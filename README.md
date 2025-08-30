@@ -1,2 +1,2 @@
-# lsreborn-backend
+# lsreborn-website
 LSR Website
