@@ -19,11 +19,11 @@ WHITELISTED_ROLE_ID = 1322674155107127458
 COOLDOWN_ROLE_ID = 1411034610086842471
 
 # MySQL connection
-MYSQL_HOST = "localhost"
+MYSQL_HOST = "20.40.56.61"
 MYSQL_PORT = 3306
 MYSQL_USER = "root"
-MYSQL_PASSWORD = "Pr@n@v7722A"
-MYSQL_DATABASE = "lsreborn"
+MYSQL_PASSWORD = "YourStrongPassword"
+MYSQL_DATABASE = "lsrwebtest"
 
 # Poll interval (seconds) for checking the database
 POLL_SECONDS = 10

@@ -3,10 +3,10 @@ require('dotenv').config();
 
 // Create a pool of connections to the database
 const pool = mysql.createPool({
-    host: "localhost",
+    host: "20.40.56.61",
     user: "root",
-    password: "Pr@n@v7722A",
-    database: "lsreborn",
+    password: "YourStrongPassword",
+    database: "lsrwebtest",
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
