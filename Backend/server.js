@@ -1,21 +1,28 @@
+// File: backend/server.js
 const express = require('express');
 const cors = require('cors');
-const db = require('./db'); 
 const session = require('express-session');
 const passport = require('passport');
+const db = require('./db'); // Ensure db is imported
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors({
-    origin: process.env.FRONTEND_URL, // Allow requests from your React app
-    credentials: true
-}));
-app.use(express.json());
-// This tells Express to trust the information from Render's proxy
+// --- CRUCIAL FIXES FOR LIVE DEPLOYMENT ---
+
+// 1. Trust the proxy: Render sits behind a proxy. This is essential for secure cookies.
 app.set('trust proxy', 1);
+
+// 2. CORS Configuration: This tells your backend to trust your frontend.
+app.use(cors({
+    origin: process.env.FRONTEND_URL, // This MUST be your Netlify URL (e.g., https://lsreborn-project.netlify.app)
+    credentials: true // This allows the browser to send the login cookie
+}));
+
+// --- END OF FIXES ---
+
+app.use(express.json());
 
 // Session Setup
 app.use(session({
@@ -23,16 +30,14 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: true, // MUST be true for cross-site cookies
+        secure: true, // MUST be true for cross-site cookies to work (HTTPS)
         httpOnly: true,
-        sameSite: 'none', // This is the magic setting that allows the cookie to be sent
+        sameSite: 'none', // This is the key setting that allows the cookie to be sent across domains
         maxAge: 1000 * 60 * 60 * 24 // Cookie lasts for 1 day
     }
 }));
 
-// ... (the rest of your server.js file) ...
-
-// Passport Middleware (for authentication)
+// Passport Middleware
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -45,6 +50,8 @@ app.use('/api/status', require('./routes/status'));
 app.get('/', (req, res) => {
     res.send('LSReborn Backend is running!');
 });
+
+// Test DB connection
 app.get('/db-test', async (req, res) => {
     try {
         const [results] = await db.query('SELECT 1');
@@ -58,3 +65,4 @@ app.get('/db-test', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
