@@ -1,3 +1,4 @@
+// File: backend/routes/auth.js
 const router = require('express').Router();
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
@@ -12,11 +13,17 @@ if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET || !pro
 
 // This function tells Passport what piece of user data to store in the session.
 passport.serializeUser((user, done) => {
+    console.log("Serializing User:", user.username);
     done(null, user);
 });
 
 // This function tells Passport how to get the full user details from the session.
 passport.deserializeUser((obj, done) => {
+    // This is a crucial step. It runs on every authenticated request.
+    // If there's an error here, the user won't be logged in.
+    console.log("Deserializing User:", obj.username);
+    // The object 'obj' is the full user profile we saved during login.
+    // We just pass it along. In a real app, you might fetch fresh data from a DB here.
     done(null, obj);
 });
 
@@ -24,10 +31,10 @@ passport.use(new DiscordStrategy({
     clientID: process.env.DISCORD_CLIENT_ID,
     clientSecret: process.env.DISCORD_CLIENT_SECRET,
     callbackURL: `${process.env.BACKEND_URL}/auth/discord/callback`,
-    scope: ['identify', 'guilds', 'guilds.members.read'] // guilds.members.read is crucial for getting roles
+    scope: ['identify', 'guilds', 'guilds.members.read']
 }, async (accessToken, refreshToken, profile, done) => {
+    console.log("Discord callback successful for user:", profile.username);
     try {
-        // Use the access token to get the user's roles for YOUR specific server
         const guildMemberResponse = await fetch(`https://discord.com/api/users/@me/guilds/${process.env.GUILD_ID}/member`, {
             headers: { Authorization: `Bearer ${accessToken}` }
         });
@@ -35,16 +42,9 @@ passport.use(new DiscordStrategy({
         if (guildMemberResponse.ok) {
             const memberData = await guildMemberResponse.json();
             profile.roles = memberData.roles || [];
-            
-            // Check for Admin and Staff roles
-            profile.isAdmin = profile.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
-            // An admin is always considered staff
-            profile.isStaff = profile.roles.includes(process.env.STAFF_ROLE_ID) || profile.isAdmin;
-
+            console.log(`Found ${profile.roles.length} roles for user.`);
         } else {
             profile.roles = [];
-            profile.isStaff = false;
-            profile.isAdmin = false;
             console.warn(`Could not fetch member data for guild ${process.env.GUILD_ID}. User might not be in the server.`);
         }
         
@@ -55,18 +55,25 @@ passport.use(new DiscordStrategy({
     }
 }));
 
-// The route the user clicks on to start the login process
 router.get('/discord', passport.authenticate('discord'));
 
-// The route Discord redirects the user back to after they approve the login
 router.get('/discord/callback', passport.authenticate('discord', {
-    failureRedirect: `${process.env.FRONTEND_URL}?login=failed` // If they cancel, send them back
+    failureRedirect: `${process.env.FRONTEND_URL}?login=failed`
 }), (req, res) => {
+    console.log("Authentication successful, redirecting to frontend.");
     res.redirect(process.env.FRONTEND_URL);
 });
 
 // A route for the frontend to check if the user is logged in
 router.get('/me', (req, res) => {
+    // --- NEW DEBUGGING LOGS ---
+    console.log('--- /auth/me endpoint hit ---');
+    console.log('Session ID:', req.sessionID);
+    console.log('Session data:', req.session);
+    console.log('Is authenticated:', req.isAuthenticated());
+    console.log('User object from session:', req.user);
+    // --- END DEBUGGING LOGS ---
+
     if (req.isAuthenticated()) {
         res.json(req.user);
     } else {
@@ -74,12 +81,18 @@ router.get('/me', (req, res) => {
     }
 });
 
-// The logout route
 router.get('/logout', (req, res, next) => {
     req.logout((err) => {
-        if (err) { return next(err); }
-        req.session.destroy(() => {
+        if (err) { 
+            console.error("Error during logout:", err);
+            return next(err); 
+        }
+        req.session.destroy((err) => {
+            if (err) {
+                console.error("Error destroying session:", err);
+            }
             res.clearCookie('connect.sid');
+            console.log("User logged out and session destroyed.");
             res.redirect(process.env.FRONTEND_URL);
         });
     });
