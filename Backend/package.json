@@ -89,6 +89,7 @@
     "send": "^1.2.0",
     "seq-queue": "^0.0.5",
     "serve-static": "^2.2.0",
+    "session-file-store": "^1.5.0",
     "setprototypeof": "^1.2.0",
     "side-channel": "^1.1.0",
     "side-channel-list": "^1.0.0",
