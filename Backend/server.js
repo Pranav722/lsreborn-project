@@ -8,7 +8,7 @@ require('dotenv').config();
 
 // --- NEW IMPORTS FOR REDIS SESSION STORE ---
 const redis = require('redis');
-// This is the corrected import pattern for the version being installed on Render
+// This is the corrected import pattern for connect-redis v6
 const RedisStore = require('connect-redis')(session); 
 // --- END NEW IMPORTS ---
 
@@ -90,4 +90,3 @@ app.get('/db-test', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-
