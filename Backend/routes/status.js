@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const fetch = require('node-fetch');
 
-const SERVER_STATUS_JSON_URL = 'YOUR_PUBLIC_JSON_URL_HERE'; // Replace with your actual URL
+const SERVER_STATUS_JSON_URL = 'http://104.234.180.52:20059/players.json'; // Replace with your actual URL
 
 router.get('/', async (req, res) => {
     console.log('--- /api/status endpoint was hit ---');
