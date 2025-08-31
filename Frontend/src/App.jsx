@@ -20,7 +20,7 @@ import StaffDashboard from './pages/staff/StaffDashboard';
 
 
 // --- LOGIN MODAL ---
-const LoginModal = ({ isOpen, onClose, onStaffLoginClick }) => {
+const LoginModal = ({ isOpen, onClose }) => {
     return (
         <Modal isOpen={isOpen} onClose={onClose} title="Login">
             <div className="space-y-4">
@@ -28,7 +28,7 @@ const LoginModal = ({ isOpen, onClose, onStaffLoginClick }) => {
                     <svg role="img" width="24" height="24" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 4.36981C18.699 3.50425 16.903 2.83421 15.01 2.33753C14.751 2.68808 14.492 3.03862 14.25 3.375C12.486 2.89885 10.739 2.89885 8.975 3.375C8.733 3.03862 8.474 2.68808 8.215 2.33753C6.322 2.83421 4.526 3.50425 2.909 4.36981C0.933 7.46497 0.25 10.824 0.963 14.048C2.583 15.436 4.483 16.374 6.516 16.968C6.776 16.6174 7.02 16.253 7.246 15.875C6.565 15.5893 5.921 15.2257 5.33 14.7874C5.52 14.6869 5.709 14.5725 5.882 14.4444C9.258 16.6111 14.021 16.6111 17.381 14.4444C17.554 14.5725 17.743 14.6869 17.933 14.7874C17.342 15.2257 16.698 15.5893 16.017 15.875C16.243 16.253 16.487 16.6174 16.747 16.968C18.78 16.374 20.68 15.436 22.3 14.048C23.142 10.226 22.112 6.91912 20.317 4.36981ZM7.422 12.1875C6.533 12.1875 5.806 11.4225 5.806 10.4625C5.806 9.5025 6.533 8.7375 7.422 8.7375C8.311 8.7375 9.038 9.5025 9.038 10.4625C9.038 11.4225 8.311 12.1875 7.422 12.1875ZM15.818 12.1875C14.929 12.1875 14.202 11.4225 14.202 10.4625C14.202 9.5025 14.929 8.7375 15.818 8.7375C16.707 8.7375 17.434 9.5025 17.434 10.4625C17.434 11.4225 16.707 12.1875 15.818 12.1875Z"/></svg>
                     <div>
                         <h3 className="font-bold text-white">Login with Discord</h3>
-                        <p className="text-sm text-gray-400">The only way to login.</p>
+                        <p className="text-sm text-gray-400">Connect your Discord account.</p>
                     </div>
                 </a>
             </div>
@@ -43,13 +43,24 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [redirectAfterLogin, setRedirectAfterLogin] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL}/auth/me`, { credentials: 'include' })
-    .then(res => res.ok ? res.json() : null)
-    .then(data => { if (data && data.id) setUser(data); })
-    .catch(() => setUser(null))
+    // Check if the user is already logged in by calling our backend
+    fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+        credentials: 'include' // This sends the session cookie
+    })
+    .then(res => {
+        if (res.ok) return res.json();
+        return null;
+    })
+    .then(data => {
+        if (data && data.id) { // A successful response will have the user's data
+            setUser(data);
+        }
+    })
+    .catch(err => console.error("User not authenticated"))
     .finally(() => setAuthLoading(false));
   }, []);
 
@@ -58,22 +69,34 @@ export default function App() {
   };
 
   const handleApplyClick = () => {
-    if (user) setPage('apply');
-    else setIsLoginModalOpen(true);
+    if (user) {
+        setPage('apply');
+    } else {
+        setIsLoginModalOpen(true);
+    }
     setIsMobileMenuOpen(false);
   };
   
   const handleQueueClick = () => {
-    if (user) setPage('queue');
-    else setIsLoginModalOpen(true);
+    if (user) {
+        setPage('queue');
+    } else {
+        setIsLoginModalOpen(true);
+    }
     setIsMobileMenuOpen(false);
   };
 
   const NavLink = ({ pageName, children, onClick }) => (
-    <button onClick={onClick || (() => { setPage(pageName); setIsMobileMenuOpen(false); })} className={`nav-link relative px-3 py-2 rounded-md text-sm font-medium transition-colors ${page === pageName ? 'text-cyan-400 active' : 'text-gray-300'}`}>{children}</button>
+    <a href="#" onClick={(e) => { e.preventDefault(); (onClick || (() => { setPage(pageName); setIsMobileMenuOpen(false); }))() }} className={`nav-link relative px-3 py-2 rounded-md text-sm font-medium transition-colors ${page === pageName ? 'text-cyan-400 active' : 'text-gray-300'}`}>{children}</a>
   );
 
   const renderCurrentPage = () => {
+      const applicantRoles = [
+          import.meta.env.VITE_APPLICATION_ROLE_ID,
+          import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
+      ];
+      const hasApplicantRole = user?.roles.some(roleId => applicantRoles.includes(roleId));
+
       const pageMap = {
           home: <HomePage setPage={setPage} onApplyClick={handleApplyClick} />,
           apply: <ApplicationPage user={user} />,
@@ -83,49 +106,49 @@ export default function App() {
           queue: <QueuePage user={user} setPage={setPage} />,
       };
       
-      if (page === 'apply' && (!user || (!user.roles.includes(import.meta.env.VITE_APPLICATION_ROLE_ID) && !user.roles.includes(import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID)))) {
+      if (page === 'apply' && !hasApplicantRole) {
           return (
               <Card className="text-center">
                   <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
-                  <p className="text-gray-300 mb-6">You need the 'Applicant' or 'Premium Applicant' role to access this form. You can get it by purchasing a pass from our store.</p>
+                  <p className="text-gray-300 mb-6">You need an 'Applicant' role to access this form. You can get one from our store.</p>
                   <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
-                    <AnimatedButton className="bg-cyan-500">Go to Tebex Store</AnimatedButton>
+                    <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
                   </a>
               </Card>
           );
       }
-      if (page === 'queue' && !user) {
+      if ((page === 'queue' || page === 'apply') && !user) {
           return (
               <Card className="text-center">
                   <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
-                  <p className="text-gray-300 mb-6">You must be logged in to access the queue.</p>
+                  <p className="text-gray-300 mb-6">You must be logged in to access this page.</p>
                   <AnimatedButton onClick={() => setIsLoginModalOpen(true)} className="bg-cyan-500">Login</AnimatedButton>
               </Card>
           );
       }
-      if (page === 'dashboard' && (!user || !user.isStaff)) {
-        return <HomePage setPage={setPage} onApplyClick={handleApplyClick} /> // Redirect non-staff home
-      }
-      if (page === 'dashboard' && user && user.isStaff) {
-        return <StaffDashboard user={user} setPage={setPage} onLogout={handleLogout}/>;
-      }
-
       return <div key={page} className="page-container">{pageMap[page]}</div>;
   };
 
-  if (authLoading) return <Layout><div>Loading...</div></Layout>
+  if (authLoading) return <Layout><div></div></Layout> // Show nothing while loading to avoid flashes
+
+  if (page === 'dashboard') {
+    if (user && (user.isStaff || user.isAdmin)) return <Layout><StaffDashboard user={user} setPage={setPage} onLogout={handleLogout}/></Layout>;
+    // If not staff, redirect home
+    else {
+        setPage('home'); 
+        return <Layout><HomePage setPage={setPage} onApplyClick={handleApplyClick} /></Layout>;
+    }
+  }
 
   return (
     <Layout>
       <LoginModal 
         isOpen={isLoginModalOpen} 
-        onClose={() => setIsLoginModalOpen(false)} 
-        onLogin={(loggedInUser) => setUser(loggedInUser)}
-        onStaffLoginClick={() => { window.location.href = `${import.meta.env.VITE_API_URL}/auth/discord`; }}
+        onClose={() => setIsLoginModalOpen(false)}
       />
       <div className="relative z-10">
         <nav className="bg-gray-900/50 backdrop-blur-lg border-b border-cyan-500/10 sticky top-0 z-40">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
                 <button onClick={() => setPage('home')} className="flex-shrink-0 text-white font-bold text-xl flex items-center gap-2">
@@ -139,15 +162,15 @@ export default function App() {
                   <NavLink pageName="queue" onClick={handleQueueClick}>Queue</NavLink>
                   <NavLink pageName="rules">Rules</NavLink>
                   <NavLink pageName="news">News</NavLink>
-                  <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer" className="nav-link relative px-3 py-2 rounded-md text-sm font-medium text-gray-300">Store</a>
+                  <NavLink onClick={() => window.open("https://ls-reborn-store.tebex.io/", "_blank")}>Store</NavLink>
 
-                  {user && user.isStaff && (
-                    <AnimatedButton onClick={() => setPage('dashboard')} className="!px-4 !py-2 text-sm bg-orange-600">Staff Dashboard</AnimatedButton>
+                  {user && (user.isStaff || user.isAdmin) && (
+                      <NavLink pageName="dashboard">Staff Dashboard</NavLink>
                   )}
 
                   {user ? (
                         <div className="relative">
-                            <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="profile-button">
+                            <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="flex items-center space-x-2 p-1 rounded-full transition-all duration-300 hover:bg-cyan-500/20 hover:shadow-lg hover:shadow-cyan-500/20">
                                 <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`} alt="User Avatar" className="w-9 h-9 rounded-full" />
                             </button>
                             <AnimatePresence>
@@ -156,12 +179,12 @@ export default function App() {
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
-                                    className="absolute right-0 mt-2 w-48 bg-gray-800/90 backdrop-blur-md border border-cyan-500/20 rounded-md shadow-lg py-1 z-50">
-                                    <div className="px-4 py-2 border-b border-cyan-500/20">
-                                        <p className="text-sm text-gray-300">Signed in as</p>
-                                        <p className="text-sm font-semibold text-white truncate">{user.username}</p>
+                                    className="absolute right-0 mt-2 w-48 bg-gray-800/80 backdrop-blur-lg border border-cyan-500/20 rounded-md shadow-lg py-1 z-50">
+                                    <div className="px-4 py-2 border-b border-gray-700">
+                                        <p className="text-sm text-white font-semibold">{user.username}</p>
+                                        <p className="text-xs text-gray-400">#{user.discriminator}</p>
                                     </div>
-                                    <button onClick={handleLogout} className="w-full text-left flex items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 transition-colors">
+                                    <button onClick={handleLogout} className="w-full text-left flex items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/20">
                                         <LogoutIcon className="mr-2 h-4 w-4" />
                                         Logout
                                     </button>
@@ -170,7 +193,7 @@ export default function App() {
                             </AnimatePresence>
                         </div>
                   ) : (
-                      <button onClick={() => setIsLoginModalOpen(true)} className="bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 px-3 py-2 rounded-md text-sm font-medium transition-colors">Login</button>
+                      <AnimatedButton onClick={() => setIsLoginModalOpen(true)} className="!px-4 !py-2 text-sm">Login</AnimatedButton>
                   )}
                 </div>
               </div>
@@ -182,17 +205,24 @@ export default function App() {
               </div>
             </div>
           </div>
+          <AnimatePresence>
           {isMobileMenuOpen && (
-            <div className="md:hidden">
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden"
+            >
               <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                 <NavLink pageName="home">Home</NavLink>
                 <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>
                 <NavLink pageName="queue" onClick={handleQueueClick}>Queue</NavLink>
                 <NavLink pageName="rules">Rules</NavLink>
                 <NavLink pageName="news">News</NavLink>
-                <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer" className="w-full text-left text-gray-300 block px-3 py-2 rounded-md text-base font-medium">Store</a>
-                {user && user.isStaff && (
-                    <button onClick={() => setPage('dashboard')} className="w-full text-left bg-orange-500/20 text-orange-300 block px-3 py-2 rounded-md text-base font-medium">Staff Dashboard</button>
+                <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer" className="nav-link relative block px-3 py-2 rounded-md text-sm font-medium text-gray-300">Store</a>
+
+                {user && (user.isStaff || user.isAdmin) && (
+                    <NavLink pageName="dashboard">Staff Dashboard</NavLink>
                 )}
                 {user ? (
                     <button onClick={handleLogout} className="w-full text-left bg-red-500/20 text-red-300 block px-3 py-2 rounded-md text-base font-medium">Logout</button>
@@ -200,10 +230,11 @@ export default function App() {
                     <button onClick={() => { setIsLoginModalOpen(true); setIsMobileMenuOpen(false); }} className="w-full text-left bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 block px-3 py-2 rounded-md text-base font-medium">Login</button>
                 )}
               </div>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </nav>
-        <main className="max-w-screen-xl mx-auto py-6 sm:px-6 lg:px-8">
+        <main className="max-w-screen-2xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">{renderCurrentPage()}</div>
         </main>
       </div>

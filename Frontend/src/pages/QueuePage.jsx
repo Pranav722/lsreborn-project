@@ -1,6 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
+import { ShieldCheck, Crown, HeartPulse, Siren, Users } from 'lucide-react';
+
+const QUEUE_DATA = [
+    { name: 'staff', roleIdEnv: 'VITE_STAFF_ROLE_ID', icon: ShieldCheck, title: 'Staff Queue', description: 'For on-duty staff members.' },
+    { name: 'pd', roleIdEnv: 'VITE_SALE_ROLE_ID', icon: Siren, title: 'PD Queue', description: 'For on-duty LSPD and BCSO officers.' },
+    { name: 'ems', roleIdEnv: 'VITE_EMS_ROLE_ID', icon: HeartPulse, title: 'EMS Queue', description: 'For on-duty medical personnel.' },
+    { name: 'premium', roleIdEnv: 'VITE_PREMIUM_ROLE_ID', icon: Crown, title: 'Premium Queue', description: 'Highest priority access.' },
+    { name: 'prime', roleIdEnv: 'VITE_PRIME_ROLE_ID', icon: Crown, title: 'Prime Queue', description: 'Excellent priority access.' },
+    { name: 'elite', roleIdEnv: 'VITE_ELITE_ROLE_ID', icon: Crown, title: 'Elite Queue', description: 'Great priority access.' },
+    { name: 'pro', roleIdEnv: 'VITE_PRO_ROLE_ID', icon: Crown, title: 'Pro Queue', description: 'Enhanced priority access.' },
+    { name: 'starter', roleIdEnv: 'VITE_STARTER_ROLE_ID', icon: Crown, title: 'Starter Queue', description: 'Good priority access.' },
+    { name: 'rookie', roleIdEnv: 'VITE_ROOKIE_ROLE_ID', icon: Crown, title: 'Rookie Queue', description: 'Basic priority access.' },
+    { name: 'normal', roleIdEnv: 'VITE_WHITELISTED_ROLE_ID', icon: Users, title: 'Normal Queue', description: 'Standard queue for all civilians.' },
+];
+
 
 const QueuePage = ({ user, setPage }) => {
     const [queueStatus, setQueueStatus] = useState({ inQueue: false, type: null, position: 0, total: 0 });
@@ -30,11 +45,13 @@ const QueuePage = ({ user, setPage }) => {
         return () => clearInterval(interval);
     }, [fetchStatus]);
 
-    const handleJoin = async () => {
+    const handleJoin = async (queueType) => {
         setIsLoading(true);
         await fetch(`${import.meta.env.VITE_API_URL}/api/queue/join`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
+            body: JSON.stringify({ queueType })
         });
         fetchStatus();
     };
@@ -47,6 +64,19 @@ const QueuePage = ({ user, setPage }) => {
         });
         fetchStatus();
     };
+
+    const QueueCard = ({ queueInfo, isAllowed, onJoin }) => (
+        <Card className={`text-center flex flex-col justify-between transition-opacity ${!isAllowed && 'opacity-40'}`}>
+            <div>
+                <queueInfo.icon className="mx-auto h-12 w-12 text-cyan-400 mb-4" />
+                <h3 className="text-xl font-bold text-white">{queueInfo.title}</h3>
+                <p className="text-gray-400 mt-2 text-sm">{queueInfo.description}</p>
+            </div>
+            <AnimatedButton onClick={() => onJoin(queueInfo.name)} disabled={!isAllowed} className={`w-full mt-6 ${isAllowed ? 'bg-cyan-500' : 'bg-gray-600 cursor-not-allowed'}`}>
+                {isAllowed ? 'Join Queue' : 'Not Eligible'}
+            </AnimatedButton>
+        </Card>
+    );
 
     if (isLoading) return <div className="text-center text-cyan-400">Loading Queue...</div>;
     
@@ -84,15 +114,21 @@ const QueuePage = ({ user, setPage }) => {
             </div>
         );
     }
+    
+    const userRoles = user?.roles || [];
+    const isAdminOrStaff = user?.isStaff || user?.isAdmin;
 
     return (
         <div className="animate-fade-in">
-            <Card className="text-center">
-                <h2 className="text-3xl font-bold text-cyan-400 mb-6">Server Queue</h2>
-                <p className="text-gray-300 mb-6">Click the button below to join the queue. You will be automatically placed in the highest priority queue you are eligible for based on your Discord roles.</p>
-                <AnimatedButton onClick={handleJoin} className="bg-cyan-500">
-                    Join Queue
-                </AnimatedButton>
+            <Card>
+                <h2 className="text-3xl font-bold text-cyan-400 mb-6 text-center">Join a Queue</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                    {QUEUE_DATA.map(queue => {
+                         const roleId = import.meta.env[queue.roleIdEnv];
+                         const isAllowed = isAdminOrStaff || userRoles.includes(roleId);
+                         return <QueueCard key={queue.name} queueInfo={queue} isAllowed={isAllowed} onJoin={handleJoin} />
+                    })}
+                </div>
             </Card>
         </div>
     );
