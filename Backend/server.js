@@ -3,12 +3,35 @@ const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
 const passport = require('passport');
-const FileStore = require('session-file-store')(session); // Import the new session store
 const db = require('./db');
 require('dotenv').config();
 
+// --- NEW IMPORTS FOR REDIS SESSION STORE ---
+const redis = require('redis');
+const RedisStore = require('connect-redis').default;
+// --- END NEW IMPORTS ---
+
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// --- UPSTASH REDIS CLIENT SETUP ---
+// Initialize client.
+const redisClient = redis.createClient({
+    url: process.env.UPSTASH_REDIS_URL // This now comes from your Upstash .env variable on Render
+});
+redisClient.connect().catch(console.error);
+
+redisClient.on('connect', () => console.log('Connected to Upstash Redis successfully!'));
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+
+// Initialize store.
+const redisStore = new RedisStore({
+    client: redisClient,
+    prefix: "lsreborn:", // Optional prefix for session keys
+});
+// --- END UPSTASH SETUP ---
+
 
 // Trust the proxy (essential for Render)
 app.set('trust proxy', 1);
@@ -22,12 +45,9 @@ app.use(cors({
 app.use(express.json());
 
 // --- UPDATED SESSION SETUP ---
-// We are now using a file-based store for stability
+// We are now using the stable Redis store from Upstash
 app.use(session({
-    store: new FileStore({
-        path: './sessions', // This will create a 'sessions' folder to store login data
-        logFn: function() {} // Disables verbose logging
-    }),
+    store: redisStore,
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
