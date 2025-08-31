@@ -44,6 +44,15 @@ app.use('/api/status', require('./routes/status'));
 app.get('/', (req, res) => {
     res.send('LSReborn Backend is running!');
 });
+app.get('/db-test', async (req, res) => {
+    try {
+        const [results] = await db.query('SELECT 1');
+        res.json({ message: 'Database connection successful!', results });
+    } catch (error) {
+        console.error("Database connection failed:", error);
+        res.status(500).json({ message: 'Database connection failed.', error: error.message });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
