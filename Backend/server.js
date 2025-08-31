@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 3001;
 app.set('trust proxy', 1);
 
 // 2. CORS Configuration: This tells your backend to trust your frontend.
+// This must be placed BEFORE your routes and session middleware.
 app.use(cors({
     origin: process.env.FRONTEND_URL, // This MUST be your Netlify URL (e.g., https://lsreborn-project.netlify.app)
     credentials: true // This allows the browser to send the login cookie
@@ -65,4 +66,3 @@ app.get('/db-test', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-

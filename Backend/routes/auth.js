@@ -19,11 +19,7 @@ passport.serializeUser((user, done) => {
 
 // This function tells Passport how to get the full user details from the session.
 passport.deserializeUser((obj, done) => {
-    // This is a crucial step. It runs on every authenticated request.
-    // If there's an error here, the user won't be logged in.
     console.log("Deserializing User:", obj.username);
-    // The object 'obj' is the full user profile we saved during login.
-    // We just pass it along. In a real app, you might fetch fresh data from a DB here.
     done(null, obj);
 });
 
