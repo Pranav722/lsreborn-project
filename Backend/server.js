@@ -1,14 +1,15 @@
 // File: backend/server.js
 const express = require('express');
 const cors = require('cors');
-const session = require('express-session');
+const session = require('express-session'); // Moved up to be available for RedisStore
 const passport = require('passport');
 const db = require('./db');
 require('dotenv').config();
 
 // --- NEW IMPORTS FOR REDIS SESSION STORE ---
 const redis = require('redis');
-const RedisStore = require('connect-redis'); // Corrected import
+// This is the corrected import pattern for the version being installed on Render
+const RedisStore = require('connect-redis')(session); 
 // --- END NEW IMPORTS ---
 
 
