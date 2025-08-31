@@ -1,25 +1,25 @@
 // File: backend/server.js
 const express = require('express');
 const cors = require('cors');
-const session = require('express-session'); // Moved up to be available for RedisStore
+const session = require('express-session');
 const passport = require('passport');
 const db = require('./db');
 require('dotenv').config();
 
-// --- NEW IMPORTS FOR REDIS SESSION STORE ---
-const redis = require('redis');
-// This is the corrected import pattern for connect-redis v6
-const RedisStore = require('connect-redis')(session); 
-// --- END NEW IMPORTS ---
+// --- MODERN IMPORTS FOR REDIS v4 and connect-redis v7 ---
+const { createClient } = require('redis');
+// This is the correct syntax for modern versions of connect-redis
+const RedisStore = require("connect-redis").default;
+// --- END MODERN IMPORTS ---
 
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- UPSTASH REDIS CLIENT SETUP ---
+// --- MODERN UPSTASH REDIS CLIENT SETUP ---
 // Initialize client.
-const redisClient = redis.createClient({
-    url: process.env.UPSTASH_REDIS_URL // This now comes from your Upstash .env variable on Render
+const redisClient = createClient({
+    url: process.env.UPSTASH_REDIS_URL
 });
 redisClient.connect().catch(console.error);
 
@@ -29,9 +29,9 @@ redisClient.on('error', (err) => console.log('Redis Client Error', err));
 // Initialize store.
 const redisStore = new RedisStore({
     client: redisClient,
-    prefix: "lsreborn:", // Optional prefix for session keys
+    prefix: "lsreborn:",
 });
-// --- END UPSTASH SETUP ---
+// --- END MODERN SETUP ---
 
 
 // Trust the proxy (essential for Render)
@@ -46,7 +46,6 @@ app.use(cors({
 app.use(express.json());
 
 // --- UPDATED SESSION SETUP ---
-// We are now using the stable Redis store from Upstash
 app.use(session({
     store: redisStore,
     secret: process.env.SESSION_SECRET,
