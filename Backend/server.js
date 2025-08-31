@@ -8,7 +8,7 @@ require('dotenv').config();
 
 // --- NEW IMPORTS FOR REDIS SESSION STORE ---
 const redis = require('redis');
-const RedisStore = require('connect-redis').default;
+const RedisStore = require('connect-redis'); // Corrected import
 // --- END NEW IMPORTS ---
 
 
@@ -89,3 +89,4 @@ app.get('/db-test', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
