@@ -14,23 +14,23 @@ app.use(cors({
     credentials: true
 }));
 app.use(express.json());
-
-// This tells Express to trust the first proxy in front of it (important for hosting)
+// This tells Express to trust the information from Render's proxy
 app.set('trust proxy', 1);
 
 // Session Setup
-// This creates a cookie that keeps the user logged in
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        secure: true, // MUST be true for cross-site cookies
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Crucial for cross-site cookies
+        sameSite: 'none', // This is the magic setting that allows the cookie to be sent
         maxAge: 1000 * 60 * 60 * 24 // Cookie lasts for 1 day
     }
 }));
+
+// ... (the rest of your server.js file) ...
 
 // Passport Middleware (for authentication)
 app.use(passport.initialize());
