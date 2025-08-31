@@ -6,6 +6,33 @@
 
 @import url('[https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;800&display=swap](https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;800&display=swap)');
 
+.nav-link {
+  position: relative;
+  color: #d1d5db; /* gray-300 */
+}
+
+.nav-link:hover {
+  color: #ffffff;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background-color: #22d3ee; /* cyan-400 */
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+.nav-link:hover::after, .nav-link.active::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
 body {
   font-family: 'Lexend', sans-serif;
 }

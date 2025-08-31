@@ -8,4 +8,5 @@ const AnimatedButton = ({ children, className = '', ...props }) => (
     {children}
   </button>
 );
+
 export default AnimatedButton;

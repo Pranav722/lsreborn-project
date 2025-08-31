@@ -1,102 +1,106 @@
 const router = require('express').Router();
-const passport = require('passport');
-const DiscordStrategy = require('passport-discord').Strategy;
+const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
 require('dotenv').config();
 
-if (!process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_CLIENT_SECRET || !process.env.GUILD_ID) {
-    console.error("ERROR: DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, and GUILD_ID must be set in your .env file.");
-    process.exit(1);
-}
+const DISCORD_API_URL = 'https://discord.com/api/v10';
 
-passport.serializeUser((user, done) => {
-    console.log("Serializing User:", user.username);
-    done(null, user);
-});
-
-passport.deserializeUser((obj, done) => {
-    console.log("Deserializing User:", obj.username);
-    done(null, obj);
-});
-
-passport.use(new DiscordStrategy({
-    clientID: process.env.DISCORD_CLIENT_ID,
-    clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    callbackURL: `${process.env.BACKEND_URL}/auth/discord/callback`,
-    scope: ['identify', 'guilds', 'guilds.members.read']
-}, async (accessToken, refreshToken, profile, done) => {
-    console.log("Discord callback successful for user:", profile.username);
-    try {
-        const guildMemberResponse = await fetch(`https://discord.com/api/users/@me/guilds/${process.env.GUILD_ID}/member`, {
-            headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        
-        if (guildMemberResponse.ok) {
-            const memberData = await guildMemberResponse.json();
-            profile.roles = memberData.roles || [];
-            console.log(`Found ${profile.roles.length} roles for user.`);
-
-            // Add staff/admin flags to the user's session profile
-            profile.isStaff = profile.roles.includes(process.env.STAFF_ROLE_ID);
-            profile.isAdmin = profile.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
-
-            // An admin is also considered staff
-            if (profile.isAdmin) {
-                profile.isStaff = true;
-            }
-
-        } else {
-            profile.roles = [];
-            profile.isStaff = false;
-            profile.isAdmin = false;
-            console.warn(`Could not fetch member data for guild ${process.env.GUILD_ID}. User might not be in the server.`);
-        }
-        
-        return done(null, profile);
-    } catch (err) {
-        console.error("Error in Discord strategy:", err);
-        return done(err, null);
-    }
-}));
-
-router.get('/discord', passport.authenticate('discord'));
-
-router.get('/discord/callback', passport.authenticate('discord', {
-    failureRedirect: `${process.env.FRONTEND_URL}?login=failed`
-}), (req, res) => {
-    console.log("Authentication successful, redirecting to frontend.");
-    res.redirect(process.env.FRONTEND_URL);
-});
-
-router.get('/me', (req, res) => {
-    console.log("--- /auth/me endpoint hit ---");
-    console.log("Session ID:", req.sessionID);
-    console.log("Session data:", req.session);
-    console.log("Is authenticated:", req.isAuthenticated());
-    console.log("User object from session:", req.user);
-
-    if (req.isAuthenticated()) {
-        res.json(req.user);
-    } else {
-        res.status(401).json({ message: 'Not authenticated' });
-    }
-});
-
-router.get('/logout', (req, res, next) => {
-    req.logout((err) => {
-        if (err) { 
-            console.error("Error during logout:", err);
-            return next(err); 
-        }
-        req.session.destroy((err) => {
-            if (err) {
-                console.error("Error destroying session:", err);
-            }
-            res.clearCookie('connect.sid');
-            console.log("User logged out and session destroyed.");
-            res.redirect(process.env.FRONTEND_URL);
-        });
+// This is the first step of the login process
+router.get('/discord', (req, res) => {
+    const params = new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        redirect_uri: `${process.env.BACKEND_URL}/auth/discord/callback`,
+        response_type: 'code',
+        scope: 'identify guilds guilds.members.read'
     });
+    res.redirect(`${DISCORD_API_URL}/oauth2/authorize?${params}`);
+});
+
+// This is where Discord sends the user back to after they authorize
+router.get('/discord/callback', async (req, res) => {
+    const code = req.query.code;
+    if (!code) {
+        return res.redirect(`${process.env.FRONTEND_URL}?login=failed`);
+    }
+
+    try {
+        // Exchange the authorization code for an access token
+        const tokenResponse = await fetch(`${DISCORD_API_URL}/oauth2/token`, {
+            method: 'POST',
+            body: new URLSearchParams({
+                client_id: process.env.DISCORD_CLIENT_ID,
+                client_secret: process.env.DISCORD_CLIENT_SECRET,
+                code,
+                grant_type: 'authorization_code',
+                redirect_uri: `${process.env.BACKEND_URL}/auth/discord/callback`,
+            }),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        });
+
+        const tokenData = await tokenResponse.json();
+        if (!tokenData.access_token) {
+            throw new Error('Failed to get access token.');
+        }
+
+        // Use the access token to get the user's profile
+        const userResponse = await fetch(`${DISCORD_API_URL}/users/@me`, {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+        const userProfile = await userResponse.json();
+        
+        // Get the user's roles from your specific server
+        const memberResponse = await fetch(`${DISCORD_API_URL}/users/@me/guilds/${process.env.GUILD_ID}/member`, {
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+
+        let roles = [];
+        if (memberResponse.ok) {
+            const memberData = await memberResponse.json();
+            roles = memberData.roles || [];
+        }
+
+        // Create a payload for our JWT
+        const userPayload = {
+            id: userProfile.id,
+            username: userProfile.username,
+            avatar: userProfile.avatar,
+            discriminator: userProfile.discriminator,
+            roles: roles
+        };
+
+        // Sign the JWT
+        const token = jwt.sign({ user: userPayload }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+        // Set the JWT in a secure, httpOnly cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 24 * 60 * 60 * 1000 // 1 day
+        });
+
+        // Redirect back to the frontend
+        res.redirect(process.env.FRONTEND_URL);
+
+    } catch (error) {
+        console.error("Discord callback error:", error);
+        res.redirect(`${process.env.FRONTEND_URL}?login=error`);
+    }
+});
+
+// A protected route for the frontend to check who is logged in
+router.get('/me', require('../middleware/auth').isAuthenticated, (req, res) => {
+    res.json(req.user);
+});
+
+// The logout route
+router.post('/logout', (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none'
+    });
+    res.status(200).json({ message: 'Logged out successfully' });
 });
 
 module.exports = router;
