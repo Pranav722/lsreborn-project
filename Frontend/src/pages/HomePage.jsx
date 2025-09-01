@@ -1,12 +1,15 @@
+// File: src/pages/HomePage.jsx
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
 
 const HomePage = ({ setPage, onApplyClick }) => {
-  const [status, setStatus] = React.useState({ online: false, players: 0, maxPlayers: 0 });
+  const [status, setStatus] = useState({ online: false, players: 0, maxPlayers: 0 });
   
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchStatus = () => {
+        // Show a fetching status initially to give the backend time to wake up on Render
+        setStatus(prevStatus => ({ ...prevStatus, online: 'fetching' }));
         fetch(`${import.meta.env.VITE_API_URL}/api/status`)
             .then(res => res.json())
             .then(data => setStatus(data))
@@ -19,6 +22,13 @@ const HomePage = ({ setPage, onApplyClick }) => {
     const interval = setInterval(fetchStatus, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const getStatusJsx = () => {
+      if(status.online === 'fetching') {
+          return <span className={`font-bold px-3 py-1 rounded-full text-sm bg-yellow-500/20 text-yellow-300`}>Fetching...</span>
+      }
+      return <span className={`font-bold px-3 py-1 rounded-full text-sm ${status.online ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>{status.online ? 'Online' : 'Offline'}</span>
+  }
 
   return (
     <div className="animate-fade-in space-y-20">
@@ -45,7 +55,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
         <Card className="md:col-span-1 animate-fade-in" style={{ animationDelay: '600ms' }}>
           <h3 className="text-2xl font-bold text-cyan-400 mb-4">Server Status</h3>
           <div className="space-y-3">
-            <div className="flex justify-between items-center"><span className="text-gray-300">Status:</span><span className={`font-bold px-3 py-1 rounded-full text-sm ${status.online ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>{status.online ? 'Online' : 'Offline'}</span></div>
+            <div className="flex justify-between items-center"><span className="text-gray-300">Status:</span>{getStatusJsx()}</div>
             <div className="flex justify-between items-center"><span className="text-gray-300">Players:</span><span className="font-bold text-white">{status.players} / {status.maxPlayers}</span></div>
             <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-cyan-400 h-2.5 rounded-full" style={{ width: status.maxPlayers > 0 ? `${(status.players / status.maxPlayers) * 100}%` : '0%' }}></div></div>
           </div>
