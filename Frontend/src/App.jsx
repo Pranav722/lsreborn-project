@@ -1,4 +1,3 @@
-// File: frontend/src/App.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, Menu, X, LogOut as LogoutIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -90,7 +89,7 @@ export default function App() {
   const handleApplyClick = async () => {
     setIsMobileMenuOpen(false);
     if (user) {
-        // Re-check roles before navigating
+        // Re-check roles before navigating to ensure they are up-to-date
         await checkAuthStatus();
         setPage('apply');
     } else {
@@ -117,7 +116,8 @@ export default function App() {
           import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
       ].filter(Boolean);
 
-      const hasApplicantRole = user?.roles.some(roleId => applicantRoles.includes(roleId));
+      // Defensive check to ensure user.roles is an array before using .some()
+      const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
 
       const pageMap = {
           home: <HomePage setPage={setPage} onApplyClick={handleApplyClick} />,
@@ -126,7 +126,7 @@ export default function App() {
           news: <NewsPage />,
           store: <StorePage />,
           queue: <QueuePage user={user} setPage={setPage} />,
-          dashboard: <StaffDashboard user={user} setPage={setPage} />
+          dashboard: <StaffDashboard user={user} setPage={setPage} onLogout={handleLogout} />
       };
       
       if (page === 'apply' && user && !hasApplicantRole) {
@@ -150,7 +150,8 @@ export default function App() {
           );
       }
 
-      const isStaffOrAdmin = user && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
+      // Defensive check for staff/admin roles
+      const isStaffOrAdmin = user && Array.isArray(user.roles) && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
 
       if (page === 'dashboard' && !isStaffOrAdmin) {
           return (
@@ -165,8 +166,9 @@ export default function App() {
 
   if (authLoading) return <Layout><div></div></Layout>;
 
-  const isStaffOrAdmin = user && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
-  const hasWhitelistedRole = user && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
+  // Defensive checks for navbar rendering
+  const isStaffOrAdmin = user && Array.isArray(user.roles) && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
+  const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
 
   return (
     <Layout>
