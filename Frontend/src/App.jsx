@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Menu, X, KeyRound, LogOut as LogoutIcon } from 'lucide-react';
+  import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Menu, X, LogOut as LogoutIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Import Components
@@ -15,7 +15,6 @@ import ApplicationPage from './pages/ApplicationPage';
 import RulesPage from './pages/RulesPage';
 import NewsPage from './pages/NewsPage';
 import StorePage from './pages/StorePage';
-import StaffLogin from './pages/staff/StaffLogin';
 import StaffDashboard from './pages/staff/StaffDashboard';
 
 
@@ -43,29 +42,45 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [redirectAfterLogin, setRedirectAfterLogin] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
-    // Check if the user is already logged in by calling our backend
-    fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
-        credentials: 'include' // This sends the session cookie
-    })
-    .then(res => {
-        if (res.ok) return res.json();
-        return null;
-    })
-    .then(data => {
-        if (data && data.id) { // A successful response will have the user's data
-            setUser(data);
-        }
-    })
-    .catch(err => console.error("User not authenticated"))
-    .finally(() => setAuthLoading(false));
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+
+    if (token) {
+        localStorage.setItem('authToken', token);
+        window.history.replaceState({}, document.title, "/"); // Clean the URL
+    }
+
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken) {
+        fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+            headers: {
+                'Authorization': `Bearer ${storedToken}`
+            }
+        })
+        .then(res => {
+            if (res.ok) return res.json();
+            // If token is invalid/expired, clear it
+            localStorage.removeItem('authToken');
+            return null;
+        })
+        .then(data => {
+            if (data) setUser(data);
+        })
+        .catch(err => console.error("Auth check failed:", err))
+        .finally(() => setAuthLoading(false));
+    } else {
+        setAuthLoading(false);
+    }
   }, []);
 
   const handleLogout = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/logout`;
+    localStorage.removeItem('authToken');
+    setUser(null);
+    setIsProfileOpen(false);
+    setPage('home');
   };
 
   const handleApplyClick = () => {
@@ -94,7 +109,8 @@ export default function App() {
       const applicantRoles = [
           import.meta.env.VITE_APPLICATION_ROLE_ID,
           import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
-      ];
+      ].filter(Boolean);
+
       const hasApplicantRole = user?.roles.some(roleId => applicantRoles.includes(roleId));
 
       const pageMap = {
@@ -104,9 +120,10 @@ export default function App() {
           news: <NewsPage />,
           store: <StorePage />,
           queue: <QueuePage user={user} setPage={setPage} />,
+          dashboard: <StaffDashboard user={user} setPage={setPage} />
       };
       
-      if (page === 'apply' && !hasApplicantRole) {
+      if (page === 'apply' && user && !hasApplicantRole) {
           return (
               <Card className="text-center">
                   <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
@@ -117,7 +134,7 @@ export default function App() {
               </Card>
           );
       }
-      if ((page === 'queue' || page === 'apply') && !user) {
+      if ((page === 'queue' || page === 'apply' || page === 'dashboard') && !user) {
           return (
               <Card className="text-center">
                   <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
@@ -126,19 +143,23 @@ export default function App() {
               </Card>
           );
       }
+
+      const isStaffOrAdmin = user && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
+
+      if (page === 'dashboard' && !isStaffOrAdmin) {
+          return (
+            <Card className="text-center">
+                <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
+                <p className="text-gray-300 mb-6">You do not have permission to view the staff dashboard.</p>
+            </Card>
+          );
+      }
       return <div key={page} className="page-container">{pageMap[page]}</div>;
   };
 
-  if (authLoading) return <Layout><div></div></Layout> // Show nothing while loading to avoid flashes
+  if (authLoading) return <Layout><div></div></Layout>;
 
-  if (page === 'dashboard') {
-    if (user && (user.isStaff || user.isAdmin)) return <Layout><StaffDashboard user={user} setPage={setPage} onLogout={handleLogout}/></Layout>;
-    // If not staff, redirect home
-    else {
-        setPage('home'); 
-        return <Layout><HomePage setPage={setPage} onApplyClick={handleApplyClick} /></Layout>;
-    }
-  }
+  const isStaffOrAdmin = user && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
 
   return (
     <Layout>
@@ -162,9 +183,9 @@ export default function App() {
                   <NavLink pageName="queue" onClick={handleQueueClick}>Queue</NavLink>
                   <NavLink pageName="rules">Rules</NavLink>
                   <NavLink pageName="news">News</NavLink>
-                  <NavLink onClick={() => window.open("https://ls-reborn-store.tebex.io/", "_blank")}>Store</NavLink>
+                  <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer" className="nav-link relative px-3 py-2 rounded-md text-sm font-medium text-gray-300">Store</a>
 
-                  {user && (user.isStaff || user.isAdmin) && (
+                  {isStaffOrAdmin && (
                       <NavLink pageName="dashboard">Staff Dashboard</NavLink>
                   )}
 
@@ -189,7 +210,7 @@ export default function App() {
                                         Logout
                                     </button>
                                 </motion.div>
-                            )}
+                          )}
                             </AnimatePresence>
                         </div>
                   ) : (
@@ -221,7 +242,7 @@ export default function App() {
                 <NavLink pageName="news">News</NavLink>
                 <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer" className="nav-link relative block px-3 py-2 rounded-md text-sm font-medium text-gray-300">Store</a>
 
-                {user && (user.isStaff || user.isAdmin) && (
+                {isStaffOrAdmin && (
                     <NavLink pageName="dashboard">Staff Dashboard</NavLink>
                 )}
                 {user ? (

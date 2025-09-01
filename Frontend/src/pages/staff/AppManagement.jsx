@@ -6,28 +6,38 @@ import Modal from '../../components/Modal';
 const AppManagement = ({ user }) => {
     const [apps, setApps] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [filter, setFilter] = useState('premium');
+    const [filter, setFilter] = useState('pending');
+    const [viewType, setViewType] = useState('all'); // 'all' or 'premium'
     const [selectedApp, setSelectedApp] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalAction, setModalAction] = useState('');
     const [rejectionReason, setRejectionReason] = useState('');
     const [customReason, setCustomReason] = useState('');
     const [cooldown, setCooldown] = useState(24);
-    const presetReasons = ["Low effort application.", "Backstory does not meet requirements.", "Not a unique character concept."];
     
+    const presetReasons = ["Low effort application.", "Backstory does not meet requirements.", "Not a unique character concept."];
+
     const fetchData = useCallback(async () => {
         setIsLoading(true);
+        const token = localStorage.getItem('authToken');
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applications`, { credentials: 'include' });
-            const data = await response.json();
-            setApps(data);
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applications`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setApps(data);
+            }
         } catch (error) {
             console.error("Failed to fetch applications:", error);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }, []);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const handleOpenModal = (app, action) => {
         setSelectedApp(app);
@@ -39,62 +49,66 @@ const AppManagement = ({ user }) => {
 
     const handleConfirmAction = async () => {
         if (!selectedApp) return;
+        const token = localStorage.getItem('authToken');
+        const finalReason = rejectionReason === 'custom' ? customReason : rejectionReason;
         
-        let finalReason = '';
-        if (modalAction === 'reject') {
-            finalReason = rejectionReason === 'custom' ? customReason : rejectionReason;
-            if (!finalReason) {
-                alert("Please select or provide a reason for rejection.");
-                return;
-            }
+        if (modalAction === 'reject' && !finalReason) {
+            alert("Please select or provide a reason for rejection.");
+            return;
         }
 
         try {
             await fetch(`${import.meta.env.VITE_API_URL}/api/applications/${selectedApp.id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    status: modalAction,
-                    reason: finalReason,
-                }),
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ status: modalAction, reason: finalReason })
             });
         } catch (error) {
             console.error("Failed to update application:", error);
+        } finally {
+            setIsModalOpen(false);
+            setSelectedApp(null);
+            fetchData();
         }
-        
-        setIsModalOpen(false);
-        setSelectedApp(null);
-        fetchData(); // Refresh the list
     };
 
-    const filteredApps = apps.filter(app => {
-        if (filter === 'premium') return app.isPremium && app.status === 'pending';
-        if (filter === 'pending') return !app.isPremium && app.status === 'pending';
-        return app.status === filter;
-    });
+    const filteredApps = apps
+        .filter(app => app.status === filter)
+        .filter(app => viewType === 'premium' ? app.isPremium : true);
 
     return (
         <div className="animate-fade-in">
             <h2 className="text-3xl font-bold text-cyan-400 mb-6">Application Management</h2>
-            <div className="flex space-x-2 mb-6 border-b border-cyan-500/20 pb-4">
-                <button onClick={() => setFilter('premium')} className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${filter === 'premium' ? 'bg-yellow-500/20 text-yellow-300' : 'text-gray-400 hover:bg-gray-800'}`}>Premium</button>
-                <button onClick={() => setFilter('pending')} className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${filter === 'pending' ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800'}`}>Pending</button>
-                <button onClick={() => setFilter('approved')} className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${filter === 'approved' ? 'bg-green-500/20 text-green-300' : 'text-gray-400 hover:bg-gray-800'}`}>Approved</button>
-                <button onClick={() => setFilter('rejected')} className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${filter === 'rejected' ? 'bg-red-500/20 text-red-300' : 'text-gray-400 hover:bg-gray-800'}`}>Rejected</button>
+            <div className="flex flex-wrap gap-4 justify-between items-center mb-6 border-b border-cyan-500/20 pb-4">
+                <div className="flex space-x-2">
+                    {['pending', 'approved', 'rejected'].map(status => (
+                        <button key={status} onClick={() => setFilter(status)} className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${filter === status ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800'}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</button>
+                    ))}
+                </div>
+                 <div className="flex space-x-2">
+                    <button onClick={() => setViewType('all')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'all' ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800'}`}>All Apps</button>
+                    <button onClick={() => setViewType('premium')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'premium' ? 'bg-yellow-500/20 text-yellow-300' : 'text-gray-400 hover:bg-gray-800'}`}>Premium Apps</button>
+                </div>
             </div>
+            
             {isLoading ? <p>Loading applications...</p> : (
                 <div className="space-y-4">{filteredApps.length > 0 ? filteredApps.map(app => (
-                    <Card key={app.id} className={`transition-all hover:border-cyan-500/50 ${app.isPremium ? 'border-yellow-500/40' : ''}`}>
+                    <Card key={app.id} className={`transition-all hover:border-cyan-500/50 ${app.isPremium ? 'border-yellow-500/30' : ''}`}>
                         <div className="flex flex-wrap justify-between items-center">
                             <div>
-                                <h3 className="text-xl font-bold text-white flex items-center">{app.characterName} {app.isPremium && <span className="ml-2 text-xs font-bold bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded-full">PREMIUM</span>}</h3>
-                                <p className="text-sm text-gray-400">Discord ID: {app.discordId}</p>
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    {app.characterName}
+                                    {app.isPremium && <span className="text-xs font-bold bg-yellow-400/20 text-yellow-300 px-2 py-1 rounded-full">PREMIUM</span>}
+                                </h3>
+                                <p className="text-sm text-gray-400">Discord: {app.discordId}</p>
                                 <p className="text-sm text-gray-500">Submitted: {new Date(app.submittedAt).toLocaleString()}</p>
                             </div>
                             <div className="flex items-center space-x-2 mt-4 sm:mt-0">
-                                <button onClick={() => setSelectedApp(selectedApp?.id === app.id ? null : app)} className="text-cyan-400 hover:underline">{selectedApp?.id === app.id ? 'Hide Details' : 'View Details'}</button>
-                                {(filter === 'pending' || filter === 'premium') && (<>
+                                <button onClick={() => setSelectedApp(selectedApp?.id === app.id ? null : app)} className="text-cyan-400 hover:underline text-sm">{selectedApp?.id === app.id ? 'Hide Details' : 'View Details'}</button>
+                                {filter === 'pending' && (<>
                                     <AnimatedButton onClick={() => handleOpenModal(app, 'approved')} className="bg-green-600 !px-4 !py-1.5 text-sm">Approve</AnimatedButton>
                                     <AnimatedButton onClick={() => handleOpenModal(app, 'rejected')} className="bg-red-600 !px-4 !py-1.5 text-sm">Reject</AnimatedButton>
                                 </>)}
@@ -107,10 +121,11 @@ const AppManagement = ({ user }) => {
                             </div>
                         )}
                     </Card>
-                )) : <p className="text-gray-400">No {filter} applications found.</p>}</div>
+                )) : <p className="text-gray-400 text-center py-8">No {viewType === 'premium' ? 'premium' : ''} {filter} applications found.</p>}</div>
             )}
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalAction === 'approved' ? 'Confirm Approval' : 'Confirm Rejection'}>
-                {modalAction === 'approved' ? (
+            
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalAction === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}>
+                {modalAction === 'approve' ? (
                     <div>
                         <p className="text-gray-300">Are you sure you want to approve the application for <span className="font-bold text-white">{selectedApp?.characterName}</span>?</p>
                         <div className="flex justify-end space-x-4 mt-6">
