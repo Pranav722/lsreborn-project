@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// File: frontend/src/App.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import { ShieldCheck, Menu, X, LogOut as LogoutIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -44,37 +45,40 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
+  const checkAuthStatus = useCallback(async () => {
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken) {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${storedToken}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setUser(data);
+            } else {
+                localStorage.removeItem('authToken');
+                setUser(null);
+            }
+        } catch (err) {
+            console.error("Auth check failed:", err);
+            setUser(null);
+        }
+    } else {
+        setUser(null);
+    }
+    setAuthLoading(false);
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
 
     if (token) {
         localStorage.setItem('authToken', token);
-        window.history.replaceState({}, document.title, "/"); // Clean the URL
+        window.history.replaceState({}, document.title, "/");
     }
-
-    const storedToken = localStorage.getItem('authToken');
-    if (storedToken) {
-        fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
-            headers: {
-                'Authorization': `Bearer ${storedToken}`
-            }
-        })
-        .then(res => {
-            if (res.ok) return res.json();
-            // If token is invalid/expired, clear it
-            localStorage.removeItem('authToken');
-            return null;
-        })
-        .then(data => {
-            if (data) setUser(data);
-        })
-        .catch(err => console.error("Auth check failed:", err))
-        .finally(() => setAuthLoading(false));
-    } else {
-        setAuthLoading(false);
-    }
-  }, []);
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
@@ -83,13 +87,15 @@ export default function App() {
     setPage('home');
   };
 
-  const handleApplyClick = () => {
+  const handleApplyClick = async () => {
+    setIsMobileMenuOpen(false);
     if (user) {
+        // Re-check roles before navigating
+        await checkAuthStatus();
         setPage('apply');
     } else {
         setIsLoginModalOpen(true);
     }
-    setIsMobileMenuOpen(false);
   };
   
   const handleQueueClick = () => {
@@ -160,6 +166,7 @@ export default function App() {
   if (authLoading) return <Layout><div></div></Layout>;
 
   const isStaffOrAdmin = user && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
+  const hasWhitelistedRole = user && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
 
   return (
     <Layout>
@@ -179,7 +186,7 @@ export default function App() {
               <div className="hidden md:block">
                 <div className="ml-10 flex items-center space-x-4">
                   <NavLink pageName="home">Home</NavLink>
-                  <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>
+                  {!hasWhitelistedRole && <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>}
                   <NavLink pageName="queue" onClick={handleQueueClick}>Queue</NavLink>
                   <NavLink pageName="rules">Rules</NavLink>
                   <NavLink pageName="news">News</NavLink>
@@ -236,7 +243,7 @@ export default function App() {
             >
               <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                 <NavLink pageName="home">Home</NavLink>
-                <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>
+                {!hasWhitelistedRole && <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>}
                 <NavLink pageName="queue" onClick={handleQueueClick}>Queue</NavLink>
                 <NavLink pageName="rules">Rules</NavLink>
                 <NavLink pageName="news">News</NavLink>
