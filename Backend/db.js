@@ -8,8 +8,7 @@ const pool = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     ssl: {
-        // This is the crucial fix. It tells the driver to allow
-        // self-signed certificates from secure hosts like Aiven.
+        // This is the crucial fix for self-signed certificates.
         rejectUnauthorized: false 
     },
     waitForConnections: true,

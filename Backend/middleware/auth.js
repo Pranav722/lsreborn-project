@@ -1,7 +1,9 @@
 const jwt = require('jsonwebtoken');
 
 const isAuthenticated = (req, res, next) => {
-    const token = req.cookies.token;
+    // We are now getting the token from the Authorization header
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Format: "Bearer TOKEN"
 
     if (!token) {
         return res.status(401).json({ message: 'Not authenticated: No token provided' });

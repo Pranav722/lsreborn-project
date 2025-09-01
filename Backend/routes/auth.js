@@ -65,22 +65,16 @@ router.get('/discord/callback', async (req, res) => {
             username: userProfile.username,
             avatar: userProfile.avatar,
             discriminator: userProfile.discriminator,
-            roles: roles
+            roles: roles,
+            isStaff: roles.includes(process.env.STAFF_ROLE_ID),
+            isAdmin: roles.includes(process.env.LSR_ADMIN_ROLE_ID)
         };
 
         // Sign the JWT
         const token = jwt.sign({ user: userPayload }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
-        // Set the JWT in a secure, httpOnly cookie
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            maxAge: 24 * 60 * 60 * 1000 // 1 day
-        });
-
-        // Redirect back to the frontend
-        res.redirect(process.env.FRONTEND_URL);
+        // Redirect back to the frontend with the token in the URL query
+        res.redirect(`${process.env.FRONTEND_URL}?token=${token}`);
 
     } catch (error) {
         console.error("Discord callback error:", error);
@@ -95,11 +89,8 @@ router.get('/me', require('../middleware/auth').isAuthenticated, (req, res) => {
 
 // The logout route
 router.post('/logout', (req, res) => {
-    res.clearCookie('token', {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none'
-    });
+    // With JWT, logout is handled entirely on the frontend by deleting the token.
+    // This endpoint is here to provide a formal logout mechanism.
     res.status(200).json({ message: 'Logged out successfully' });
 });
 

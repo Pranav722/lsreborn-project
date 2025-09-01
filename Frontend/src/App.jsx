@@ -1,4 +1,4 @@
-  import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Menu, X, LogOut as LogoutIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -210,7 +210,7 @@ export default function App() {
                                         Logout
                                     </button>
                                 </motion.div>
-                          )}
+                            )}
                             </AnimatePresence>
                         </div>
                   ) : (

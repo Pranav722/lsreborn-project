@@ -1,112 +1,102 @@
 const router = require('express').Router();
+const { isAuthenticated } = require('../middleware/auth');
 const db = require('../db');
 require('dotenv').config();
 
-// In-memory queue storage (replace with Redis in production for scalability)
-let queues = { 
-    staff: [], 
-    pd: [], 
-    ems: [], 
-    premium: [], 
-    prime: [], 
-    elite: [], 
-    pro: [], 
-    starter: [], 
-    rookie: [], 
-    normal: [] 
+// In-memory queue storage.
+let queues = {
+    staff: [], police: [], ems: [], premium: [], prime: [], elite: [],
+    pro: [], starter: [], rookie: [], normal: []
 };
 
-const isAuthenticated = (req, res, next) => {
-    if (req.isAuthenticated()) return next();
-    res.status(401).json({ message: 'Unauthorized' });
+const roleToQueueMap = {
+    [process.env.STAFF_ROLE_ID]: 'staff',
+    [process.env.SALE_ROLE_ID]: 'police',
+    [process.env.EMS_ROLE_ID]: 'ems',
+    [process.env.PREMIUM_ROLE_ID]: 'premium',
+    [process.env.PRIME_ROLE_ID]: 'prime',
+    [process.env.ELITE_ROLE_ID]: 'elite',
+    [process.env.PRO_ROLE_ID]: 'pro',
+    [process.env.STARTER_ROLE_ID]: 'starter',
+    [process.env.ROOKIE_ROLE_ID]: 'rookie',
+    [process.env.WHITELISTED_ROLE_ID]: 'normal'
 };
 
-// The order of priority, from highest to lowest
-const PRIORITY_ORDER = [
-    { name: 'staff', roleId: process.env.STAFF_ROLE_ID },
-    { name: 'pd', roleId: process.env.SALE_ROLE_ID },
-    { name: 'ems', roleId: process.env.EMS_ROLE_ID },
-    { name: 'premium', roleId: process.env.PREMIUM_ROLE_ID },
-    { name: 'prime', roleId: process.env.PRIME_ROLE_ID },
-    { name: 'elite', roleId: process.env.ELITE_ROLE_ID },
-    { name: 'pro', roleId: process.env.PRO_ROLE_ID },
-    { name: 'starter', roleId: process.env.STARTER_ROLE_ID },
-    { name: 'rookie', roleId: process.env.ROOKIE_ROLE_ID },
-    { name: 'normal', roleId: process.env.WHITELISTED_ROLE_ID },
-];
+const priorityOrder = ['staff', 'police', 'ems', 'premium', 'prime', 'elite', 'pro', 'starter', 'rookie', 'normal'];
+
+// This function simulates processing the queue
+setInterval(async () => {
+    for (const type of priorityOrder) {
+        if (queues[type].length > 0) {
+            const userId = queues[type].shift(); // Remove the first person
+            console.log(`Processing user ${userId} from ${type} queue.`);
+            
+            // Add to priority_queue table with a 5-minute expiry
+            try {
+                const expiryTime = Date.now() + (5 * 60 * 1000); // 5 minutes from now
+                await db.query(
+                    'INSERT INTO priority_queue (discord_id, expiry_timestamp) VALUES (?, ?) ON DUPLICATE KEY UPDATE expiry_timestamp = ?',
+                    [userId, expiryTime, expiryTime]
+                );
+                console.log(`User ${userId} granted 5-minute server access.`);
+            } catch (error) {
+                console.error(`Failed to grant priority access to user ${userId}:`, error);
+            }
+            return; // Only process one user per interval
+        }
+    }
+}, 30 * 1000); // Process one person every 30 seconds
 
 router.get('/status', isAuthenticated, (req, res) => {
     const userId = req.user.id;
-    for (const type in queues) {
+    for (const type of priorityOrder) {
         const position = queues[type].indexOf(userId);
         if (position !== -1) {
-            return res.json({ inQueue: true, type, position: position + 1, total: queues[type].length });
+            return res.json({
+                inQueue: true,
+                type: type,
+                position: position + 1,
+                total: queues[type].length
+            });
         }
     }
-    res.json({ inQueue: false, type: null, position: 0, total: 0 });
+    res.json({ inQueue: false });
 });
 
 router.post('/join', isAuthenticated, (req, res) => {
-    const { queueType } = req.body;
-    const userId = req.user.id;
     const userRoles = req.user.roles || [];
+    const userId = req.user.id;
 
-    const queueInfo = PRIORITY_ORDER.find(q => q.name === queueType);
-
-    if (!queueInfo) {
-        return res.status(400).json({ message: 'Invalid queue type' });
-    }
-
-    // Admins and staff can join any queue they want
-    const isStaffOrAdmin = userRoles.includes(process.env.STAFF_ROLE_ID) || userRoles.includes(process.env.LSR_ADMIN_ROLE_ID);
-    
-    // Check eligibility
-    if (!userRoles.includes(queueInfo.roleId) && !isStaffOrAdmin) {
-        return res.status(403).json({ message: `You are not eligible to join the ${queueType} queue.` });
+    // Determine the user's highest priority queue
+    let highestQueue = 'normal'; // Default queue
+    for (const type of priorityOrder) {
+        const roleId = Object.keys(roleToQueueMap).find(key => roleToQueueMap[key] === type);
+        if (roleId && userRoles.includes(roleId)) {
+            highestQueue = type;
+            break; // Stop at the first (highest priority) match
+        }
     }
     
     // Remove from any other queue first
     for (const type in queues) {
         queues[type] = queues[type].filter(id => id !== userId);
     }
-
-    // Add to the assigned queue
-    if (!queues[queueType].includes(userId)) {
-        queues[queueType].push(userId);
+    
+    // Add to the highest priority queue
+    if (!queues[highestQueue].includes(userId)) {
+        queues[highestQueue].push(userId);
     }
     
-    res.status(200).json({ message: `Joined ${queueType} queue` });
+    res.status(200).json({ message: `Joined ${highestQueue} queue.` });
 });
+
 
 router.post('/leave', isAuthenticated, (req, res) => {
     const userId = req.user.id;
     for (const type in queues) {
         queues[type] = queues[type].filter(id => id !== userId);
     }
-    res.status(200).json({ message: 'Left the queue' });
+    res.status(200).json({ message: 'Left all queues.' });
 });
-
-// Simulate processing the queue
-setInterval(async () => {
-    for (const queue of PRIORITY_ORDER) {
-        if (queues[queue.name].length > 0) {
-            const userId = queues[queue.name].shift(); // Remove the first person
-            console.log(`Processing user ${userId} from ${queue.name} queue.`);
-            
-            // Add user to the database priority list with a 5-minute expiry
-            const expiryTimestamp = Date.now() + (5 * 60 * 1000);
-            try {
-                await db.query(
-                    'INSERT INTO priority_queue (discord_id, expiry_timestamp) VALUES (?, ?) ON DUPLICATE KEY UPDATE expiry_timestamp = ?',
-                    [userId, expiryTimestamp, expiryTimestamp]
-                );
-                console.log(`User ${userId} added to database priority list.`);
-            } catch (error) {
-                console.error("Error adding user to priority_queue table:", error);
-            }
-            return; // Only process one person per interval
-        }
-    }
-}, 30000); // Process one person every 30 seconds
 
 module.exports = router;

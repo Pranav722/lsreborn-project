@@ -4,11 +4,7 @@ const { isAuthenticated } = require('../middleware/auth');
 
 // Middleware to check if the user is staff or admin
 const isStaff = (req, res, next) => {
-    const staffRoleId = process.env.STAFF_ROLE_ID;
-    const adminRoleId = process.env.LSR_ADMIN_ROLE_ID;
-    const userRoles = req.user.roles || [];
-
-    if (userRoles.includes(staffRoleId) || userRoles.includes(adminRoleId)) {
+    if (req.user && (req.user.isStaff || req.user.isAdmin)) {
         return next();
     }
     return res.status(403).json({ message: 'Forbidden: Staff access required' });
@@ -16,10 +12,7 @@ const isStaff = (req, res, next) => {
 
 // Middleware to check if the user is an admin
 const isAdmin = (req, res, next) => {
-    const adminRoleId = process.env.LSR_ADMIN_ROLE_ID;
-    const userRoles = req.user.roles || [];
-
-    if (userRoles.includes(adminRoleId)) {
+    if (req.user && req.user.isAdmin) {
         return next();
     }
     return res.status(403).json({ message: 'Forbidden: Admin access required' });
