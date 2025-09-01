@@ -8,13 +8,15 @@ const pool = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
     ssl: {
-        rejectUnauthorized: true
+        // This is the crucial fix. It tells the driver to allow
+        // self-signed certificates from secure hosts like Aiven.
+        rejectUnauthorized: false 
     },
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-console.log("MySQL Connection Pool created with SSL.");
+console.log("MySQL Connection Pool created with updated SSL configuration.");
 
 module.exports = pool;
