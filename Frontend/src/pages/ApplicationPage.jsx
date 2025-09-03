@@ -10,8 +10,8 @@ const ApplicationPage = ({ user, setPage }) => {
   const [wordCount, setWordCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
 
-  const hasWaitingRole = user && user.roles.includes(import.meta.env.VITE_WAITING_FOR_APPROVAL_ROLE_ID);
-  const hasCooldownRole = user && user.roles.includes(import.meta.env.VITE_COOLDOWN_ROLE_ID);
+  const hasWaitingRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WAITING_FOR_APPROVAL_ROLE_ID);
+  const hasCooldownRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_COOLDOWN_ROLE_ID);
   
   const calculateTimeLeft = useCallback(() => {
     if (!user || !user.cooldownExpiry) return '';
@@ -22,8 +22,6 @@ const ApplicationPage = ({ user, setPage }) => {
       const seconds = Math.floor((difference / 1000) % 60);
       return `${hours}h ${minutes}m ${seconds}s`;
     }
-    // In a real app, you might want to trigger a role update via the bot when the timer hits zero.
-    // For now, it will just show 0h 0m 0s.
     return '0h 0m 0s';
   }, [user]);
 
@@ -65,7 +63,7 @@ const ApplicationPage = ({ user, setPage }) => {
 
         if (response.ok) {
             setMessage({ type: 'success', text: 'Application submitted successfully! Redirecting...' });
-            setTimeout(() => setPage('home'), 2000); // Redirect after 2 seconds
+            setTimeout(() => setPage('home'), 2000);
         } else {
             const errorData = await response.json();
             setMessage({ type: 'error', text: errorData.message || 'Failed to submit application.' });
@@ -94,6 +92,24 @@ const ApplicationPage = ({ user, setPage }) => {
             <h3 className="text-2xl font-bold text-red-300">Application on Cooldown</h3>
             <p className="text-red-200 mt-2 mb-4">Your previous application was rejected. You can reapply in:</p>
             <div className="text-4xl font-mono font-bold text-cyan-400 my-4 p-4 bg-gray-900 rounded-lg inline-block">{timeLeft}</div>
+        </Card>
+    );
+  }
+
+  const applicantRoles = [
+      import.meta.env.VITE_APPLICATION_ROLE_ID,
+      import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
+  ].filter(Boolean);
+  const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
+
+  if (!hasApplicantRole) {
+    return (
+        <Card className="text-center">
+            <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
+            <p className="text-gray-300 mb-6">You need an 'Applicant' role to access this form. You can get one from our store.</p>
+            <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
+              <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
+            </a>
         </Card>
     );
   }

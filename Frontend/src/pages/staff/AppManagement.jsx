@@ -1,162 +1,148 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Card from '../../components/Card';
-import AnimatedButton from '../../components/AnimatedButton';
-import Modal from '../../components/Modal';
+import Card from '../components/Card';
+import AnimatedButton from '../components/AnimatedButton';
+import { Clock, CheckCircle } from 'lucide-react';
 
-const AppManagement = ({ user }) => {
-    const [apps, setApps] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [filter, setFilter] = useState('pending');
-    const [viewType, setViewType] = useState('all'); // 'all' or 'premium'
-    const [selectedApp, setSelectedApp] = useState(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalAction, setModalAction] = useState('');
-    const [rejectionReason, setRejectionReason] = useState('');
-    const [customReason, setCustomReason] = useState('');
-    const [cooldown, setCooldown] = useState(24);
-    
-    const presetReasons = ["Low effort application.", "Backstory does not meet requirements.", "Not a unique character concept."];
+const ApplicationPage = ({ user, setPage }) => {
+  const [formData, setFormData] = useState({ characterName: '', characterAge: '', backstory: '' });
+  const [message, setMessage] = useState({ type: '', text: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [timeLeft, setTimeLeft] = useState('');
 
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        const token = localStorage.getItem('authToken');
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applications`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setApps(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch applications:", error);
-        } finally {
-            setIsLoading(false);
+  const hasWaitingRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WAITING_FOR_APPROVAL_ROLE_ID);
+  const hasCooldownRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_COOLDOWN_ROLE_ID);
+  
+  const calculateTimeLeft = useCallback(() => {
+    if (!user || !user.cooldownExpiry) return '';
+    const difference = +new Date(user.cooldownExpiry) - +new Date();
+    if (difference > 0) {
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+      return `${hours}h ${minutes}m ${seconds}s`;
+    }
+    return '0h 0m 0s';
+  }, [user]);
+
+  useEffect(() => {
+    if (hasCooldownRole) {
+      setTimeLeft(calculateTimeLeft());
+      const timer = setInterval(() => {
+        setTimeLeft(calculateTimeLeft());
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [hasCooldownRole, calculateTimeLeft]);
+
+  const handleBackstoryChange = (e) => {
+    setFormData({ ...formData, backstory: e.target.value });
+    setWordCount(e.target.value.trim().split(/\s+/).filter(Boolean).length);
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (wordCount < 200) return;
+    setIsLoading(true);
+    setMessage({ type: '', text: '' });
+    const token = localStorage.getItem('authToken');
+
+    try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applications`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            setMessage({ type: 'success', text: 'Application submitted successfully! Redirecting...' });
+            setTimeout(() => setPage('home'), 2000);
+        } else {
+            const errorData = await response.json();
+            setMessage({ type: 'error', text: errorData.message || 'Failed to submit application.' });
         }
-    }, []);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const handleOpenModal = (app, action) => {
-        setSelectedApp(app);
-        setModalAction(action);
-        setIsModalOpen(true);
-        setRejectionReason('');
-        setCustomReason('');
-    };
-
-    const handleConfirmAction = async () => {
-        if (!selectedApp) return;
-        const token = localStorage.getItem('authToken');
-        const finalReason = rejectionReason === 'custom' ? customReason : rejectionReason;
-        
-        if (modalAction === 'reject' && !finalReason) {
-            alert("Please select or provide a reason for rejection.");
-            return;
-        }
-
-        try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/applications/${selectedApp.id}`, {
-                method: 'PUT',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
-                },
-                body: JSON.stringify({ status: modalAction, reason: finalReason })
-            });
-        } catch (error) {
-            console.error("Failed to update application:", error);
-        } finally {
-            setIsModalOpen(false);
-            setSelectedApp(null);
-            fetchData();
-        }
-    };
-
-    const filteredApps = apps
-        .filter(app => app.status === filter)
-        .filter(app => viewType === 'premium' ? app.isPremium : true);
-
+    } catch (error) {
+        setMessage({ type: 'error', text: 'An unexpected error occurred.' });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+  
+  if (hasWaitingRole) {
     return (
-        <div className="animate-fade-in">
-            <h2 className="text-3xl font-bold text-cyan-400 mb-6">Application Management</h2>
-            <div className="flex flex-wrap gap-4 justify-between items-center mb-6 border-b border-cyan-500/20 pb-4">
-                <div className="flex space-x-2">
-                    {['pending', 'approved', 'rejected'].map(status => (
-                        <button key={status} onClick={() => setFilter(status)} className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${filter === status ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800'}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</button>
-                    ))}
-                </div>
-                 <div className="flex space-x-2">
-                    <button onClick={() => setViewType('all')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'all' ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800'}`}>All Apps</button>
-                    <button onClick={() => setViewType('premium')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'premium' ? 'bg-yellow-500/20 text-yellow-300' : 'text-gray-400 hover:bg-gray-800'}`}>Premium Apps</button>
-                </div>
-            </div>
-            
-            {isLoading ? <p>Loading applications...</p> : (
-                <div className="space-y-4">{filteredApps.length > 0 ? filteredApps.map(app => (
-                    <Card key={app.id} className={`transition-all hover:border-cyan-500/50 ${app.isPremium ? 'border-yellow-500/30' : ''}`}>
-                        <div className="flex flex-wrap justify-between items-center">
-                            <div>
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                                    {app.characterName}
-                                    {app.isPremium && <span className="text-xs font-bold bg-yellow-400/20 text-yellow-300 px-2 py-1 rounded-full">PREMIUM</span>}
-                                </h3>
-                                <p className="text-sm text-gray-400">Discord: {app.discordId}</p>
-                                <p className="text-sm text-gray-500">Submitted: {new Date(app.submittedAt).toLocaleString()}</p>
-                            </div>
-                            <div className="flex items-center space-x-2 mt-4 sm:mt-0">
-                                <button onClick={() => setSelectedApp(selectedApp?.id === app.id ? null : app)} className="text-cyan-400 hover:underline text-sm">{selectedApp?.id === app.id ? 'Hide Details' : 'View Details'}</button>
-                                {filter === 'pending' && (<>
-                                    <AnimatedButton onClick={() => handleOpenModal(app, 'approved')} className="bg-green-600 !px-4 !py-1.5 text-sm">Approve</AnimatedButton>
-                                    <AnimatedButton onClick={() => handleOpenModal(app, 'rejected')} className="bg-red-600 !px-4 !py-1.5 text-sm">Reject</AnimatedButton>
-                                </>)}
-                            </div>
-                        </div>
-                        {selectedApp?.id === app.id && (
-                            <div className="mt-4 pt-4 border-t border-cyan-500/20 animate-fade-in-fast">
-                                <p className="text-gray-300 whitespace-pre-wrap">{app.backstory}</p>
-                                {app.status === 'rejected' && <p className="mt-2 text-red-400">Reason: {app.reason}</p>}
-                            </div>
-                        )}
-                    </Card>
-                )) : <p className="text-gray-400 text-center py-8">No {viewType === 'premium' ? 'premium' : ''} {filter} applications found.</p>}</div>
-            )}
-            
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalAction === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}>
-                {modalAction === 'approve' ? (
-                    <div>
-                        <p className="text-gray-300">Are you sure you want to approve the application for <span className="font-bold text-white">{selectedApp?.characterName}</span>?</p>
-                        <div className="flex justify-end space-x-4 mt-6">
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">Cancel</button>
-                            <AnimatedButton onClick={handleConfirmAction} className="bg-green-600">Confirm</AnimatedButton>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        <p className="text-gray-300">Rejecting application for <span className="font-bold text-white">{selectedApp?.characterName}</span>.</p>
-                        <div>
-                            <label className="block text-sm font-medium text-cyan-300 mb-1">Rejection Reason</label>
-                            <select value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} className="w-full bg-gray-800 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none">
-                                <option value="">Select a preset reason...</option>
-                                {presetReasons.map(r => <option key={r} value={r}>{r}</option>)}
-                                <option value="custom">Custom Reason...</option>
-                            </select>
-                        </div>
-                        {rejectionReason === 'custom' && (<textarea value={customReason} onChange={e => setCustomReason(e.target.value)} placeholder="Enter custom reason" className="w-full bg-gray-800 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"></textarea>)}
-                        <div>
-                            <label className="block text-sm font-medium text-cyan-300 mb-1">Cooldown (hours)</label>
-                            <input type="number" value={cooldown} onChange={e => setCooldown(Number(e.target.value))} className="w-full bg-gray-800 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
-                        </div>
-                        <div className="flex justify-end space-x-4 mt-6">
-                            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">Cancel</button>
-                            <AnimatedButton onClick={handleConfirmAction} className="bg-red-600">Confirm Rejection</AnimatedButton>
-                        </div>
-                    </div>
-                )}
-            </Modal>
-        </div>
+        <Card className="text-center">
+            <CheckCircle className="mx-auto text-cyan-400 h-16 w-16 mb-4" />
+            <h2 className="text-2xl font-bold text-cyan-300">Application in Review</h2>
+            <p className="text-gray-300 mt-2">Your application has been received and is currently waiting for review. This process can take up to 24-48 hours. Please be patient.</p>
+        </Card>
     );
+  }
+  
+  if (hasCooldownRole) {
+    return (
+        <Card className="text-center bg-red-900/50 border border-red-500/30">
+            <Clock className="mx-auto text-red-400 h-16 w-16 mb-4" />
+            <h3 className="text-2xl font-bold text-red-300">Application on Cooldown</h3>
+            <p className="text-red-200 mt-2 mb-4">Your previous application was rejected. You can reapply in:</p>
+            <div className="text-4xl font-mono font-bold text-cyan-400 my-4 p-4 bg-gray-900 rounded-lg inline-block">{timeLeft}</div>
+        </Card>
+    );
+  }
+
+  const applicantRoles = [
+      import.meta.env.VITE_APPLICATION_ROLE_ID,
+      import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
+  ].filter(Boolean);
+  const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
+
+  if (!hasApplicantRole) {
+    return (
+        <Card className="text-center">
+            <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
+            <p className="text-gray-300 mb-6">You need an 'Applicant' role to access this form. You can get one from our store.</p>
+            <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
+              <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
+            </a>
+        </Card>
+    );
+  }
+
+  return (
+    <div className="animate-fade-in">
+      <Card>
+        <h2 className="text-3xl font-bold text-cyan-400 mb-4">Allowlist Application</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="characterName" className="block text-sm font-medium text-cyan-300 mb-1">Character Name</label>
+              <input type="text" name="characterName" id="characterName" value={formData.characterName} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="characterAge" className="block text-sm font-medium text-cyan-300 mb-1">Character Age</label>
+                <input type="number" name="characterAge" id="characterAge" value={formData.characterAge} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
+              </div>
+               <div>
+                 <label htmlFor="discord" className="block text-sm font-medium text-cyan-300 mb-1">Your Discord</label>
+                 <input type="text" name="discord" id="discord" value={`${user.username}#${user.discriminator}`} readOnly className="w-full bg-gray-800/80 border border-cyan-500/30 rounded-lg px-4 py-2 text-gray-400 cursor-not-allowed" />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="backstory" className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory</label>
+              <textarea name="backstory" id="backstory" rows="8" value={formData.backstory} onChange={handleBackstoryChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"></textarea>
+              <p className={`text-sm mt-1 ${wordCount < 200 ? 'text-red-400' : 'text-green-400'}`}>Word Count: {wordCount} / 200</p>
+            </div>
+            {message.text && (<div className={`p-4 rounded-lg text-center ${message.type === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>{message.text}</div>)}
+            <div><AnimatedButton type="submit" disabled={isLoading || wordCount < 200} className="w-full bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed">{isLoading ? 'Submitting...' : 'Submit Application'}</AnimatedButton></div>
+          </form>
+      </Card>
+    </div>
+  );
 };
-export default AppManagement;
+export default ApplicationPage;

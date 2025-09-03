@@ -1,3 +1,4 @@
+// File: backend/routes/queue.js
 const router = require('express').Router();
 const { isAuthenticated } = require('../middleware/auth');
 const db = require('../db');
@@ -31,7 +32,6 @@ setInterval(async () => {
             const userId = queues[type].shift(); // Remove the first person
             console.log(`Processing user ${userId} from ${type} queue.`);
             
-            // Add to priority_queue table with a 5-minute expiry
             try {
                 const expiryTime = Date.now() + (5 * 60 * 1000); // 5 minutes from now
                 await db.query(
@@ -64,30 +64,36 @@ router.get('/status', isAuthenticated, (req, res) => {
 });
 
 router.post('/join', isAuthenticated, (req, res) => {
+    const { queueType } = req.body;
     const userRoles = req.user.roles || [];
     const userId = req.user.id;
+    const isStaffOrAdmin = userRoles.includes(process.env.STAFF_ROLE_ID) || userRoles.includes(process.env.LSR_ADMIN_ROLE_ID);
 
-    // Determine the user's highest priority queue
-    let highestQueue = 'normal'; // Default queue
-    for (const type of priorityOrder) {
-        const roleId = Object.keys(roleToQueueMap).find(key => roleToQueueMap[key] === type);
-        if (roleId && userRoles.includes(roleId)) {
-            highestQueue = type;
-            break; // Stop at the first (highest priority) match
-        }
+    if (!queueType || !queues.hasOwnProperty(queueType)) {
+        return res.status(400).json({ message: 'Invalid queue type provided.' });
     }
+
+    // Find the role required for the requested queue
+    const requiredRoleId = Object.keys(roleToQueueMap).find(key => roleToQueueMap[key] === queueType);
     
+    // Check for eligibility
+    const isEligible = isStaffOrAdmin || (requiredRoleId && userRoles.includes(requiredRoleId)) || queueType === 'normal';
+
+    if (!isEligible) {
+        return res.status(403).json({ message: 'You are not eligible for this queue.' });
+    }
+
     // Remove from any other queue first
     for (const type in queues) {
         queues[type] = queues[type].filter(id => id !== userId);
     }
     
-    // Add to the highest priority queue
-    if (!queues[highestQueue].includes(userId)) {
-        queues[highestQueue].push(userId);
+    // Add to the requested queue
+    if (!queues[queueType].includes(userId)) {
+        queues[queueType].push(userId);
     }
     
-    res.status(200).json({ message: `Joined ${highestQueue} queue.` });
+    res.status(200).json({ message: `Joined ${queueType} queue.` });
 });
 
 

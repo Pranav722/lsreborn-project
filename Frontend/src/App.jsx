@@ -132,7 +132,7 @@ export default function App() {
         news: <NewsPage />,
         store: <StorePage />,
         queue: <QueuePage user={user} setPage={setPage} />,
-        dashboard: <StaffDashboard user={user} setPage={setPage} />
+        dashboard: <StaffDashboard user={user} setPage={setPage} onLogout={handleLogout} />
     };
     
     if ((page === 'queue' || page === 'apply' || page === 'dashboard') && !user) {
@@ -149,7 +149,7 @@ export default function App() {
 
   if (authLoading) return <Layout><div></div></Layout>;
 
-  const isStaffOrAdmin = user && Array.isArray(user.roles) && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
+  const isStaffOrAdmin = user && (user.isStaff || user.isAdmin);
   const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
 
   return (

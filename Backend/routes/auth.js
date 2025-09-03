@@ -1,3 +1,4 @@
+// File: backend/routes/auth.js
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
@@ -49,9 +50,13 @@ router.get('/discord/callback', async (req, res) => {
         });
         const userProfile = await userResponse.json();
         
+        // --- Store the access token to re-fetch roles later ---
+        const discordAccessToken = tokenData.access_token;
+
+
         // Get the user's roles from your specific server
         const memberResponse = await fetch(`${DISCORD_API_URL}/users/@me/guilds/${process.env.GUILD_ID}/member`, {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` },
+            headers: { Authorization: `Bearer ${discordAccessToken}` },
         });
 
         let roles = [];
@@ -75,6 +80,9 @@ router.get('/discord/callback', async (req, res) => {
             }
         }
 
+        const isAdmin = roles.includes(process.env.LSR_ADMIN_ROLE_ID);
+        const isStaff = roles.includes(process.env.STAFF_ROLE_ID) || isAdmin;
+
         // Create a payload for our JWT
         const userPayload = {
             id: userProfile.id,
@@ -83,7 +91,10 @@ router.get('/discord/callback', async (req, res) => {
             discriminator: userProfile.discriminator,
             roles: roles,
             inGuild: inGuild,
-            cooldownExpiry: cooldownExpiry
+            cooldownExpiry: cooldownExpiry,
+            isStaff: isStaff,
+            isAdmin: isAdmin,
+            accessToken: discordAccessToken // Store the access token in the JWT
         };
 
         // Sign the JWT
@@ -100,21 +111,50 @@ router.get('/discord/callback', async (req, res) => {
 
 // A protected route for the frontend to check who is logged in
 router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
-    // Re-fetch cooldown on every check to keep it dynamic
+    // This endpoint now re-fetches roles to ensure data is always fresh
     try {
-        const [userDbRows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
-        if (userDbRows.length > 0) {
-            req.user.cooldownExpiry = userDbRows[0].cooldown_expiry;
+        const memberResponse = await fetch(`${DISCORD_API_URL}/users/@me/guilds/${process.env.GUILD_ID}/member`, {
+            headers: { Authorization: `Bearer ${req.user.accessToken}` }, // Use the stored access token
+        });
+
+        if (memberResponse.ok) {
+            const memberData = await memberResponse.json();
+            req.user.roles = memberData.roles || [];
+            req.user.inGuild = true;
+        } else {
+            req.user.roles = [];
+            req.user.inGuild = false;
         }
-    } catch (dbError) {
-        console.error("Error re-fetching user cooldown from DB:", dbError);
+        
+        // Re-fetch cooldown on every check
+        const [userDbRows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
+        req.user.cooldownExpiry = userDbRows.length > 0 ? userDbRows[0].cooldown_expiry : null;
+
+        // Re-calculate staff/admin status
+        req.user.isAdmin = req.user.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
+        req.user.isStaff = req.user.roles.includes(process.env.STAFF_ROLE_ID) || req.user.isAdmin;
+
+        res.json(req.user);
+    } catch (error) {
+        console.error("Error re-fetching user data in /me route:", error);
+        res.status(500).json({ message: "Failed to refresh user data." });
     }
-    res.json(req.user);
 });
 
+
+router.get('/discord', (req, res) => {
+    const params = new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        redirect_uri: `${process.env.BACKEND_URL}/auth/discord/callback`,
+        response_type: 'code',
+        scope: 'identify guilds guilds.members.read'
+    });
+    res.redirect(`${DISCORD_API_URL}/oauth2/authorize?${params}`);
+});
 
 router.post('/logout', (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
 module.exports = router;
+
