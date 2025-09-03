@@ -1,23 +1,54 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
-import { XCircle } from 'lucide-react';
+import { Clock, CheckCircle } from 'lucide-react';
 
-const ApplicationPage = ({ user }) => {
-  const [cooldown, setCooldown] = useState({ onCooldown: false, reapplyDate: null, reason: '' });
-  const [timeLeft, setTimeLeft] = useState('');
-  const [formData, setFormData] = useState({ characterName: '', characterAge: '', discord: '', backstory: '' });
+const ApplicationPage = ({ user, setPage }) => {
+  const [formData, setFormData] = useState({ characterName: '', characterAge: '', backstory: '' });
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [timeLeft, setTimeLeft] = useState('');
 
-  // In a real app, you would fetch the cooldown status from your backend
-  // For now, this is disabled as the bot handles cooldown roles.
-  // useEffect(() => { ... }, []);
+  const hasWaitingRole = user && user.roles.includes(import.meta.env.VITE_WAITING_FOR_APPROVAL_ROLE_ID);
+  const hasCooldownRole = user && user.roles.includes(import.meta.env.VITE_COOLDOWN_ROLE_ID);
+  
+  const calculateTimeLeft = useCallback(() => {
+    if (!user || !user.cooldownExpiry) return '';
+    const difference = +new Date(user.cooldownExpiry) - +new Date();
+    if (difference > 0) {
+      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((difference / 1000 / 60) % 60);
+      const seconds = Math.floor((difference / 1000) % 60);
+      return `${hours}h ${minutes}m ${seconds}s`;
+    }
+    // In a real app, you might want to trigger a role update via the bot when the timer hits zero.
+    // For now, it will just show 0h 0m 0s.
+    return '0h 0m 0s';
+  }, [user]);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  useEffect(() => {
+    if (hasCooldownRole) {
+      setTimeLeft(calculateTimeLeft());
+      const timer = setInterval(() => {
+        setTimeLeft(calculateTimeLeft());
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [hasCooldownRole, calculateTimeLeft]);
+
+  const handleBackstoryChange = (e) => {
+    setFormData({ ...formData, backstory: e.target.value });
+    setWordCount(e.target.value.trim().split(/\s+/).filter(Boolean).length);
+  };
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (wordCount < 200) return;
     setIsLoading(true);
     setMessage({ type: '', text: '' });
     const token = localStorage.getItem('authToken');
@@ -33,8 +64,8 @@ const ApplicationPage = ({ user }) => {
         });
 
         if (response.ok) {
-            setMessage({ type: 'success', text: 'Application submitted successfully!' });
-            setFormData({ characterName: '', characterAge: '', discord: '', backstory: '' });
+            setMessage({ type: 'success', text: 'Application submitted successfully! Redirecting...' });
+            setTimeout(() => setPage('home'), 2000); // Redirect after 2 seconds
         } else {
             const errorData = await response.json();
             setMessage({ type: 'error', text: errorData.message || 'Failed to submit application.' });
@@ -45,6 +76,27 @@ const ApplicationPage = ({ user }) => {
         setIsLoading(false);
     }
   };
+  
+  if (hasWaitingRole) {
+    return (
+        <Card className="text-center">
+            <CheckCircle className="mx-auto text-cyan-400 h-16 w-16 mb-4" />
+            <h2 className="text-2xl font-bold text-cyan-300">Application in Review</h2>
+            <p className="text-gray-300 mt-2">Your application has been received and is currently waiting for review. This process can take up to 24-48 hours. Please be patient.</p>
+        </Card>
+    );
+  }
+  
+  if (hasCooldownRole) {
+    return (
+        <Card className="text-center bg-red-900/50 border border-red-500/30">
+            <Clock className="mx-auto text-red-400 h-16 w-16 mb-4" />
+            <h3 className="text-2xl font-bold text-red-300">Application on Cooldown</h3>
+            <p className="text-red-200 mt-2 mb-4">Your previous application was rejected. You can reapply in:</p>
+            <div className="text-4xl font-mono font-bold text-cyan-400 my-4 p-4 bg-gray-900 rounded-lg inline-block">{timeLeft}</div>
+        </Card>
+    );
+  }
 
   return (
     <div className="animate-fade-in">
@@ -60,17 +112,18 @@ const ApplicationPage = ({ user }) => {
                 <label htmlFor="characterAge" className="block text-sm font-medium text-cyan-300 mb-1">Character Age</label>
                 <input type="number" name="characterAge" id="characterAge" value={formData.characterAge} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
               </div>
-              <div>
-                <label htmlFor="discord" className="block text-sm font-medium text-cyan-300 mb-1">Discord ID (e.g., username#1234)</label>
-                <input type="text" name="discord" id="discord" value={formData.discord} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
+               <div>
+                 <label htmlFor="discord" className="block text-sm font-medium text-cyan-300 mb-1">Your Discord</label>
+                 <input type="text" name="discord" id="discord" value={`${user.username}#${user.discriminator}`} readOnly className="w-full bg-gray-800/80 border border-cyan-500/30 rounded-lg px-4 py-2 text-gray-400 cursor-not-allowed" />
               </div>
             </div>
             <div>
-              <label htmlFor="backstory" className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory (min. 200 words)</label>
-              <textarea name="backstory" id="backstory" rows="6" value={formData.backstory} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"></textarea>
+              <label htmlFor="backstory" className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory</label>
+              <textarea name="backstory" id="backstory" rows="8" value={formData.backstory} onChange={handleBackstoryChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"></textarea>
+              <p className={`text-sm mt-1 ${wordCount < 200 ? 'text-red-400' : 'text-green-400'}`}>Word Count: {wordCount} / 200</p>
             </div>
             {message.text && (<div className={`p-4 rounded-lg text-center ${message.type === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>{message.text}</div>)}
-            <div><AnimatedButton type="submit" disabled={isLoading} className="w-full bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed">{isLoading ? 'Submitting...' : 'Submit Application'}</AnimatedButton></div>
+            <div><AnimatedButton type="submit" disabled={isLoading || wordCount < 200} className="w-full bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed">{isLoading ? 'Submitting...' : 'Submit Application'}</AnimatedButton></div>
           </form>
       </Card>
     </div>

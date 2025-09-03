@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
+const db = require('../db');
 require('dotenv').config();
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
@@ -54,9 +55,24 @@ router.get('/discord/callback', async (req, res) => {
         });
 
         let roles = [];
+        let inGuild = false;
         if (memberResponse.ok) {
             const memberData = await memberResponse.json();
             roles = memberData.roles || [];
+            inGuild = true;
+        }
+
+        // Fetch cooldown info from our database
+        let cooldownExpiry = null;
+        if (inGuild) {
+            try {
+                const [userDbRows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [userProfile.id]);
+                if (userDbRows.length > 0) {
+                    cooldownExpiry = userDbRows[0].cooldown_expiry;
+                }
+            } catch (dbError) {
+                console.error("Error fetching user cooldown from DB:", dbError);
+            }
         }
 
         // Create a payload for our JWT
@@ -66,8 +82,8 @@ router.get('/discord/callback', async (req, res) => {
             avatar: userProfile.avatar,
             discriminator: userProfile.discriminator,
             roles: roles,
-            isStaff: roles.includes(process.env.STAFF_ROLE_ID),
-            isAdmin: roles.includes(process.env.LSR_ADMIN_ROLE_ID)
+            inGuild: inGuild,
+            cooldownExpiry: cooldownExpiry
         };
 
         // Sign the JWT
@@ -83,14 +99,21 @@ router.get('/discord/callback', async (req, res) => {
 });
 
 // A protected route for the frontend to check who is logged in
-router.get('/me', require('../middleware/auth').isAuthenticated, (req, res) => {
+router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
+    // Re-fetch cooldown on every check to keep it dynamic
+    try {
+        const [userDbRows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
+        if (userDbRows.length > 0) {
+            req.user.cooldownExpiry = userDbRows[0].cooldown_expiry;
+        }
+    } catch (dbError) {
+        console.error("Error re-fetching user cooldown from DB:", dbError);
+    }
     res.json(req.user);
 });
 
-// The logout route
+
 router.post('/logout', (req, res) => {
-    // With JWT, logout is handled entirely on the frontend by deleting the token.
-    // This endpoint is here to provide a formal logout mechanism.
     res.status(200).json({ message: 'Logged out successfully' });
 });
 

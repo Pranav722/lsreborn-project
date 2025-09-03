@@ -44,8 +44,8 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  const checkAuthStatus = useCallback(async () => {
-    const storedToken = localStorage.getItem('authToken');
+  const checkAuthStatus = useCallback(async (tokenToUse = null) => {
+    const storedToken = tokenToUse || localStorage.getItem('authToken');
     if (storedToken) {
         try {
             const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
@@ -71,12 +71,14 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    let tokenToUse = null;
 
     if (token) {
         localStorage.setItem('authToken', token);
+        tokenToUse = token;
         window.history.replaceState({}, document.title, "/");
     }
-    checkAuthStatus();
+    checkAuthStatus(tokenToUse);
   }, [checkAuthStatus]);
 
   const handleLogout = () => {
@@ -89,7 +91,6 @@ export default function App() {
   const handleApplyClick = async () => {
     setIsMobileMenuOpen(false);
     if (user) {
-        // Re-check roles before navigating to ensure they are up-to-date
         await checkAuthStatus();
         setPage('apply');
     } else {
@@ -97,76 +98,57 @@ export default function App() {
     }
   };
   
-  const handleQueueClick = () => {
+  const handleQueueClick = async () => {
+    setIsMobileMenuOpen(false);
     if (user) {
+        await checkAuthStatus();
         setPage('queue');
     } else {
         setIsLoginModalOpen(true);
     }
-    setIsMobileMenuOpen(false);
   };
 
   const NavLink = ({ pageName, children, onClick }) => (
     <a href="#" onClick={(e) => { e.preventDefault(); (onClick || (() => { setPage(pageName); setIsMobileMenuOpen(false); }))() }} className={`nav-link relative px-3 py-2 rounded-md text-sm font-medium transition-colors ${page === pageName ? 'text-cyan-400 active' : 'text-gray-300'}`}>{children}</a>
   );
-
+  
   const renderCurrentPage = () => {
-      const applicantRoles = [
-          import.meta.env.VITE_APPLICATION_ROLE_ID,
-          import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
-      ].filter(Boolean);
+    if (user && !user.inGuild && page !== 'home') {
+        return (
+            <Card className="text-center">
+                <h2 className="text-2xl font-bold text-cyan-400 mb-4">Join Our Discord Server</h2>
+                <p className="text-gray-300 mb-6">To access this and other features, you need to be a member of our Discord server. Click the button below to join!</p>
+                <a href="https://discord.gg/lsreborn1" target="_blank" rel="noopener noreferrer">
+                  <AnimatedButton className="bg-blue-600">Join Discord</AnimatedButton>
+                </a>
+            </Card>
+        );
+    }
 
-      // Defensive check to ensure user.roles is an array before using .some()
-      const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
-
-      const pageMap = {
-          home: <HomePage setPage={setPage} onApplyClick={handleApplyClick} />,
-          apply: <ApplicationPage user={user} />,
-          rules: <RulesPage />,
-          news: <NewsPage />,
-          store: <StorePage />,
-          queue: <QueuePage user={user} setPage={setPage} />,
-          dashboard: <StaffDashboard user={user} setPage={setPage} onLogout={handleLogout} />
-      };
-      
-      if (page === 'apply' && user && !hasApplicantRole) {
-          return (
-              <Card className="text-center">
-                  <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
-                  <p className="text-gray-300 mb-6">You need an 'Applicant' role to access this form. You can get one from our store.</p>
-                  <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
-                    <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
-                  </a>
-              </Card>
-          );
-      }
-      if ((page === 'queue' || page === 'apply' || page === 'dashboard') && !user) {
-          return (
-              <Card className="text-center">
-                  <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
-                  <p className="text-gray-300 mb-6">You must be logged in to access this page.</p>
-                  <AnimatedButton onClick={() => setIsLoginModalOpen(true)} className="bg-cyan-500">Login</AnimatedButton>
-              </Card>
-          );
-      }
-
-      // Defensive check for staff/admin roles
-      const isStaffOrAdmin = user && Array.isArray(user.roles) && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
-
-      if (page === 'dashboard' && !isStaffOrAdmin) {
-          return (
+    const pageMap = {
+        home: <HomePage setPage={setPage} onApplyClick={handleApplyClick} />,
+        apply: <ApplicationPage user={user} setPage={setPage} />,
+        rules: <RulesPage />,
+        news: <NewsPage />,
+        store: <StorePage />,
+        queue: <QueuePage user={user} setPage={setPage} />,
+        dashboard: <StaffDashboard user={user} setPage={setPage} />
+    };
+    
+    if ((page === 'queue' || page === 'apply' || page === 'dashboard') && !user) {
+        return (
             <Card className="text-center">
                 <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
-                <p className="text-gray-300 mb-6">You do not have permission to view the staff dashboard.</p>
+                <p className="text-gray-300 mb-6">You must be logged in to access this page.</p>
+                <AnimatedButton onClick={() => setIsLoginModalOpen(true)} className="bg-cyan-500">Login</AnimatedButton>
             </Card>
-          );
-      }
-      return <div key={page} className="page-container">{pageMap[page]}</div>;
+        );
+    }
+    return <div key={page} className="page-container">{pageMap[page]}</div>;
   };
 
   if (authLoading) return <Layout><div></div></Layout>;
 
-  // Defensive checks for navbar rendering
   const isStaffOrAdmin = user && Array.isArray(user.roles) && (user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID));
   const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
 
