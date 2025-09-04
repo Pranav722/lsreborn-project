@@ -10,10 +10,19 @@ const isStaff = (req, res, next) => {
     return res.status(403).json({ message: 'Forbidden: Staff access required' });
 };
 
+// Middleware to check if the user is an admin
+const isAdmin = (req, res, next) => {
+    if (req.user && req.user.isAdmin) {
+        return next();
+    }
+    return res.status(403).json({ message: 'Forbidden: Admin access required' });
+};
+
+
 // GET all applications (for staff/admin)
 router.get('/', isAuthenticated, isStaff, async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT * FROM applications ORDER BY isPremium DESC, submittedAt DESC');
+        const [rows] = await db.query('SELECT *, (isPremium = 1) AS isPremium FROM applications ORDER BY isPremium DESC, submittedAt DESC');
         res.json(rows);
     } catch (err) {
         console.error("Error fetching applications:", err);
@@ -24,20 +33,26 @@ router.get('/', isAuthenticated, isStaff, async (req, res) => {
 // POST a new application
 router.post('/', isAuthenticated, async (req, res) => {
     const { characterName, characterAge, backstory } = req.body;
+    
+    // Basic validation on the backend for security
+    if (!characterName || !characterAge || !backstory) {
+        return res.status(400).json({ message: "All fields are required." });
+    }
+    const wordCount = backstory.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount < 200) {
+        return res.status(400).json({ message: "Backstory must be at least 200 words." });
+    }
+
     const discordId = req.user.id;
     const userRoles = req.user.roles || [];
     
-    // Server-side word count validation
-    const wordCount = backstory.trim().split(/\s+/).length;
-    if (wordCount < 200) {
-        return res.status(400).json({ message: 'Backstory must be at least 200 words.' });
-    }
-
+    // Check if the user has a premium applicant role
     const isPremium = userRoles.includes(process.env.PREMIUM_APPLICANT_ROLE_ID);
 
     try {
-        const query = 'INSERT INTO applications (discordId, characterName, characterAge, backstory, isPremium) VALUES (?, ?, ?, ?, ?)';
-        await db.query(query, [discordId, characterName, characterAge, backstory, isPremium]);
+        const query = 'INSERT INTO applications (discordId, characterName, characterAge, backstory, isPremium, status, notified) VALUES (?, ?, ?, ?, ?, ?, ?)';
+        // Set status to pending and notified to 0 so the bot can process it
+        await db.query(query, [discordId, characterName, characterAge, backstory, isPremium, 'pending', 0]); 
         res.status(201).json({ message: 'Application submitted successfully' });
     } catch (err) {
         console.error("Error submitting application:", err);
@@ -62,5 +77,6 @@ router.put('/:id', isAuthenticated, isStaff, async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
+
 
 module.exports = router;

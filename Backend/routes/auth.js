@@ -1,9 +1,8 @@
-// File: backend/routes/auth.js
 const router = require('express').Router();
 const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
-const db = require('../db');
 require('dotenv').config();
+const db = require('../db');
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
@@ -50,13 +49,9 @@ router.get('/discord/callback', async (req, res) => {
         });
         const userProfile = await userResponse.json();
         
-        // --- Store the access token to re-fetch roles later ---
-        const discordAccessToken = tokenData.access_token;
-
-
         // Get the user's roles from your specific server
         const memberResponse = await fetch(`${DISCORD_API_URL}/users/@me/guilds/${process.env.GUILD_ID}/member`, {
-            headers: { Authorization: `Bearer ${discordAccessToken}` },
+            headers: { Authorization: `Bearer ${tokenData.access_token}` },
         });
 
         let roles = [];
@@ -67,21 +62,16 @@ router.get('/discord/callback', async (req, res) => {
             inGuild = true;
         }
 
-        // Fetch cooldown info from our database
+        // Get cooldown expiry from our database
         let cooldownExpiry = null;
-        if (inGuild) {
-            try {
-                const [userDbRows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [userProfile.id]);
-                if (userDbRows.length > 0) {
-                    cooldownExpiry = userDbRows[0].cooldown_expiry;
-                }
-            } catch (dbError) {
-                console.error("Error fetching user cooldown from DB:", dbError);
+        try {
+            const [userRows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [userProfile.id]);
+            if (userRows.length > 0) {
+                cooldownExpiry = userRows[0].cooldown_expiry;
             }
+        } catch (dbError) {
+            console.error("DB Error fetching cooldown:", dbError);
         }
-
-        const isAdmin = roles.includes(process.env.LSR_ADMIN_ROLE_ID);
-        const isStaff = roles.includes(process.env.STAFF_ROLE_ID) || isAdmin;
 
         // Create a payload for our JWT
         const userPayload = {
@@ -92,9 +82,8 @@ router.get('/discord/callback', async (req, res) => {
             roles: roles,
             inGuild: inGuild,
             cooldownExpiry: cooldownExpiry,
-            isStaff: isStaff,
-            isAdmin: isAdmin,
-            accessToken: discordAccessToken // Store the access token in the JWT
+            isStaff: roles.includes(process.env.STAFF_ROLE_ID) || roles.includes(process.env.LSR_ADMIN_ROLE_ID),
+            isAdmin: roles.includes(process.env.LSR_ADMIN_ROLE_ID)
         };
 
         // Sign the JWT
@@ -109,52 +98,48 @@ router.get('/discord/callback', async (req, res) => {
     }
 });
 
-// A protected route for the frontend to check who is logged in
+// A protected route for the frontend to check who is logged in and get fresh data
 router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
-    // This endpoint now re-fetches roles to ensure data is always fresh
+    // The JWT is valid, but the roles might be stale.
+    // We re-fetch roles and other dynamic data here to ensure the frontend is always up-to-date.
     try {
-        const memberResponse = await fetch(`${DISCORD_API_URL}/users/@me/guilds/${process.env.GUILD_ID}/member`, {
-            headers: { Authorization: `Bearer ${req.user.accessToken}` }, // Use the stored access token
+        // We need a way to get a fresh access token if the original one expired.
+        // For simplicity, we will re-fetch roles using the bot's token.
+        // In a full production app, you would implement a refresh token flow.
+        const memberResponse = await fetch(`${DISCORD_API_URL}/guilds/${process.env.GUILD_ID}/members/${req.user.id}`, {
+            headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
         });
 
+        let roles = req.user.roles; // Default to old roles if fetch fails
         if (memberResponse.ok) {
             const memberData = await memberResponse.json();
-            req.user.roles = memberData.roles || [];
-            req.user.inGuild = true;
-        } else {
-            req.user.roles = [];
-            req.user.inGuild = false;
+            roles = memberData.roles || [];
+        }
+
+        let cooldownExpiry = null;
+        try {
+            const [userRows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
+            if (userRows.length > 0) {
+                cooldownExpiry = userRows[0].cooldown_expiry;
+            }
+        } catch (dbError) {
+            console.error("DB Error re-fetching cooldown:", dbError);
         }
         
-        // Re-fetch cooldown on every check
-        const [userDbRows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
-        req.user.cooldownExpiry = userDbRows.length > 0 ? userDbRows[0].cooldown_expiry : null;
+        const refreshedUserPayload = {
+            ...req.user,
+            roles: roles,
+            cooldownExpiry: cooldownExpiry,
+            isStaff: roles.includes(process.env.STAFF_ROLE_ID) || roles.includes(process.env.LSR_ADMIN_ROLE_ID),
+            isAdmin: roles.includes(process.env.LSR_ADMIN_ROLE_ID)
+        };
 
-        // Re-calculate staff/admin status
-        req.user.isAdmin = req.user.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
-        req.user.isStaff = req.user.roles.includes(process.env.STAFF_ROLE_ID) || req.user.isAdmin;
+        res.json(refreshedUserPayload);
 
-        res.json(req.user);
-    } catch (error) {
-        console.error("Error re-fetching user data in /me route:", error);
-        res.status(500).json({ message: "Failed to refresh user data." });
+    } catch(error) {
+        console.error("Error refreshing user data:", error);
+        res.status(500).json({ message: "Error refreshing user data" });
     }
 });
 
-
-router.get('/discord', (req, res) => {
-    const params = new URLSearchParams({
-        client_id: process.env.DISCORD_CLIENT_ID,
-        redirect_uri: `${process.env.BACKEND_URL}/auth/discord/callback`,
-        response_type: 'code',
-        scope: 'identify guilds guilds.members.read'
-    });
-    res.redirect(`${DISCORD_API_URL}/oauth2/authorize?${params}`);
-});
-
-router.post('/logout', (req, res) => {
-    res.status(200).json({ message: 'Logged out successfully' });
-});
-
 module.exports = router;
-

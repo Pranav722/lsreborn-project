@@ -10,6 +10,7 @@ const ApplicationPage = ({ user, setPage }) => {
   const [wordCount, setWordCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState('');
 
+  // Defensive checks to ensure user and user.roles exist before trying to access them
   const hasWaitingRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WAITING_FOR_APPROVAL_ROLE_ID);
   const hasCooldownRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_COOLDOWN_ROLE_ID);
   
@@ -87,29 +88,11 @@ const ApplicationPage = ({ user, setPage }) => {
   
   if (hasCooldownRole) {
     return (
-        <Card className="text-center bg-red-900/50 border border-red-500/30">
-            <Clock className="mx-auto text-red-400 h-16 w-16 mb-4" />
+        <Card className="text-center bg-gray-900/80 border border-red-500/30">
+            <Clock className="mx-auto text-red-400 h-16 w-16 mb-4 animate-pulse" />
             <h3 className="text-2xl font-bold text-red-300">Application on Cooldown</h3>
             <p className="text-red-200 mt-2 mb-4">Your previous application was rejected. You can reapply in:</p>
-            <div className="text-4xl font-mono font-bold text-cyan-400 my-4 p-4 bg-gray-900 rounded-lg inline-block">{timeLeft}</div>
-        </Card>
-    );
-  }
-
-  const applicantRoles = [
-      import.meta.env.VITE_APPLICATION_ROLE_ID,
-      import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
-  ].filter(Boolean);
-  const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
-
-  if (!hasApplicantRole) {
-    return (
-        <Card className="text-center">
-            <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
-            <p className="text-gray-300 mb-6">You need an 'Applicant' role to access this form. You can get one from our store.</p>
-            <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
-              <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
-            </a>
+            <div className="text-4xl font-mono font-bold text-cyan-400 my-4 p-4 bg-gray-900 rounded-lg inline-block shadow-lg">{timeLeft}</div>
         </Card>
     );
   }
@@ -130,7 +113,7 @@ const ApplicationPage = ({ user, setPage }) => {
               </div>
                <div>
                  <label htmlFor="discord" className="block text-sm font-medium text-cyan-300 mb-1">Your Discord</label>
-                 <input type="text" name="discord" id="discord" value={`${user.username}#${user.discriminator}`} readOnly className="w-full bg-gray-800/80 border border-cyan-500/30 rounded-lg px-4 py-2 text-gray-400 cursor-not-allowed" />
+                 <input type="text" name="discord" id="discord" value={user ? `${user.username}#${user.discriminator}` : ''} readOnly className="w-full bg-gray-800/80 border border-cyan-500/30 rounded-lg px-4 py-2 text-gray-400 cursor-not-allowed" />
               </div>
             </div>
             <div>

@@ -77,7 +77,23 @@ const AppManagement = ({ user }) => {
 
     const filteredApps = apps
         .filter(app => app.status === filter)
-        .filter(app => viewType === 'premium' ? app.isPremium : true);
+        .filter(app => viewType === 'premium' ? app.isPremium : !app.isPremium);
+
+    if (viewType === 'all') {
+        filteredApps = apps.filter(app => app.status === filter);
+    } else {
+        filteredApps = apps
+            .filter(app => app.status === filter)
+            .filter(app => viewType === 'premium' ? app.isPremium : !app.isPremium);
+    }
+     const finalFilteredApps = apps
+        .filter(app => app.status === filter)
+        .filter(app => {
+            if (viewType === 'premium') return app.isPremium;
+            if (viewType === 'normal') return !app.isPremium;
+            return true; // for 'all'
+        });
+
 
     return (
         <div className="animate-fade-in">
@@ -98,7 +114,7 @@ const AppManagement = ({ user }) => {
             </div>
             
             {isLoading ? <p>Loading applications...</p> : (
-                <div className="space-y-4">{filteredApps.length > 0 ? filteredApps.map(app => (
+                <div className="space-y-4">{finalFilteredApps.length > 0 ? finalFilteredApps.map(app => (
                     <Card key={app.id} className={`transition-all hover:border-cyan-500/50 ${app.isPremium ? 'border-yellow-500/30' : ''}`}>
                         <div className="flex flex-wrap justify-between items-center">
                             <div>
@@ -106,7 +122,7 @@ const AppManagement = ({ user }) => {
                                     {app.characterName}
                                     {app.isPremium && <span className="text-xs font-bold bg-yellow-400/20 text-yellow-300 px-2 py-1 rounded-full">PREMIUM</span>}
                                 </h3>
-                                <p className="text-sm text-gray-400">Discord: {app.discordId}</p>
+                                <p className="text-sm text-gray-400">Discord ID: {app.discordId}</p>
                                 <p className="text-sm text-gray-500">Submitted: {new Date(app.submittedAt).toLocaleString()}</p>
                             </div>
                             <div className="flex items-center space-x-2 mt-4 sm:mt-0">
@@ -124,7 +140,7 @@ const AppManagement = ({ user }) => {
                             </div>
                         )}
                     </Card>
-                )) : <p className="text-gray-400 text-center py-8">No {viewType === 'premium' ? 'premium' : ''} {filter} applications found.</p>}</div>
+                )) : <p className="text-gray-400 text-center py-8">No {viewType !== 'all' ? viewType : ''} {filter} applications found.</p>}</div>
             )}
             
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalAction === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}>
