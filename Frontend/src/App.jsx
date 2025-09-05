@@ -157,7 +157,7 @@ export default function App() {
             </div>
         );
     }
-    
+    // No key on page container for smoother transitions
     return pageMap[page];
   };
 

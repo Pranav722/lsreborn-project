@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, Youtube, Instagram, Twitter, Twitch } from 'lucide-react';
+import { ShieldCheck, Youtube, Instagram } from 'lucide-react';
 
 const Footer = ({ setPage }) => {
     return (
@@ -19,6 +19,13 @@ const Footer = ({ setPage }) => {
                             <ShieldCheck className="text-cyan-400"/> LSReborn V2
                         </button>
                         <p className="text-gray-400 text-sm">The most immersive GTA V roleplay experience, where your story matters and every decision shapes the city.</p>
+                         <div className="flex space-x-4">
+                            <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors"><Youtube size={20} /></a>
+                            <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors"><Instagram size={20} /></a>
+                            <a href="https://discord.gg/lsreborn1" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                               <svg role="img" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 4.36981C18.699 3.50425 16.903 2.83421 15.01 2.33753C14.751 2.68808 14.492 3.03862 14.25 3.375C12.486 2.89885 10.739 2.89885 8.975 3.375C8.733 3.03862 8.474 2.68808 8.215 2.33753C6.322 2.83421 4.526 3.50425 2.909 4.36981C0.933 7.46497 0.25 10.824 0.963 14.048C2.583 15.436 4.483 16.374 6.516 16.968C6.776 16.6174 7.02 16.253 7.246 15.875C6.565 15.5893 5.921 15.2257 5.33 14.7874C5.52 14.6869 5.709 14.5725 5.882 14.4444C9.258 16.6111 14.021 16.6111 17.381 14.4444C17.554 14.5725 17.743 14.6869 17.933 14.7874C17.342 15.2257 16.698 15.5893 16.017 15.875C16.243 16.253 16.487 16.6174 16.747 16.968C18.78 16.374 20.68 15.436 22.3 14.048C23.142 10.226 22.112 6.91912 20.317 4.36981ZM7.422 12.1875C6.533 12.1875 5.806 11.4225 5.806 10.4625C5.806 9.5025 6.533 8.7375 7.422 8.7375C8.311 8.7375 9.038 9.5025 9.038 10.4625C9.038 11.4225 8.311 12.1875 7.422 12.1875ZM15.818 12.1875C14.929 12.1875 14.202 11.4225 14.202 10.4625C14.202 9.5025 14.929 8.7375 15.818 8.7375C16.707 8.7375 17.434 9.5025 17.434 10.4625C17.434 11.4225 16.707 12.1875 15.818 12.1875Z"/></svg>
+                            </a>
+                        </div>
                     </div>
 
                     <div className="md:col-span-7 lg:col-span-8 grid grid-cols-2 md:grid-cols-3 gap-8">
@@ -35,7 +42,7 @@ const Footer = ({ setPage }) => {
                             <ul className="mt-4 space-y-2">
                                 <li><a href="#" onClick={(e) => { e.preventDefault(); setPage('apply'); }} className="text-gray-400 hover:text-white transition-colors">Apply Now</a></li>
                                 <li><a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">Store</a></li>
-                                <li><a href="https://discord.gg/lsreborn1" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">Discord</a></li>
+                                <li><a href="#" onClick={(e) => { e.preventDefault(); setPage('queue'); }} className="text-gray-400 hover:text-white transition-colors">Queue</a></li>
                             </ul>
                         </div>
                          <div>
@@ -49,14 +56,8 @@ const Footer = ({ setPage }) => {
                     </div>
                 </div>
                 <div className="mt-8 border-t border-gray-800 pt-8 flex flex-col sm:flex-row justify-between items-center text-sm text-gray-500">
-                    <div className="flex space-x-4">
-                        <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors"><Youtube size={20} /></a>
-                        <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors"><Instagram size={20} /></a>
-                        <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors"><Twitter size={20} /></a>
-                        <a href="#" className="text-gray-400 hover:text-cyan-400 transition-colors"><Twitch size={20} /></a>
-                    </div>
-                    <p className="mt-4 sm:mt-0">&copy; {new Date().getFullYear()} LSReborn. All rights reserved.</p>
-                    <p className="mt-4 sm:mt-0">Crafted with ❤️ by Pranav</p>
+                    <p>&copy; {new Date().getFullYear()} LSReborn. All rights reserved.</p>
+                    <p className="mt-4 sm:mt-0">Crafted with ❤️ by Luffy</p>
                 </div>
             </div>
         </footer>
