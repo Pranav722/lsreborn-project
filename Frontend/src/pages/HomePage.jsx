@@ -7,6 +7,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
   
   useEffect(() => {
     const fetchStatus = () => {
+        // Show a fetching status initially to give the backend time to wake up on Render
         setStatus(prevStatus => ({ ...prevStatus, online: 'fetching' }));
         fetch(`${import.meta.env.VITE_API_URL}/api/status`)
             .then(res => res.json())
