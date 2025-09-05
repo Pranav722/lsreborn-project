@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import Modal from './components/Modal';
 import AnimatedButton from './components/AnimatedButton';
 import Card from './components/Card';
+import Footer from './components/Footer'; // Import the new Footer
 
 // Import Pages
 import HomePage from './pages/HomePage';
@@ -14,7 +15,6 @@ import QueuePage from './pages/QueuePage';
 import ApplicationPage from './pages/ApplicationPage';
 import RulesPage from './pages/RulesPage';
 import NewsPage from './pages/NewsPage';
-import StorePage from './pages/StorePage';
 import StaffDashboard from './pages/staff/StaffDashboard';
 
 
@@ -43,6 +43,16 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  // Navbar scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+        setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const checkAuthStatus = useCallback(async (tokenToUse = null) => {
     const storedToken = tokenToUse || localStorage.getItem('authToken');
@@ -115,13 +125,15 @@ export default function App() {
   const renderCurrentPage = () => {
     if (user && !user.inGuild && page !== 'home') {
         return (
-            <Card className="text-center">
-                <h2 className="text-2xl font-bold text-cyan-400 mb-4">Join Our Discord Server</h2>
-                <p className="text-gray-300 mb-6">To access this and other features, you need to be a member of our Discord server. Click the button below to join!</p>
-                <a href="https://discord.gg/lsreborn1" target="_blank" rel="noopener noreferrer">
-                  <AnimatedButton className="bg-blue-600">Join Discord</AnimatedButton>
-                </a>
-            </Card>
+            <div className="py-20">
+                <Card className="text-center max-w-lg mx-auto">
+                    <h2 className="text-2xl font-bold text-cyan-400 mb-4">Join Our Discord Server</h2>
+                    <p className="text-gray-300 mb-6">To access this and other features, you need to be a member of our Discord server. Click the button below to join!</p>
+                    <a href="https://discord.gg/lsreborn1" target="_blank" rel="noopener noreferrer">
+                      <AnimatedButton className="bg-blue-600">Join Discord</AnimatedButton>
+                    </a>
+                </Card>
+            </div>
         );
     }
 
@@ -130,21 +142,23 @@ export default function App() {
         apply: <ApplicationPage user={user} setPage={setPage} />,
         rules: <RulesPage />,
         news: <NewsPage />,
-        store: <StorePage />,
         queue: <QueuePage user={user} setPage={setPage} />,
         dashboard: <StaffDashboard user={user} setPage={setPage} onLogout={handleLogout} />
     };
     
     if ((page === 'queue' || page === 'apply' || page === 'dashboard') && !user) {
         return (
-            <Card className="text-center">
-                <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
-                <p className="text-gray-300 mb-6">You must be logged in to access this page.</p>
-                <AnimatedButton onClick={() => setIsLoginModalOpen(true)} className="bg-cyan-500">Login</AnimatedButton>
-            </Card>
+            <div className="py-20">
+                <Card className="text-center max-w-lg mx-auto">
+                    <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
+                    <p className="text-gray-300 mb-6">You must be logged in to access this page.</p>
+                    <AnimatedButton onClick={() => setIsLoginModalOpen(true)} className="bg-cyan-500">Login</AnimatedButton>
+                </Card>
+            </div>
         );
     }
-    return <div key={page} className="page-container">{pageMap[page]}</div>;
+    // No key on page container for smoother transitions
+    return pageMap[page];
   };
 
   if (authLoading) return <Layout><div></div></Layout>;
@@ -159,7 +173,7 @@ export default function App() {
         onClose={() => setIsLoginModalOpen(false)}
       />
       <div className="relative z-10">
-        <nav className="bg-gray-900/50 backdrop-blur-lg border-b border-cyan-500/10 sticky top-0 z-40">
+        <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-gray-900/50 backdrop-blur-lg border-b border-cyan-500/10' : 'bg-transparent border-transparent'}`}>
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
@@ -223,7 +237,7 @@ export default function App() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="md:hidden"
+              className="md:hidden bg-gray-900/80 backdrop-blur-md"
             >
               <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                 <NavLink pageName="home">Home</NavLink>
@@ -246,9 +260,10 @@ export default function App() {
           )}
           </AnimatePresence>
         </nav>
-        <main className="max-w-screen-2xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">{renderCurrentPage()}</div>
-        </main>
+        <div className="page-content-wrapper">
+          {renderCurrentPage()}
+        </div>
+        <Footer setPage={setPage} />
       </div>
     </Layout>
   );

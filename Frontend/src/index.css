@@ -7,6 +7,11 @@
 @import url('[https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;800&display=swap](https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;700;800&display=swap)');
 
 
+
+.page-content-wrapper {
+    padding-top: 4rem; /* h-16 */
+}
+
 .nav-link {
   position: relative;
   color: #d1d5db; /* gray-300 */

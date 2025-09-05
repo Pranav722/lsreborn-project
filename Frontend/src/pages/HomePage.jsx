@@ -1,4 +1,3 @@
-// File: src/pages/HomePage.jsx
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
@@ -32,13 +31,19 @@ const HomePage = ({ setPage, onApplyClick }) => {
 
   return (
     <div className="animate-fade-in space-y-20">
-      <div className="relative text-center py-24 md:py-32 lg:py-40 rounded-xl overflow-hidden border border-cyan-500/20 bg-gray-900/70">
-          <div className="absolute inset-0 bg-grid-cyan opacity-10"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-gray-900/50 to-transparent"></div>
-          <div className="relative z-10">
+      {/* New Full-Width Hero Section */}
+      <div className="relative text-center -mt-16 -mx-4 sm:-mx-6 lg:-mx-8 h-[60vh] md:h-[80vh] flex items-center justify-center rounded-b-2xl overflow-hidden shadow-2xl shadow-cyan-500/20">
+          <div className="absolute inset-0 bg-black/50 z-10"></div>
+          <div className="absolute inset-0 bg-grid-cyan opacity-10 z-10"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent z-10"></div>
+          <video autoPlay loop muted playsInline className="absolute z-0 w-auto min-w-full min-h-full max-w-none">
+              {/* You can replace this with a more dynamic video */}
+              <source src="https://cdn.discordapp.com/attachments/1080221764562137158/1149341142544760842/gta.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+          </video>
+          <div className="relative z-20 p-4">
               <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tighter animate-slide-in-up">
-                  <span className="text-cyan-400">LS</span>Reborn
+                  <span className="text-cyan-400">LS</span>Reborn V2
               </h1>
               <p className="mt-4 text-lg md:text-xl text-gray-300 max-w-2xl mx-auto animate-slide-in-up" style={{ animationDelay: '200ms' }}>
                   Your next-level roleplaying experience starts here.
@@ -51,6 +56,8 @@ const HomePage = ({ setPage, onApplyClick }) => {
               </div>
           </div>
       </div>
+
+      {/* Server Info Section */}
       <div className="grid md:grid-cols-3 gap-8">
         <Card className="md:col-span-1 animate-fade-in" style={{ animationDelay: '600ms' }}>
           <h3 className="text-2xl font-bold text-cyan-400 mb-4">Server Status</h3>
@@ -65,6 +72,8 @@ const HomePage = ({ setPage, onApplyClick }) => {
           <p className="text-gray-300">We offer a unique, story-driven RP environment with custom scripts, a dedicated staff team, and a vibrant community. Your story is waiting to be written in Los Santos.</p>
         </Card>
       </div>
+
+      {/* Trailer Section */}
       <div className="animate-fade-in" style={{ animationDelay: '1000ms' }}>
         <Card>
             <h2 className="text-3xl font-bold text-cyan-400 mb-6 text-center">Server Trailer</h2>
