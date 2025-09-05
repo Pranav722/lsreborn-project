@@ -1,3 +1,4 @@
+// File: frontend/src/pages/HomePage.jsx
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';

@@ -123,6 +123,7 @@ export default function App() {
   );
   
   const renderCurrentPage = () => {
+    // Defensive check to ensure user object exists before checking its properties
     if (user && !user.inGuild && page !== 'home') {
         return (
             <div className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -157,13 +158,15 @@ export default function App() {
             </div>
         );
     }
-    
     return pageMap[page];
   };
 
   if (authLoading) return <Layout><div></div></Layout>;
 
-  const isStaffOrAdmin = user && (user.isStaff || user.isAdmin);
+  // Defensive checks to ensure user and user.roles exist before checking permissions
+  const isStaff = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID);
+  const isAdmin = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID);
+  const isStaffOrAdmin = isStaff || isAdmin;
   const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
 
   return (
