@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
-import { Clock, CheckCircle } from 'lucide-react';
+import { Clock, CheckCircle, FileText } from 'lucide-react';
 
 const ApplicationPage = ({ user, setPage }) => {
   const [formData, setFormData] = useState({ characterName: '', characterAge: '', backstory: '' });
@@ -11,8 +11,15 @@ const ApplicationPage = ({ user, setPage }) => {
   const [timeLeft, setTimeLeft] = useState('');
 
   // Defensive checks to ensure user and user.roles exist before trying to access them
+  const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
   const hasWaitingRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WAITING_FOR_APPROVAL_ROLE_ID);
   const hasCooldownRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_COOLDOWN_ROLE_ID);
+  const applicantRoles = [
+      import.meta.env.VITE_APPLICATION_ROLE_ID,
+      import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
+  ].filter(Boolean);
+  const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
+
   
   const calculateTimeLeft = useCallback(() => {
     if (!user || !user.cooldownExpiry) return '';
@@ -23,6 +30,8 @@ const ApplicationPage = ({ user, setPage }) => {
       const seconds = Math.floor((difference / 1000) % 60);
       return `${hours}h ${minutes}m ${seconds}s`;
     }
+    // In a real app, you might want to trigger a role update via the bot when the timer hits zero.
+    // For now, it will just show 0h 0m 0s.
     return '0h 0m 0s';
   }, [user]);
 
@@ -64,7 +73,7 @@ const ApplicationPage = ({ user, setPage }) => {
 
         if (response.ok) {
             setMessage({ type: 'success', text: 'Application submitted successfully! Redirecting...' });
-            setTimeout(() => setPage('home'), 2000);
+            setTimeout(() => setPage('home'), 2000); // Redirect after 2 seconds
         } else {
             const errorData = await response.json();
             setMessage({ type: 'error', text: errorData.message || 'Failed to submit application.' });
@@ -76,6 +85,17 @@ const ApplicationPage = ({ user, setPage }) => {
     }
   };
   
+  if (hasWhitelistedRole) {
+    return (
+        <Card className="text-center">
+            <ShieldCheck className="mx-auto text-green-400 h-16 w-16 mb-4" />
+            <h2 className="text-2xl font-bold text-green-300">You're Already Whitelisted!</h2>
+            <p className="text-gray-300 mt-2 mb-6">Your application has been approved. Hop in the server and start your journey!</p>
+            <AnimatedButton onClick={() => setPage('queue')} className="bg-cyan-500">Connect Now</AnimatedButton>
+        </Card>
+    );
+  }
+
   if (hasWaitingRole) {
     return (
         <Card className="text-center">
@@ -97,53 +117,49 @@ const ApplicationPage = ({ user, setPage }) => {
     );
   }
 
-  const applicantRoles = [
-      import.meta.env.VITE_APPLICATION_ROLE_ID,
-      import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
-  ].filter(Boolean);
-  const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
-
-  if (!hasApplicantRole) {
+  if (hasApplicantRole) {
     return (
-        <Card className="text-center">
-            <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
-            <p className="text-gray-300 mb-6">You need an 'Applicant' role to access this form. You can get one from our store.</p>
-            <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
-              <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
-            </a>
+      <div className="animate-fade-in max-w-4xl mx-auto">
+        <Card>
+          <h2 className="text-3xl font-bold text-cyan-400 mb-4">Allowlist Application</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="characterName" className="block text-sm font-medium text-cyan-300 mb-1">Character Name</label>
+                <input type="text" name="characterName" id="characterName" value={formData.characterName} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="characterAge" className="block text-sm font-medium text-cyan-300 mb-1">Character Age</label>
+                  <input type="number" name="characterAge" id="characterAge" value={formData.characterAge} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
+                </div>
+                 <div>
+                   <label htmlFor="discord" className="block text-sm font-medium text-cyan-300 mb-1">Your Discord</label>
+                   <input type="text" name="discord" id="discord" value={user ? `${user.username}#${user.discriminator}` : ''} readOnly className="w-full bg-gray-800/80 border border-cyan-500/30 rounded-lg px-4 py-2 text-gray-400 cursor-not-allowed" />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="backstory" className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory</label>
+                <textarea name="backstory" id="backstory" rows="8" value={formData.backstory} onChange={handleBackstoryChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"></textarea>
+                <p className={`text-sm mt-1 ${wordCount < 200 ? 'text-red-400' : 'text-green-400'}`}>Word Count: {wordCount} / 200</p>
+              </div>
+              {message.text && (<div className={`p-4 rounded-lg text-center ${message.type === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>{message.text}</div>)}
+              <div><AnimatedButton type="submit" disabled={isLoading || wordCount < 200} className="w-full bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed">{isLoading ? 'Submitting...' : 'Submit Application'}</AnimatedButton></div>
+            </form>
         </Card>
+      </div>
     );
   }
 
+  // Fallback for users with no relevant roles
   return (
-    <div className="animate-fade-in max-w-4xl mx-auto">
-      <Card>
-        <h2 className="text-3xl font-bold text-cyan-400 mb-4">Allowlist Application</h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="characterName" className="block text-sm font-medium text-cyan-300 mb-1">Character Name</label>
-              <input type="text" name="characterName" id="characterName" value={formData.characterName} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
-            </div>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="characterAge" className="block text-sm font-medium text-cyan-300 mb-1">Character Age</label>
-                <input type="number" name="characterAge" id="characterAge" value={formData.characterAge} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
-              </div>
-               <div>
-                 <label htmlFor="discord" className="block text-sm font-medium text-cyan-300 mb-1">Your Discord</label>
-                 <input type="text" name="discord" id="discord" value={user ? `${user.username}#${user.discriminator}` : ''} readOnly className="w-full bg-gray-800/80 border border-cyan-500/30 rounded-lg px-4 py-2 text-gray-400 cursor-not-allowed" />
-              </div>
-            </div>
-            <div>
-              <label htmlFor="backstory" className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory</label>
-              <textarea name="backstory" id="backstory" rows="8" value={formData.backstory} onChange={handleBackstoryChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"></textarea>
-              <p className={`text-sm mt-1 ${wordCount < 200 ? 'text-red-400' : 'text-green-400'}`}>Word Count: {wordCount} / 200</p>
-            </div>
-            {message.text && (<div className={`p-4 rounded-lg text-center ${message.type === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>{message.text}</div>)}
-            <div><AnimatedButton type="submit" disabled={isLoading || wordCount < 200} className="w-full bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed">{isLoading ? 'Submitting...' : 'Submit Application'}</AnimatedButton></div>
-          </form>
-      </Card>
-    </div>
+    <Card className="text-center">
+        <FileText className="mx-auto text-cyan-400 h-16 w-16 mb-4" />
+        <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
+        <p className="text-gray-300 mb-6">You need an application pass to access this form. You can get one from our store.</p>
+        <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
+          <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
+        </a>
+    </Card>
   );
 };
 export default ApplicationPage;

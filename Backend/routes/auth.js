@@ -86,8 +86,8 @@ router.get('/discord/callback', async (req, res) => {
             isAdmin: roles.includes(process.env.LSR_ADMIN_ROLE_ID)
         };
 
-        // Sign the JWT
-        const token = jwt.sign({ user: userPayload }, process.env.JWT_SECRET, { expiresIn: '1d' });
+        // Sign the JWT with an 8-hour expiry
+        const token = jwt.sign({ user: userPayload }, process.env.JWT_SECRET, { expiresIn: '8h' });
 
         // Redirect back to the frontend with the token in the URL query
         res.redirect(`${process.env.FRONTEND_URL}?token=${token}`);
@@ -100,16 +100,20 @@ router.get('/discord/callback', async (req, res) => {
 
 // A protected route for the frontend to check who is logged in and get fresh data
 router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
-    // Re-fetch roles and dynamic data to ensure it's always up-to-date
+    // Re-fetch roles and dynamic data to ensure it's always up-to-date.
     try {
         const memberResponse = await fetch(`${DISCORD_API_URL}/guilds/${process.env.GUILD_ID}/members/${req.user.id}`, {
             headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
         });
 
         let roles = req.user.roles; // Default to old roles if fetch fails
+        let inGuild = req.user.inGuild;
         if (memberResponse.ok) {
             const memberData = await memberResponse.json();
             roles = memberData.roles || [];
+            inGuild = true;
+        } else {
+            inGuild = false;
         }
 
         let cooldownExpiry = null;
@@ -125,6 +129,7 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
         const refreshedUserPayload = {
             ...req.user,
             roles: roles,
+            inGuild: inGuild,
             cooldownExpiry: cooldownExpiry,
             isStaff: roles.includes(process.env.STAFF_ROLE_ID) || roles.includes(process.env.LSR_ADMIN_ROLE_ID),
             isAdmin: roles.includes(process.env.LSR_ADMIN_ROLE_ID)
