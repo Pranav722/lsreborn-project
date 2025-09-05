@@ -1,3 +1,4 @@
+// File: src/pages/staff/AppManagement.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../../components/Card';
 import AnimatedButton from '../../components/AnimatedButton';
@@ -7,7 +8,7 @@ const AppManagement = ({ user }) => {
     const [apps, setApps] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState('pending');
-    const [viewType, setViewType] = useState('all'); // 'all' or 'premium'
+    const [viewType, setViewType] = useState('all'); // 'all', 'premium', or 'normal'
     const [selectedApp, setSelectedApp] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalAction, setModalAction] = useState('');
@@ -75,18 +76,7 @@ const AppManagement = ({ user }) => {
         }
     };
 
-    const filteredApps = apps
-        .filter(app => app.status === filter)
-        .filter(app => viewType === 'premium' ? app.isPremium : !app.isPremium);
-
-    if (viewType === 'all') {
-        filteredApps = apps.filter(app => app.status === filter);
-    } else {
-        filteredApps = apps
-            .filter(app => app.status === filter)
-            .filter(app => viewType === 'premium' ? app.isPremium : !app.isPremium);
-    }
-     const finalFilteredApps = apps
+    const finalFilteredApps = apps
         .filter(app => app.status === filter)
         .filter(app => {
             if (viewType === 'premium') return app.isPremium;
@@ -143,8 +133,8 @@ const AppManagement = ({ user }) => {
                 )) : <p className="text-gray-400 text-center py-8">No {viewType !== 'all' ? viewType : ''} {filter} applications found.</p>}</div>
             )}
             
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalAction === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}>
-                {modalAction === 'approve' ? (
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalAction === 'approved' ? 'Confirm Approval' : 'Confirm Rejection'}>
+                {modalAction === 'approved' ? (
                     <div>
                         <p className="text-gray-300">Are you sure you want to approve the application for <span className="font-bold text-white">{selectedApp?.characterName}</span>?</p>
                         <div className="flex justify-end space-x-4 mt-6">
