@@ -30,20 +30,19 @@ const HomePage = ({ setPage, onApplyClick }) => {
   }
 
   return (
-    <div className="animate-fade-in space-y-20">
+    <div className="animate-fade-in">
       {/* New Full-Width Hero Section */}
-      <div className="relative text-center -mt-16 -mx-4 sm:-mx-6 lg:-mx-8 h-[60vh] md:h-[80vh] flex items-center justify-center rounded-b-2xl overflow-hidden shadow-2xl shadow-cyan-500/20">
+      <div className="relative text-center h-[60vh] md:h-[80vh] flex items-center justify-center -mt-16 -mx-4 sm:-mx-6 lg:-mx-8">
           <div className="absolute inset-0 bg-black/50 z-10"></div>
           <div className="absolute inset-0 bg-grid-cyan opacity-10 z-10"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent z-10"></div>
-          <video autoPlay loop muted playsInline className="absolute z-0 w-auto min-w-full min-h-full max-w-none">
-              {/* You can replace this with a more dynamic video */}
-              <source src="https://cdn.discordapp.com/attachments/1080221764562137158/1149341142544760842/gta.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-          </video>
+          
+          {/* You can replace this with a more dynamic video if you have one */}
+          <div className="absolute inset-0 bg-cover bg-center" style={{backgroundImage: "url('/background.png')"}}></div>
+
           <div className="relative z-20 p-4">
               <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tighter animate-slide-in-up">
-                  <span className="text-cyan-400">LS</span>Reborn V2
+                  <span className="text-cyan-400">LSReborn</span> V2
               </h1>
               <p className="mt-4 text-lg md:text-xl text-gray-300 max-w-2xl mx-auto animate-slide-in-up" style={{ animationDelay: '200ms' }}>
                   Your next-level roleplaying experience starts here.
@@ -58,29 +57,31 @@ const HomePage = ({ setPage, onApplyClick }) => {
       </div>
 
       {/* Server Info Section */}
-      <div className="grid md:grid-cols-3 gap-8">
-        <Card className="md:col-span-1 animate-fade-in" style={{ animationDelay: '600ms' }}>
-          <h3 className="text-2xl font-bold text-cyan-400 mb-4">Server Status</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center"><span className="text-gray-300">Status:</span>{getStatusJsx()}</div>
-            <div className="flex justify-between items-center"><span className="text-gray-300">Players:</span><span className="font-bold text-white">{status.players} / {status.maxPlayers}</span></div>
-            <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-cyan-400 h-2.5 rounded-full" style={{ width: status.maxPlayers > 0 ? `${(status.players / status.maxPlayers) * 100}%` : '0%' }}></div></div>
-          </div>
-        </Card>
-        <Card className="md:col-span-2 animate-fade-in" style={{ animationDelay: '800ms' }}>
-          <h3 className="text-2xl font-bold text-cyan-400 mb-4">Why Join Us?</h3>
-          <p className="text-gray-300">We offer a unique, story-driven RP environment with custom scripts, a dedicated staff team, and a vibrant community. Your story is waiting to be written in Los Santos.</p>
-        </Card>
-      </div>
-
-      {/* Trailer Section */}
-      <div className="animate-fade-in" style={{ animationDelay: '1000ms' }}>
-        <Card>
-            <h2 className="text-3xl font-bold text-cyan-400 mb-6 text-center">Server Trailer</h2>
-            <div className="aspect-video-container rounded-lg overflow-hidden shadow-lg shadow-cyan-500/10">
-                <iframe className="w-full h-full" src="https://www.youtube.com/embed/TWH2a9EzqI8" title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen></iframe>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20 space-y-20">
+        <div className="grid md:grid-cols-3 gap-8">
+          <Card className="md:col-span-1 animate-fade-in" style={{ animationDelay: '600ms' }}>
+            <h3 className="text-2xl font-bold text-cyan-400 mb-4">Server Status</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center"><span className="text-gray-300">Status:</span>{getStatusJsx()}</div>
+              <div className="flex justify-between items-center"><span className="text-gray-300">Players:</span><span className="font-bold text-white">{status.players} / {status.maxPlayers}</span></div>
+              <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-cyan-400 h-2.5 rounded-full" style={{ width: status.maxPlayers > 0 ? `${(status.players / status.maxPlayers) * 100}%` : '0%' }}></div></div>
             </div>
-        </Card>
+          </Card>
+          <Card className="md:col-span-2 animate-fade-in" style={{ animationDelay: '800ms' }}>
+            <h3 className="text-2xl font-bold text-cyan-400 mb-4">Why Join Us?</h3>
+            <p className="text-gray-300">We offer a unique, story-driven RP environment with custom scripts, a dedicated staff team, and a vibrant community. Your story is waiting to be written in Los Santos.</p>
+          </Card>
+        </div>
+
+        {/* Trailer Section */}
+        <div className="animate-fade-in" style={{ animationDelay: '1000ms' }}>
+          <Card>
+              <h2 className="text-3xl font-bold text-cyan-400 mb-6 text-center">Server Trailer</h2>
+              <div className="aspect-video-container rounded-lg overflow-hidden shadow-lg shadow-cyan-500/10">
+                  <iframe className="w-full h-full" src="https://www.youtube.com/embed/TWH2a9EzqI8" title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen></iframe>
+              </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

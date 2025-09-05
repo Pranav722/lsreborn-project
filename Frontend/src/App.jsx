@@ -7,7 +7,7 @@ import Layout from './components/Layout';
 import Modal from './components/Modal';
 import AnimatedButton from './components/AnimatedButton';
 import Card from './components/Card';
-import Footer from './components/Footer';
+import Footer from './components/Footer'; // Import the new Footer
 
 // Import Pages
 import HomePage from './pages/HomePage';
@@ -123,10 +123,9 @@ export default function App() {
   );
   
   const renderCurrentPage = () => {
-    // Defensive check to ensure user object exists before checking its properties
     if (user && !user.inGuild && page !== 'home') {
         return (
-            <div className="py-20">
+            <div className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <Card className="text-center max-w-lg mx-auto">
                     <h2 className="text-2xl font-bold text-cyan-400 mb-4">Join Our Discord Server</h2>
                     <p className="text-gray-300 mb-6">To access this and other features, you need to be a member of our Discord server. Click the button below to join!</p>
@@ -149,7 +148,7 @@ export default function App() {
     
     if ((page === 'queue' || page === 'apply' || page === 'dashboard') && !user) {
         return (
-            <div className="py-20">
+            <div className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <Card className="text-center max-w-lg mx-auto">
                     <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
                     <p className="text-gray-300 mb-6">You must be logged in to access this page.</p>
@@ -158,15 +157,13 @@ export default function App() {
             </div>
         );
     }
+    // No key on page container for smoother transitions
     return pageMap[page];
   };
 
   if (authLoading) return <Layout><div></div></Layout>;
 
-  // Defensive checks to ensure user and user.roles exist before checking permissions
-  const isStaff = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID);
-  const isAdmin = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID);
-  const isStaffOrAdmin = isStaff || isAdmin;
+  const isStaffOrAdmin = user && (user.isStaff || user.isAdmin);
   const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
 
   return (
@@ -176,7 +173,7 @@ export default function App() {
         onClose={() => setIsLoginModalOpen(false)}
       />
       <div className="relative z-10">
-        <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${isScrolled ? 'bg-gray-900/50 backdrop-blur-lg border-b border-cyan-500/10' : 'bg-transparent border-transparent'}`}>
+        <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${isScrolled || page !== 'home' ? 'bg-gray-900/50 backdrop-blur-lg border-b border-cyan-500/10' : 'bg-transparent border-transparent'}`}>
           <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
@@ -210,7 +207,7 @@ export default function App() {
                                     exit={{ opacity: 0, y: -10 }}
                                     className="absolute right-0 mt-2 w-48 bg-gray-800/80 backdrop-blur-lg border border-cyan-500/20 rounded-md shadow-lg py-1 z-50">
                                     <div className="px-4 py-2 border-b border-gray-700">
-                                        <p className="text-sm text-white font-semibold">{user.username}</p>
+                                        <p className="text-sm text-white font-semibold truncate">{user.username}</p>
                                         <p className="text-xs text-gray-400">#{user.discriminator}</p>
                                     </div>
                                     <button onClick={handleLogout} className="w-full text-left flex items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/20">
