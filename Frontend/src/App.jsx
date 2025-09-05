@@ -260,8 +260,8 @@ export default function App() {
           )}
           </AnimatePresence>
         </nav>
-        <div className="page-content-wrapper">
-          {renderCurrentPage()}
+        <div className={page === 'home' ? 'home-page-wrapper' : 'page-content-wrapper'}>
+            {renderCurrentPage()}
         </div>
         <Footer setPage={setPage} />
       </div>

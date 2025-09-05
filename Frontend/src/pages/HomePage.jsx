@@ -7,7 +7,6 @@ const HomePage = ({ setPage, onApplyClick }) => {
   
   useEffect(() => {
     const fetchStatus = () => {
-        // Show a fetching status initially to give the backend time to wake up on Render
         setStatus(prevStatus => ({ ...prevStatus, online: 'fetching' }));
         fetch(`${import.meta.env.VITE_API_URL}/api/status`)
             .then(res => res.json())
@@ -32,16 +31,18 @@ const HomePage = ({ setPage, onApplyClick }) => {
   return (
     <div className="animate-fade-in">
       {/* New Full-Width Hero Section */}
-      <div className="relative text-center h-[60vh] md:h-[80vh] flex items-center justify-center -mt-16 -mx-4 sm:-mx-6 lg:-mx-8">
-          <div className="absolute inset-0 bg-black/50 z-10"></div>
+      <div className="relative text-center h-[70vh] md:h-[90vh] flex items-center justify-center -mt-16">
+          <div className="absolute inset-0 bg-black/60 z-10"></div>
           <div className="absolute inset-0 bg-grid-cyan opacity-10 z-10"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent z-10"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-gray-900 z-10"></div>
           
-          {/* You can replace this with a more dynamic video if you have one */}
-          <div className="absolute inset-0 bg-cover bg-center" style={{backgroundImage: "url('/background.png')"}}></div>
+          <video autoPlay loop muted playsInline className="absolute z-0 w-auto min-w-full min-h-full max-w-none object-cover">
+              <source src="https://cdn.discordapp.com/attachments/1080221764562137158/1149341142544760842/gta.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+          </video>
 
           <div className="relative z-20 p-4">
-              <h1 className="text-5xl md:text-7xl font-extrabold text-white tracking-tighter animate-slide-in-up">
+              <h1 className="text-5xl md:text-8xl font-extrabold text-white tracking-tighter animate-slide-in-up">
                   <span className="text-cyan-400">LSReborn</span> V2
               </h1>
               <p className="mt-4 text-lg md:text-xl text-gray-300 max-w-2xl mx-auto animate-slide-in-up" style={{ animationDelay: '200ms' }}>
@@ -73,14 +74,23 @@ const HomePage = ({ setPage, onApplyClick }) => {
           </Card>
         </div>
 
-        {/* Trailer Section */}
-        <div className="animate-fade-in" style={{ animationDelay: '1000ms' }}>
-          <Card>
-              <h2 className="text-3xl font-bold text-cyan-400 mb-6 text-center">Server Trailer</h2>
-              <div className="aspect-video-container rounded-lg overflow-hidden shadow-lg shadow-cyan-500/10">
-                  <iframe className="w-full h-full" src="https://www.youtube.com/embed/TWH2a9EzqI8" title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen></iframe>
-              </div>
-          </Card>
+        {/* New Trailer Section */}
+        <div className="grid lg:grid-cols-2 gap-12 items-center animate-fade-in" style={{ animationDelay: '1000ms' }}>
+            <div>
+                <h2 className="text-4xl font-bold text-cyan-400 mb-4">Dive Into the Action</h2>
+                <p className="text-gray-300 mb-6">LSReborn V2 is more than just a server; it's a living, breathing world. We are dedicated to providing a high-quality, immersive roleplay experience with a focus on deep character development and compelling stories. Our active development team is always working to bring new and exciting features to the city.</p>
+                <AnimatedButton onClick={() => setPage('rules')}>View Server Rules</AnimatedButton>
+            </div>
+            <div className="aspect-video-container rounded-lg overflow-hidden shadow-lg shadow-cyan-500/10">
+                <iframe 
+                    className="w-full h-full" 
+                    src="https://www.youtube.com/embed/TWH2a9EzqI8?autoplay=1&mute=1&loop=1&playlist=TWH2a9EzqI8&controls=0&showinfo=0&autohide=1&modestbranding=1" 
+                    title="YouTube video player" 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen>
+                </iframe>
+            </div>
         </div>
       </div>
     </div>

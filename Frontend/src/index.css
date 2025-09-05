@@ -11,7 +11,10 @@
 .page-content-wrapper {
     padding-top: 4rem; /* h-16 */
 }
-
+/* This ensures the hero section on the homepage ignores the padding */
+.home-page-wrapper {
+    padding-top: 0;
+}
 
 .nav-link {
   position: relative;
@@ -119,7 +122,6 @@ body {
   transform-origin: bottom right;
   transition: transform 0.25s ease-out;
 }
-
 
 .nav-link:hover {
   color: #fff;
