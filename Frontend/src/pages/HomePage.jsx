@@ -32,7 +32,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
   return (
     <div className="animate-fade-in">
       {/* New Full-Width Hero Section */}
-      <div className="relative text-center h-[70vh] md:h-[90vh] flex items-center justify-center -mt-16">
+      <div className="relative text-center h-screen flex items-center justify-center -mt-16">
           <div className="absolute inset-0 bg-black/60 z-10"></div>
           <div className="absolute inset-0 bg-grid-cyan opacity-10 z-10"></div>
           <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-gray-900 z-10"></div>
