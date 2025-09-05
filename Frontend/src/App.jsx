@@ -7,7 +7,7 @@ import Layout from './components/Layout';
 import Modal from './components/Modal';
 import AnimatedButton from './components/AnimatedButton';
 import Card from './components/Card';
-import Footer from './components/Footer'; // Import the new Footer
+import Footer from './components/Footer';
 
 // Import Pages
 import HomePage from './pages/HomePage';
@@ -162,7 +162,10 @@ export default function App() {
 
   if (authLoading) return <Layout><div></div></Layout>;
 
-  const isStaffOrAdmin = user && (user.isStaff || user.isAdmin);
+  // Defensive checks to ensure user and user.roles exist before checking permissions
+  const isStaff = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_STAFF_ROLE_ID);
+  const isAdmin = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID);
+  const isStaffOrAdmin = isStaff || isAdmin;
   const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
 
   return (

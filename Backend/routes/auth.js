@@ -100,12 +100,8 @@ router.get('/discord/callback', async (req, res) => {
 
 // A protected route for the frontend to check who is logged in and get fresh data
 router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
-    // The JWT is valid, but the roles might be stale.
-    // We re-fetch roles and other dynamic data here to ensure the frontend is always up-to-date.
+    // Re-fetch roles and dynamic data to ensure it's always up-to-date
     try {
-        // We need a way to get a fresh access token if the original one expired.
-        // For simplicity, we will re-fetch roles using the bot's token.
-        // In a full production app, you would implement a refresh token flow.
         const memberResponse = await fetch(`${DISCORD_API_URL}/guilds/${process.env.GUILD_ID}/members/${req.user.id}`, {
             headers: { 'Authorization': `Bot ${process.env.BOT_TOKEN}` },
         });

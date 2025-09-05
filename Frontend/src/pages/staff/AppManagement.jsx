@@ -1,4 +1,3 @@
-// File: src/pages/staff/AppManagement.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../../components/Card';
 import AnimatedButton from '../../components/AnimatedButton';
@@ -76,7 +75,7 @@ const AppManagement = ({ user }) => {
         }
     };
 
-    const finalFilteredApps = apps
+     const finalFilteredApps = apps
         .filter(app => app.status === filter)
         .filter(app => {
             if (viewType === 'premium') return app.isPremium;
@@ -98,6 +97,7 @@ const AppManagement = ({ user }) => {
                     <div className="flex space-x-2">
                         <button onClick={() => setViewType('all')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'all' ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800'}`}>All Apps</button>
                         <button onClick={() => setViewType('premium')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'premium' ? 'bg-yellow-500/20 text-yellow-300' : 'text-gray-400 hover:bg-gray-800'}`}>Premium Apps</button>
+                         <button onClick={() => setViewType('normal')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'normal' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:bg-gray-800'}`}>Normal Apps</button>
                     </div>
                     <AnimatedButton onClick={fetchData} className="!px-3 !py-2 text-sm">Refresh</AnimatedButton>
                 </div>

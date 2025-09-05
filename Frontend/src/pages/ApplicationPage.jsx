@@ -97,8 +97,26 @@ const ApplicationPage = ({ user, setPage }) => {
     );
   }
 
+  const applicantRoles = [
+      import.meta.env.VITE_APPLICATION_ROLE_ID,
+      import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
+  ].filter(Boolean);
+  const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
+
+  if (!hasApplicantRole) {
+    return (
+        <Card className="text-center">
+            <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
+            <p className="text-gray-300 mb-6">You need an 'Applicant' role to access this form. You can get one from our store.</p>
+            <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
+              <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
+            </a>
+        </Card>
+    );
+  }
+
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in max-w-4xl mx-auto">
       <Card>
         <h2 className="text-3xl font-bold text-cyan-400 mb-4">Allowlist Application</h2>
           <form onSubmit={handleSubmit} className="space-y-6">

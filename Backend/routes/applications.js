@@ -34,7 +34,6 @@ router.get('/', isAuthenticated, isStaff, async (req, res) => {
 router.post('/', isAuthenticated, async (req, res) => {
     const { characterName, characterAge, backstory } = req.body;
     
-    // Basic validation on the backend for security
     if (!characterName || !characterAge || !backstory) {
         return res.status(400).json({ message: "All fields are required." });
     }
@@ -46,12 +45,16 @@ router.post('/', isAuthenticated, async (req, res) => {
     const discordId = req.user.id;
     const userRoles = req.user.roles || [];
     
-    // Check if the user has a premium applicant role
+    // Check if user already has a pending/approved application
+    const [existingApps] = await db.query("SELECT * FROM applications WHERE discordId = ? AND status IN ('pending', 'approved')", [discordId]);
+    if (existingApps.length > 0) {
+        return res.status(400).json({ message: "You already have an active application." });
+    }
+
     const isPremium = userRoles.includes(process.env.PREMIUM_APPLICANT_ROLE_ID);
 
     try {
         const query = 'INSERT INTO applications (discordId, characterName, characterAge, backstory, isPremium, status, notified) VALUES (?, ?, ?, ?, ?, ?, ?)';
-        // Set status to pending and notified to 0 so the bot can process it
         await db.query(query, [discordId, characterName, characterAge, backstory, isPremium, 'pending', 0]); 
         res.status(201).json({ message: 'Application submitted successfully' });
     } catch (err) {
