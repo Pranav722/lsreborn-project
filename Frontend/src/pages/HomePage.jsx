@@ -1,4 +1,3 @@
-// File: frontend/src/pages/HomePage.jsx
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
@@ -86,7 +85,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
             <div className="aspect-video-container rounded-lg overflow-hidden shadow-lg shadow-cyan-500/10">
                 <iframe 
                     className="w-full h-full" 
-                    src="https://www.youtube.com/embed/TWH2a9EzqI8?autoplay=1&mute=1&loop=1&playlist=TWH2a9EzqI8&controls=0&showinfo=0&autohide=1&modestbranding=1" 
+                    src="https://www.youtube.com/embed/Xr3GZDRQ1lo?autoplay=1&mute=1&loop=1&playlist=Xr3GZDRQ1lo&controls=0&showinfo=0&autohide=1&modestbranding=1" 
                     title="YouTube video player" 
                     frameBorder="0" 
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
