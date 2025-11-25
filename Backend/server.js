@@ -23,10 +23,10 @@ app.use(cookieParser());
 
 // --- API Routes ---
 app.use('/auth', require('./routes/auth'));
-app.use('/api/applications', require('./routes/applications'));
+app.use('/api/forms', require('./routes/forms')); // New Forms & Quiz Route
+app.use('/api/management', require('./routes/management')); // New Management Dashboard
 app.use('/api/queue', require('./routes/queue'));
 app.use('/api/status', require('./routes/status'));
-
 
 // --- Root and DB Test Routes ---
 app.get('/', (req, res) => {

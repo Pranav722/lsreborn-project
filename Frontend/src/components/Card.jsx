@@ -1,9 +1,16 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 const Card = ({ children, className = '' }) => (
-  <div className={`bg-gray-800/60 backdrop-blur-md border border-cyan-500/20 rounded-xl shadow-lg shadow-cyan-500/5 p-6 transition-all duration-300 hover:border-cyan-500/40 hover:shadow-cyan-500/10 ${className}`}>
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.5 }}
+    className={`bg-gray-900/80 backdrop-blur-md border border-cyan-500/20 rounded-xl shadow-lg shadow-black/50 p-6 hover:border-cyan-500/40 transition-colors ${className}`}
+  >
     {children}
-  </div>
+  </motion.div>
 );
 
 export default Card;
