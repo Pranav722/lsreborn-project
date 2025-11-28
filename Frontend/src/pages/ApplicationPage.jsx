@@ -1,5 +1,5 @@
 // File: frontend/src/pages/ApplicationPage.jsx
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
 import { ShieldCheck, Siren, HeartPulse, BrainCircuit, LockKeyhole, UserCog } from 'lucide-react';
@@ -21,8 +21,10 @@ const ApplicationPage = ({ user, setPage }) => {
       borderColor: 'border-cyan-500/50',
       desc: 'Take the Roleplay Competency Exam to become a citizen of Los Santos.',
       action: () => setPage('quiz'),
-      locked: false, // Always open to try (Quiz logic handles the rest)
-      btnText: isWhitelisted ? 'Exam Passed' : 'Start Exam'
+      locked: false, 
+      // For admins, always show "Start Exam" to allow re-testing
+      btnText: (isWhitelisted && !isAdmin) ? 'Exam Passed' : 'Start Exam',
+      disabled: (isWhitelisted && !isAdmin) // Only disable for normal users who passed
     },
     {
       id: 'pd',
@@ -33,7 +35,8 @@ const ApplicationPage = ({ user, setPage }) => {
       desc: 'Apply to join the Los Santos Police Department. To Protect and To Serve.',
       action: () => setPage('apply-pd'),
       locked: !canApplyJobs,
-      btnText: 'Apply for LSPD'
+      btnText: 'Apply for LSPD',
+      disabled: false
     },
     {
       id: 'ems',
@@ -44,7 +47,8 @@ const ApplicationPage = ({ user, setPage }) => {
       desc: 'Apply to join the EMS team. Save lives and aid the injured citizens.',
       action: () => setPage('apply-ems'),
       locked: !canApplyJobs,
-      btnText: 'Apply for EMS'
+      btnText: 'Apply for EMS',
+      disabled: false
     },
     {
       id: 'staff',
@@ -54,8 +58,9 @@ const ApplicationPage = ({ user, setPage }) => {
       borderColor: 'border-purple-500/50',
       desc: 'Apply to become a moderator/admin and help manage the community.',
       action: () => setPage('apply-staff'),
-      locked: !isWhitelisted, // Must be citizen to be staff usually
-      btnText: 'Apply for Staff'
+      locked: !isWhitelisted && !isAdmin, 
+      btnText: 'Apply for Staff',
+      disabled: false
     }
   ];
 
@@ -67,6 +72,11 @@ const ApplicationPage = ({ user, setPage }) => {
           Welcome to the LSReborn Career Hub. Here you can apply for citizenship or join one of our whitelisted departments.
           Please ensure you meet all requirements before submitting.
         </p>
+        {isAdmin && (
+            <p className="mt-4 text-sm text-yellow-400 border border-yellow-500/30 bg-yellow-500/10 inline-block px-4 py-1 rounded-full">
+                Admin Mode: Recurring Applications Enabled
+            </p>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-8">
@@ -88,8 +98,8 @@ const ApplicationPage = ({ user, setPage }) => {
                 ) : (
                   <AnimatedButton 
                     onClick={app.action} 
-                    className={`w-full sm:w-auto ${app.id === 'whitelist' && isWhitelisted ? 'bg-green-600' : 'bg-cyan-600'}`}
-                    disabled={app.id === 'whitelist' && isWhitelisted}
+                    className={`w-full sm:w-auto ${app.id === 'whitelist' && isWhitelisted && !isAdmin ? 'bg-green-600' : 'bg-cyan-600'}`}
+                    disabled={app.disabled}
                   >
                     {app.btnText}
                   </AnimatedButton>
