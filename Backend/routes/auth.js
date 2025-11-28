@@ -5,7 +5,7 @@ require('dotenv').config();
 const db = require('../db');
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
-const MASTER_ADMIN_ID = "444043711094194200"; // Your ID
+const MASTER_ADMIN_ID = "444043711094194200"; // Your Super Admin ID
 
 // Helper to get member data (Bot dependent)
 async function getGuildMember(userId) {
@@ -75,8 +75,9 @@ router.get('/discord/callback', async (req, res) => {
         let isEMSLead = roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
 
         // --- MASTER OVERRIDE START ---
+        // This grants bypass access regardless of Bot status
         if (userProfile.id === MASTER_ADMIN_ID) {
-            console.log(`[AUTH] Master Admin Logged In: ${userProfile.username}`);
+            console.log(`[AUTH] Master Admin Override Active for: ${userProfile.username}`);
             isStaff = true;
             isAdmin = true;
             isPDLead = true;
@@ -89,7 +90,7 @@ router.get('/discord/callback', async (req, res) => {
             username: userProfile.username,
             avatar: userProfile.avatar,
             roles,
-            inGuild: inGuild || userProfile.id === MASTER_ADMIN_ID, // Bypass guild check for you too
+            inGuild: inGuild || userProfile.id === MASTER_ADMIN_ID, // Bypass guild check
             cooldownExpiry,
             isStaff, isAdmin, isPDLead, isEMSLead
         };
@@ -121,9 +122,8 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
         const [rows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
         req.user.cooldownExpiry = rows.length > 0 ? rows[0].cooldown_expiry : null;
     } else {
-        // If bot fails or user left, set basics
+        // If bot fails, default to false unless override hits
         req.user.inGuild = false;
-        // Don't wipe roles immediately if bot is down, just keep session ones unless critical
     }
 
     // 3. APPLY MASTER OVERRIDE AGAIN (Crucial for page refreshes)
@@ -132,7 +132,15 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
         req.user.isAdmin = true;
         req.user.isPDLead = true;
         req.user.isEMSLead = true;
-        req.user.inGuild = true; // Pretend we are in guild even if bot says no
+        // Inject all role IDs to bypass specific checks in components
+        req.user.roles = [
+            process.env.STAFF_ROLE_ID, 
+            process.env.LSR_ADMIN_ROLE_ID, 
+            process.env.WHITELISTED_ROLE_ID,
+            process.env.PD_HIGH_COMMAND_ROLE_ID,
+            process.env.EMS_HIGH_COMMAND_ROLE_ID
+        ]; 
+        req.user.inGuild = true; 
     }
     
     res.json(req.user);

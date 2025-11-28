@@ -9,8 +9,17 @@ const HomePage = ({ setPage, onApplyClick }) => {
   useEffect(() => {
     const fetchStatus = () => {
         setStatus(prevStatus => ({ ...prevStatus, online: 'fetching' }));
-        // Safe check for import.meta to prevent crash if environment differs
-        const apiUrl = import.meta?.env?.VITE_API_URL || 'http://localhost:3001';
+        
+        // Robust check for environment variables to prevent build warnings/errors
+        let apiUrl = 'http://localhost:3001';
+        try {
+            // Check if import.meta and import.meta.env exist before accessing
+            if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
+                apiUrl = import.meta.env.VITE_API_URL;
+            }
+        } catch (e) {
+            console.warn("Environment variable access failed, using default.");
+        }
         
         fetch(`${apiUrl}/api/status`)
             .then(res => res.json())
@@ -132,7 +141,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
                 <div className="relative aspect-video rounded-xl overflow-hidden shadow-2xl shadow-black/50 border border-gray-800 bg-gray-900">
                     <iframe 
                         className="w-full h-full" 
-                        src="https://www.youtube.com/embed/Xr3GZDRQ1lo?si=wQezikgYsIb1y4sf&autoplay=0&controls=1&rel=0" 
+                        src="https://www.youtube.com/embed/Xr3GZDRQ1lo?si=wQezikgYsIb1y4sf&autoplay=1&mute=1&loop=1&playlist=Xr3GZDRQ1lo&controls=0&rel=0" 
                         title="Server Trailer" 
                         frameBorder="0" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
