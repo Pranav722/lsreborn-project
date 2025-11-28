@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ShieldCheck, FileText, Settings, LogOut as LogOutIcon, BookUser } from 'lucide-react';
+import { ShieldCheck, FileText, Settings, LogOut as LogOutIcon, BookUser, Briefcase } from 'lucide-react';
 import AppManagement from './AppManagement';
 import SettingsPanel from './SettingsPanel';
 import AuditLogs from './AuditLogs';
+import JobManagement from './JobManagement';
 
 const StaffDashboard = ({ user, setPage, onLogout }) => {
     const [dashboardPage, setDashboardPage] = useState('apps');
@@ -23,6 +24,7 @@ const StaffDashboard = ({ user, setPage, onLogout }) => {
     const renderPage = () => {
         switch (dashboardPage) {
             case 'apps': return <AppManagement user={user} />;
+            case 'jobs': return <JobManagement user={user} />;
             case 'settings': return isAdmin ? <SettingsPanel user={user} /> : <AccessDenied />;
             case 'logs': return isAdmin ? <AuditLogs user={user} /> : <AccessDenied />;
             default: return <AppManagement user={user} />;
@@ -44,7 +46,8 @@ const StaffDashboard = ({ user, setPage, onLogout }) => {
                     <h2 className="text-xl font-bold text-white">Staff Panel</h2>
                 </div>
                 <nav className="space-y-2">
-                    <NavItem icon={FileText} label="Applications" pageName="apps" />
+                    <NavItem icon={FileText} label="Citizenship Apps" pageName="apps" />
+                    <NavItem icon={Briefcase} label="Departments" pageName="jobs" />
                     {isAdmin && <NavItem icon={Settings} label="Settings" pageName="settings" />}
                     {isAdmin && <NavItem icon={BookUser} label="Audit Logs" pageName="logs" />}
                 </nav>
@@ -59,7 +62,7 @@ const StaffDashboard = ({ user, setPage, onLogout }) => {
                     </button>
                 </div>
             </aside>
-            <main className="flex-1 p-6 sm:p-8 lg:p-10">{renderPage()}</main>
+            <main className="flex-1 p-6 sm:p-8 lg:p-10 overflow-y-auto max-h-screen">{renderPage()}</main>
         </div>
     );
 };

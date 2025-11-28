@@ -1,175 +1,106 @@
 // File: frontend/src/pages/ApplicationPage.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
-import { Clock, CheckCircle, FileText, LockKeyhole } from 'lucide-react';
+import { ShieldCheck, Siren, HeartPulse, BrainCircuit, LockKeyhole, UserCog } from 'lucide-react';
 
 const ApplicationPage = ({ user, setPage }) => {
-  const [formData, setFormData] = useState({ characterName: '', characterAge: '', backstory: '' });
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [isLoading, setIsLoading] = useState(false);
-  const [wordCount, setWordCount] = useState(0);
-  const [timeLeft, setTimeLeft] = useState('');
-
-  // Defensive checks to ensure user and user.roles exist before trying to access them
-  const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
-  const hasWaitingRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WAITING_FOR_APPROVAL_ROLE_ID);
-  const hasCooldownRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_COOLDOWN_ROLE_ID);
-  const applicantRoles = [
-      import.meta.env.VITE_APPLICATION_ROLE_ID,
-      import.meta.env.VITE_PREMIUM_APPLICANT_ROLE_ID
-  ].filter(Boolean);
-  const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
-
-  // Admin Override
-  const isAdmin = user && (user.isAdmin || user.isStaff);
-
-  const calculateTimeLeft = useCallback(() => {
-    if (!user || !user.cooldownExpiry) return '';
-    const difference = +new Date(user.cooldownExpiry) - +new Date();
-    if (difference > 0) {
-      const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((difference / 1000 / 60) % 60);
-      const seconds = Math.floor((difference / 1000) % 60);
-      return `${hours}h ${minutes}m ${seconds}s`;
-    }
-    return '0h 0m 0s';
-  }, [user]);
-
-  useEffect(() => {
-    if (hasCooldownRole) {
-      setTimeLeft(calculateTimeLeft());
-      const timer = setInterval(() => {
-        setTimeLeft(calculateTimeLeft());
-      }, 1000);
-      return () => clearInterval(timer);
-    }
-  }, [hasCooldownRole, calculateTimeLeft]);
-
-  const handleBackstoryChange = (e) => {
-    setFormData({ ...formData, backstory: e.target.value });
-    setWordCount(e.target.value.trim().split(/\s+/).filter(Boolean).length);
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (wordCount < 200) return;
-    setIsLoading(true);
-    setMessage({ type: '', text: '' });
-    const token = localStorage.getItem('authToken');
-
-    try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applications`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(formData)
-        });
-
-        if (response.ok) {
-            setMessage({ type: 'success', text: 'Application submitted successfully! Redirecting...' });
-            setTimeout(() => setPage('home'), 2000); // Redirect after 2 seconds
-        } else {
-            const errorData = await response.json();
-            setMessage({ type: 'error', text: errorData.message || 'Failed to submit application.' });
-        }
-    } catch (error) {
-        setMessage({ type: 'error', text: 'An unexpected error occurred.' });
-    } finally {
-        setIsLoading(false);
-    }
-  };
+  // Roles
+  const isWhitelisted = user?.roles?.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
+  const isAdmin = user?.isAdmin || user?.isStaff;
   
-  // RENDER LOGIC WITH ADMIN OVERRIDE - BYPASS CHECKS FOR ADMIN
-  
-  // 1. If Whitelisted (and not forcing view as Admin)
-  if (hasWhitelistedRole && !isAdmin) {
-    return (
-        <Card className="text-center">
-            <CheckCircle className="mx-auto text-green-400 h-16 w-16 mb-4" />
-            <h2 className="text-2xl font-bold text-green-300">You're Already Whitelisted!</h2>
-            <p className="text-gray-300 mt-2 mb-6">Your application has been approved. Hop in the server and start your journey!</p>
-            <AnimatedButton onClick={() => setPage('queue')} className="bg-cyan-500">Connect Now</AnimatedButton>
-        </Card>
-    );
-  }
+  // You can extend this logic to lock PD/EMS if not whitelisted
+  const canApplyJobs = isWhitelisted || isAdmin;
 
-  // 2. If Waiting (and not forcing view)
-  if (hasWaitingRole && !isAdmin) {
-    return (
-        <Card className="text-center">
-            <Clock className="mx-auto text-cyan-400 h-16 w-16 mb-4 animate-pulse" />
-            <h2 className="text-2xl font-bold text-cyan-300">Application in Review</h2>
-            <p className="text-gray-300 mt-2">Your application has been received and is currently waiting for review. This process can take up to 24-48 hours.</p>
-        </Card>
-    );
-  }
-  
-  // 3. If Cooldown (and not forcing view)
-  if (hasCooldownRole && !isAdmin) {
-    return (
-        <Card className="text-center bg-gray-900/80 border border-red-500/30">
-            <Clock className="mx-auto text-red-400 h-16 w-16 mb-4 animate-pulse" />
-            <h3 className="text-2xl font-bold text-red-300">Application on Cooldown</h3>
-            <p className="text-red-200 mt-2 mb-4">Your previous application was rejected. You can reapply in:</p>
-            <div className="text-4xl font-mono font-bold text-cyan-400 my-4 p-4 bg-gray-900 rounded-lg inline-block shadow-lg">{timeLeft}</div>
-        </Card>
-    );
-  }
+  const apps = [
+    {
+      id: 'whitelist',
+      title: 'Citizenship Application',
+      icon: BrainCircuit,
+      color: 'text-cyan-400',
+      borderColor: 'border-cyan-500/50',
+      desc: 'Take the Roleplay Competency Exam to become a citizen of Los Santos.',
+      action: () => setPage('quiz'),
+      locked: false, // Always open to try (Quiz logic handles the rest)
+      btnText: isWhitelisted ? 'Exam Passed' : 'Start Exam'
+    },
+    {
+      id: 'pd',
+      title: 'Police Department',
+      icon: Siren,
+      color: 'text-blue-500',
+      borderColor: 'border-blue-500/50',
+      desc: 'Apply to join the Los Santos Police Department. To Protect and To Serve.',
+      action: () => setPage('apply-pd'),
+      locked: !canApplyJobs,
+      btnText: 'Apply for LSPD'
+    },
+    {
+      id: 'ems',
+      title: 'Emergency Medical Services',
+      icon: HeartPulse,
+      color: 'text-red-500',
+      borderColor: 'border-red-500/50',
+      desc: 'Apply to join the EMS team. Save lives and aid the injured citizens.',
+      action: () => setPage('apply-ems'),
+      locked: !canApplyJobs,
+      btnText: 'Apply for EMS'
+    },
+    {
+      id: 'staff',
+      title: 'Staff Team',
+      icon: UserCog,
+      color: 'text-purple-500',
+      borderColor: 'border-purple-500/50',
+      desc: 'Apply to become a moderator/admin and help manage the community.',
+      action: () => setPage('apply-staff'),
+      locked: !isWhitelisted, // Must be citizen to be staff usually
+      btnText: 'Apply for Staff'
+    }
+  ];
 
-  // 4. Show Form if Applicant Role OR Admin
-  if (hasApplicantRole || isAdmin) {
-    return (
-      <div className="animate-fade-in max-w-4xl mx-auto">
-        <Card>
-          <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-cyan-400">Allowlist Application</h2>
-              {isAdmin && <span className="bg-red-500/20 text-red-300 text-xs px-2 py-1 rounded border border-red-500/30">Admin Override Active</span>}
-          </div>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label htmlFor="characterName" className="block text-sm font-medium text-cyan-300 mb-1">Character Name</label>
-                <input type="text" name="characterName" id="characterName" value={formData.characterName} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="characterAge" className="block text-sm font-medium text-cyan-300 mb-1">Character Age</label>
-                  <input type="number" name="characterAge" id="characterAge" value={formData.characterAge} onChange={handleChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" />
-                </div>
-                 <div>
-                   <label htmlFor="discord" className="block text-sm font-medium text-cyan-300 mb-1">Your Discord</label>
-                   <input type="text" name="discord" id="discord" value={user ? `${user.username}#${user.discriminator}` : ''} readOnly className="w-full bg-gray-800/80 border border-cyan-500/30 rounded-lg px-4 py-2 text-gray-400 cursor-not-allowed" />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="backstory" className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory</label>
-                <textarea name="backstory" id="backstory" rows="8" value={formData.backstory} onChange={handleBackstoryChange} required className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none"></textarea>
-                <p className={`text-sm mt-1 ${wordCount < 200 ? 'text-red-400' : 'text-green-400'}`}>Word Count: {wordCount} / 200</p>
-              </div>
-              {message.text && (<div className={`p-4 rounded-lg text-center ${message.type === 'success' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>{message.text}</div>)}
-              <div><AnimatedButton type="submit" disabled={isLoading || wordCount < 200} className="w-full bg-cyan-500 disabled:bg-gray-600 disabled:cursor-not-allowed">{isLoading ? 'Submitting...' : 'Submit Application'}</AnimatedButton></div>
-            </form>
-        </Card>
-      </div>
-    );
-  }
-
-  // Fallback for users with no relevant roles (and not admin)
   return (
-    <Card className="text-center">
-        <LockKeyhole className="mx-auto text-cyan-400 h-16 w-16 mb-4" />
-        <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
-        <p className="text-gray-300 mb-6">You need an application pass to access this form. You can get one from our store.</p>
-        <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">
-          <AnimatedButton className="bg-cyan-500">Go to Store</AnimatedButton>
-        </a>
-    </Card>
+    <div className="animate-fade-in max-w-7xl mx-auto px-4 py-10">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-white mb-4">Application Center</h1>
+        <p className="text-gray-400 max-w-2xl mx-auto">
+          Welcome to the LSReborn Career Hub. Here you can apply for citizenship or join one of our whitelisted departments.
+          Please ensure you meet all requirements before submitting.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-8">
+        {apps.map((app) => (
+          <Card key={app.id} className={`hover:border-opacity-100 transition-all duration-300 group border-l-4 ${app.borderColor}`}>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-3">
+                  <app.icon className={`w-8 h-8 ${app.color}`} />
+                  <h3 className="text-2xl font-bold text-white group-hover:text-cyan-300 transition-colors">{app.title}</h3>
+                </div>
+                <p className="text-gray-400 mb-6 min-h-[3rem]">{app.desc}</p>
+                
+                {app.locked && !isAdmin ? (
+                  <div className="flex items-center gap-2 text-gray-500 bg-gray-800/50 p-3 rounded-lg w-fit">
+                    <LockKeyhole size={18} />
+                    <span className="text-sm font-medium">Citizenship Required</span>
+                  </div>
+                ) : (
+                  <AnimatedButton 
+                    onClick={app.action} 
+                    className={`w-full sm:w-auto ${app.id === 'whitelist' && isWhitelisted ? 'bg-green-600' : 'bg-cyan-600'}`}
+                    disabled={app.id === 'whitelist' && isWhitelisted}
+                  >
+                    {app.btnText}
+                  </AnimatedButton>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 };
+
 export default ApplicationPage;
