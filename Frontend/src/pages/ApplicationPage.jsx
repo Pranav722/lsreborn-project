@@ -1,7 +1,8 @@
+// File: frontend/src/pages/ApplicationPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
-import { Clock, CheckCircle, FileText } from 'lucide-react';
+import { Clock, CheckCircle, FileText, LockKeyhole } from 'lucide-react';
 
 const ApplicationPage = ({ user, setPage }) => {
   const [formData, setFormData] = useState({ characterName: '', characterAge: '', backstory: '' });
@@ -20,7 +21,9 @@ const ApplicationPage = ({ user, setPage }) => {
   ].filter(Boolean);
   const hasApplicantRole = user && Array.isArray(user.roles) && user.roles.some(roleId => applicantRoles.includes(roleId));
 
-  
+  // Admin Override
+  const isAdmin = user && (user.isAdmin || user.isStaff);
+
   const calculateTimeLeft = useCallback(() => {
     if (!user || !user.cooldownExpiry) return '';
     const difference = +new Date(user.cooldownExpiry) - +new Date();
@@ -30,8 +33,6 @@ const ApplicationPage = ({ user, setPage }) => {
       const seconds = Math.floor((difference / 1000) % 60);
       return `${hours}h ${minutes}m ${seconds}s`;
     }
-    // In a real app, you might want to trigger a role update via the bot when the timer hits zero.
-    // For now, it will just show 0h 0m 0s.
     return '0h 0m 0s';
   }, [user]);
 
@@ -85,10 +86,13 @@ const ApplicationPage = ({ user, setPage }) => {
     }
   };
   
-  if (hasWhitelistedRole) {
+  // RENDER LOGIC WITH ADMIN OVERRIDE - BYPASS CHECKS FOR ADMIN
+  
+  // 1. If Whitelisted (and not forcing view as Admin)
+  if (hasWhitelistedRole && !isAdmin) {
     return (
         <Card className="text-center">
-            <ShieldCheck className="mx-auto text-green-400 h-16 w-16 mb-4" />
+            <CheckCircle className="mx-auto text-green-400 h-16 w-16 mb-4" />
             <h2 className="text-2xl font-bold text-green-300">You're Already Whitelisted!</h2>
             <p className="text-gray-300 mt-2 mb-6">Your application has been approved. Hop in the server and start your journey!</p>
             <AnimatedButton onClick={() => setPage('queue')} className="bg-cyan-500">Connect Now</AnimatedButton>
@@ -96,17 +100,19 @@ const ApplicationPage = ({ user, setPage }) => {
     );
   }
 
-  if (hasWaitingRole) {
+  // 2. If Waiting (and not forcing view)
+  if (hasWaitingRole && !isAdmin) {
     return (
         <Card className="text-center">
-            <CheckCircle className="mx-auto text-cyan-400 h-16 w-16 mb-4" />
+            <Clock className="mx-auto text-cyan-400 h-16 w-16 mb-4 animate-pulse" />
             <h2 className="text-2xl font-bold text-cyan-300">Application in Review</h2>
-            <p className="text-gray-300 mt-2">Your application has been received and is currently waiting for review. This process can take up to 24-48 hours. Please be patient.</p>
+            <p className="text-gray-300 mt-2">Your application has been received and is currently waiting for review. This process can take up to 24-48 hours.</p>
         </Card>
     );
   }
   
-  if (hasCooldownRole) {
+  // 3. If Cooldown (and not forcing view)
+  if (hasCooldownRole && !isAdmin) {
     return (
         <Card className="text-center bg-gray-900/80 border border-red-500/30">
             <Clock className="mx-auto text-red-400 h-16 w-16 mb-4 animate-pulse" />
@@ -117,11 +123,15 @@ const ApplicationPage = ({ user, setPage }) => {
     );
   }
 
-  if (hasApplicantRole) {
+  // 4. Show Form if Applicant Role OR Admin
+  if (hasApplicantRole || isAdmin) {
     return (
       <div className="animate-fade-in max-w-4xl mx-auto">
         <Card>
-          <h2 className="text-3xl font-bold text-cyan-400 mb-4">Allowlist Application</h2>
+          <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-bold text-cyan-400">Allowlist Application</h2>
+              {isAdmin && <span className="bg-red-500/20 text-red-300 text-xs px-2 py-1 rounded border border-red-500/30">Admin Override Active</span>}
+          </div>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="characterName" className="block text-sm font-medium text-cyan-300 mb-1">Character Name</label>
@@ -150,10 +160,10 @@ const ApplicationPage = ({ user, setPage }) => {
     );
   }
 
-  // Fallback for users with no relevant roles
+  // Fallback for users with no relevant roles (and not admin)
   return (
     <Card className="text-center">
-        <FileText className="mx-auto text-cyan-400 h-16 w-16 mb-4" />
+        <LockKeyhole className="mx-auto text-cyan-400 h-16 w-16 mb-4" />
         <h2 className="text-2xl font-bold text-cyan-400 mb-4">Application Access Required</h2>
         <p className="text-gray-300 mb-6">You need an application pass to access this form. You can get one from our store.</p>
         <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer">

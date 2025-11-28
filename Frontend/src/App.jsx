@@ -21,8 +21,6 @@ import QuizPage from './pages/QuizPage';
 import DepartmentApp from './pages/DepartmentApps';
 import JobManagement from './pages/staff/JobManagement';
 
-
-
 // --- LOGIN MODAL ---
 const LoginModal = ({ isOpen, onClose }) => {
     return (
@@ -128,7 +126,10 @@ export default function App() {
   );
   
   const renderCurrentPage = () => {
-    if (user && !user.inGuild && page !== 'home') {
+    // Admin bypass: If admin, ignore "inGuild" check
+    const isAdmin = user && (user.isAdmin || user.isStaff);
+    
+    if (user && !user.inGuild && page !== 'home' && !isAdmin) {
         return (
             <div className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
                 <Card className="text-center max-w-lg mx-auto">
@@ -167,7 +168,6 @@ export default function App() {
             </div>
         );
     }
-    // No key on page container for smoother transitions
     return pageMap[page];
   };
 
@@ -175,6 +175,9 @@ export default function App() {
 
   const isStaffOrAdmin = user && (user.isStaff || user.isAdmin);
   const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
+  
+  // LOGIC FIX: Always show 'Apply' if Admin, regardless of whitelisted status
+  const showApplyButton = !hasWhitelistedRole || isStaffOrAdmin;
 
   return (
     <Layout>
@@ -194,7 +197,7 @@ export default function App() {
               </div>
               <div className="hidden md:flex items-center space-x-8">
                   <NavLink pageName="home">Home</NavLink>
-                  {!hasWhitelistedRole && <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>}
+                  {showApplyButton && <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>}
                   <NavLink pageName="queue" onClick={handleQueueClick}>Queue</NavLink>
                   <NavLink pageName="rules">Rules</NavLink>
                   <NavLink pageName="news">News</NavLink>
@@ -254,7 +257,7 @@ export default function App() {
             >
               <div className="px-4 pt-2 pb-6 space-y-1">
                 <NavLink pageName="home">Home</NavLink>
-                {!hasWhitelistedRole && <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>}
+                {showApplyButton && <NavLink pageName="apply" onClick={handleApplyClick}>Apply</NavLink>}
                 <NavLink pageName="queue" onClick={handleQueueClick}>Queue</NavLink>
                 <NavLink pageName="rules">Rules</NavLink>
                 <NavLink pageName="news">News</NavLink>
