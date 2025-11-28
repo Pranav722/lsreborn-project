@@ -15,9 +15,12 @@ const TeamMember = ({ name, role, desc, image }) => {
                 >
                     {/* Image Background (Darkened) */}
                     <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent z-10"></div>
+                    
+                    {/* MANUAL IMAGE SOURCE */}
                     <img 
-                        src={image || `https://ui-avatars.com/api/?name=${name}&background=0d1117&color=22d3ee&size=256`} 
+                        src={image} 
                         alt={name} 
+                        onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${name}&background=0d1117&color=22d3ee&size=256` }} // Fallback if file not found
                         className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity duration-500"
                     />
 
@@ -50,7 +53,6 @@ const HomePage = ({ setPage, onApplyClick }) => {
   useEffect(() => {
     const fetchStatus = () => {
         setStatus(prevStatus => ({ ...prevStatus, online: 'fetching' }));
-        // Safe check for import.meta
         let apiUrl = 'http://localhost:3001';
         try {
             if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
@@ -71,19 +73,51 @@ const HomePage = ({ setPage, onApplyClick }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // --- MANUAL IMAGE PATHS ---
   const teamMembers = [
-      { name: 'Certified Noob', role: 'OverWatcher', desc: 'People feel this guy is just a normie but what they need is just 5 mins in VC to understand what a Gem he is and why is he really the Overwatcher.' },
-      { name: 'Xtracious', role: 'Karma', desc: 'The all rounder. Introduction jitna do utna kam hai. From Roleplaying with 12 characters to Developing assets and managing staff, he does it all.' },
-      { name: 'Jay Bhai', role: 'Community Manager', desc: 'The Ghost Mayor of the city who is mostly overlooking everything.' },
-      { name: 'Riginex', role: 'LSReborn Partner', desc: 'The undercover chill and Rich guy in server with a Huge AURA. In short: chalta firta EDM Pack.' },
-      { name: 'Itaachi', role: 'Management', desc: 'The OG Mafia Uncle and Perfect Vehicle Handler. Short: Chalta firta Vehicle Resource of server.' },
-      { name: 'Rexci', role: 'Management', desc: 'The most experienced and fierce player. If he enters RP, players drop their guns. Manages Gangs effortlessly.' },
-      // Hidden by default
-      { name: 'Luffy', role: 'PD Management & Staff', desc: 'The law enforcer you do not want to mess with. Try doing crime once in server and find out.', hidden: true },
-      { name: 'Tushar Gupta', role: 'PD Management & Staff', desc: 'Aspataal Premium Member. Always in the thick of the action.', hidden: true },
-      { name: 'Danny', role: 'Staff', desc: 'Dedicated to keeping the streets clean and the RP quality high.', hidden: true },
-      { name: 'Draken', role: 'Staff', desc: 'Ensuring fair play and assisting citizens with technical issues.', hidden: true },
-      { name: 'DaddyWoo', role: 'Staff', desc: 'Watching over the city to ensure everyone has a good time.', hidden: true },
+      { 
+          name: 'Certified Noob', 
+          role: 'OverWatcher', 
+          desc: 'People feel this guy is just a normie but what they need is just 5 mins in VC to understand what a Gem he is.', 
+          image: '/Media/Noob-Avatar.png' 
+      },
+      { 
+          name: 'Xtracious', 
+          role: 'Karma', 
+          desc: 'The all rounder. Introduction jitna do utna kam hai. From Roleplaying to Developing assets.', 
+          image: '/Media/Xtracious-Avatar.png' 
+      },
+      { 
+          name: 'Jay Bhai', 
+          role: 'Community Manager', 
+          desc: 'The Ghost Mayor of the city who is mostly overlooking everything.', 
+          image: '/Media/Jay-Avatar.png' 
+      },
+      { 
+          name: 'Riginex', 
+          role: 'LSReborn Partner', 
+          desc: 'The undercover chill and Rich guy in server with a Huge AURA. In short: chalta firta EDM Pack.', 
+          image: '/Media/Riginex-Avatar.png' 
+      },
+      { 
+          name: 'Itaachi', 
+          role: 'Management', 
+          desc: 'The OG Mafia Uncle and Perfect Vehicle Handler. Short: Chalta firta Vehicle Resource of server.', 
+          image: '/Media/Itaachi-Avatar.png' 
+      },
+      { 
+          name: 'Rexci', 
+          role: 'Management', 
+          desc: 'The most experienced and fierce player. If he enters RP, players drop their guns.', 
+          image: '/Media/Rexci-Avatar.png' 
+      },
+      
+      // Hidden by default (Click 'View Full Roster' to see)
+      { name: 'Luffy', role: 'PD Management & Staff', desc: 'The law enforcer you do not want to mess with. Try doing crime once in server and find out.', hidden: true, image: '/Media/Luffy-Avatar.png' },
+      { name: 'Tushar Gupta', role: 'PD Management & Staff', desc: 'Aspataal Premium Member. Always in the thick of the action.', hidden: true, image: '/Media/Tushar-Avatar.png' },
+      { name: 'Danny', role: 'Staff', desc: 'Dedicated to keeping the streets clean and the RP quality high.', hidden: true, image: '/Media/Danny-Avatar.png' },
+      { name: 'Draken', role: 'Staff', desc: 'Ensuring fair play and assisting citizens with technical issues.', hidden: true, image: '/Media/Draken-Avatar.png' },
+      { name: 'DaddyWoo', role: 'Staff', desc: 'Watching over the city to ensure everyone has a good time.', hidden: true, image: '/Media/DaddyWoo-Avatar.png' },
   ];
 
   const displayedTeam = showAllTeam ? teamMembers : teamMembers.filter(m => !m.hidden);
