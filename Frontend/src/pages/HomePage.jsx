@@ -1,25 +1,62 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
-import { Play, Users } from 'lucide-react';
+import { Play, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const TeamMember = ({ name, role, desc, image }) => {
+    return (
+        <div className="group relative w-full h-80 perspective-1000">
+            <div className="relative w-full h-full duration-500 preserve-3d group-hover:my-rotate-y-180">
+                {/* Card Container */}
+                <motion.div 
+                    whileHover={{ scale: 1.05, rotateX: 5, rotateY: 5 }}
+                    className="w-full h-full bg-gray-900/40 backdrop-blur-md border border-cyan-500/20 rounded-xl overflow-hidden relative shadow-lg shadow-cyan-500/10 transition-all duration-500 group-hover:shadow-cyan-500/30 group-hover:border-cyan-400/50"
+                >
+                    {/* Image Background (Darkened) */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent z-10"></div>
+                    <img 
+                        src={image || `https://ui-avatars.com/api/?name=${name}&background=0d1117&color=22d3ee&size=256`} 
+                        alt={name} 
+                        className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity duration-500"
+                    />
+
+                    {/* Content - Default State */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 z-20 transform transition-transform duration-500 group-hover:-translate-y-4">
+                        <p className="text-cyan-400 text-xs font-bold tracking-widest uppercase mb-1">{role}</p>
+                        <h3 className="text-2xl font-black text-white">{name}</h3>
+                    </div>
+
+                    {/* Content - Hover Reveal State */}
+                    <div className="absolute inset-0 bg-gray-950/90 flex flex-col justify-center p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30">
+                        <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                            <p className="text-cyan-400 text-xs font-bold tracking-widest uppercase mb-2">{role}</p>
+                            <h3 className="text-2xl font-bold text-white mb-4">{name}</h3>
+                            <p className="text-gray-300 text-sm leading-relaxed border-l-2 border-cyan-500 pl-3">
+                                "{desc}"
+                            </p>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+        </div>
+    );
+};
 
 const HomePage = ({ setPage, onApplyClick }) => {
   const [status, setStatus] = useState({ online: false, players: 0, maxPlayers: 0 });
+  const [showAllTeam, setShowAllTeam] = useState(false);
   
   useEffect(() => {
     const fetchStatus = () => {
         setStatus(prevStatus => ({ ...prevStatus, online: 'fetching' }));
-        
-        // Robust check for environment variables to prevent build warnings/errors
+        // Safe check for import.meta
         let apiUrl = 'http://localhost:3001';
         try {
-            // Check if import.meta and import.meta.env exist before accessing
             if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
                 apiUrl = import.meta.env.VITE_API_URL;
             }
-        } catch (e) {
-            console.warn("Environment variable access failed, using default.");
-        }
+        } catch (e) { console.warn("Env check failed"); }
         
         fetch(`${apiUrl}/api/status`)
             .then(res => res.json())
@@ -34,11 +71,27 @@ const HomePage = ({ setPage, onApplyClick }) => {
     return () => clearInterval(interval);
   }, []);
 
+  const teamMembers = [
+      { name: 'Certified Noob', role: 'OverWatcher', desc: 'People feel this guy is just a normie but what they need is just 5 mins in VC to understand what a Gem he is and why is he really the Overwatcher.' },
+      { name: 'Xtracious', role: 'Karma', desc: 'The all rounder. Introduction jitna do utna kam hai. From Roleplaying with 12 characters to Developing assets and managing staff, he does it all.' },
+      { name: 'Jay Bhai', role: 'Community Manager', desc: 'The Ghost Mayor of the city who is mostly overlooking everything.' },
+      { name: 'Riginex', role: 'LSReborn Partner', desc: 'The undercover chill and Rich guy in server with a Huge AURA. In short: chalta firta EDM Pack.' },
+      { name: 'Itaachi', role: 'Management', desc: 'The OG Mafia Uncle and Perfect Vehicle Handler. Short: Chalta firta Vehicle Resource of server.' },
+      { name: 'Rexci', role: 'Management', desc: 'The most experienced and fierce player. If he enters RP, players drop their guns. Manages Gangs effortlessly.' },
+      // Hidden by default
+      { name: 'Luffy', role: 'PD Management & Staff', desc: 'The law enforcer you do not want to mess with. Try doing crime once in server and find out.', hidden: true },
+      { name: 'Tushar Gupta', role: 'PD Management & Staff', desc: 'Aspataal Premium Member. Always in the thick of the action.', hidden: true },
+      { name: 'Danny', role: 'Staff', desc: 'Dedicated to keeping the streets clean and the RP quality high.', hidden: true },
+      { name: 'Draken', role: 'Staff', desc: 'Ensuring fair play and assisting citizens with technical issues.', hidden: true },
+      { name: 'DaddyWoo', role: 'Staff', desc: 'Watching over the city to ensure everyone has a good time.', hidden: true },
+  ];
+
+  const displayedTeam = showAllTeam ? teamMembers : teamMembers.filter(m => !m.hidden);
+
   return (
     <div className="animate-fade-in w-full">
       {/* Full-Screen Hero Section */}
       <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden -mt-16">
-          {/* Background Video */}
           <div className="absolute inset-0 w-full h-full z-0">
                <div className="absolute inset-0 bg-gray-950/70 z-10"></div>
                <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent z-10 h-full"></div>
@@ -47,7 +100,6 @@ const HomePage = ({ setPage, onApplyClick }) => {
                </video>
           </div>
 
-          {/* Hero Content - Centered */}
           <div className="relative z-20 text-center px-4 max-w-4xl mx-auto">
               <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-white tracking-tighter mb-6 drop-shadow-2xl">
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">LS</span>Reborn
@@ -67,7 +119,6 @@ const HomePage = ({ setPage, onApplyClick }) => {
               </div>
           </div>
           
-          {/* Scroll Indicator */}
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 animate-bounce text-gray-500">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
           </div>
@@ -78,14 +129,11 @@ const HomePage = ({ setPage, onApplyClick }) => {
         
         {/* Stats & Info Grid */}
         <div className="grid md:grid-cols-12 gap-8">
-            
-            {/* Modern Minimalist Status Card */}
             <div className="md:col-span-4">
                 <div className="h-full bg-gray-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/20 transition-all duration-500">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Users size={100} />
                     </div>
-                    
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <span className="text-gray-400 text-sm font-medium tracking-wider uppercase">Los Santos Status</span>
@@ -100,7 +148,6 @@ const HomePage = ({ setPage, onApplyClick }) => {
                             {status.online === 'fetching' ? 'Connecting...' : (status.online ? 'Live Server' : 'Offline')}
                         </h3>
                     </div>
-
                     <div className="mt-8">
                         <div className="flex items-end gap-2">
                             <span className="text-6xl font-black text-white tracking-tighter">
@@ -115,7 +162,6 @@ const HomePage = ({ setPage, onApplyClick }) => {
                 </div>
             </div>
 
-            {/* About / Why Join */}
             <div className="md:col-span-8">
                  <div className="h-full flex flex-col justify-center space-y-6 p-4">
                     <h2 className="text-4xl font-bold text-white">Why <span className="text-cyan-400">LSReborn?</span></h2>
@@ -134,7 +180,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
             </div>
         </div>
 
-        {/* Trailer & Feature Section */}
+        {/* Trailer Section */}
         <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1 relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
@@ -149,7 +195,6 @@ const HomePage = ({ setPage, onApplyClick }) => {
                     </iframe>
                 </div>
             </div>
-            
             <div className="order-1 lg:order-2 space-y-8">
                 <div>
                     <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">Experience the <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Next Generation</span></h2>
@@ -163,6 +208,40 @@ const HomePage = ({ setPage, onApplyClick }) => {
                         <Play className="w-5 h-5 fill-current" />
                     </div>
                     Read Server Rules
+                </button>
+            </div>
+        </div>
+
+        {/* TEAM SHOWCASE SECTION */}
+        <div className="pt-16">
+            <div className="text-center mb-16">
+                <h2 className="text-4xl font-bold text-white mb-4">Meet The <span className="text-cyan-400">Legends</span></h2>
+                <p className="text-gray-400 max-w-2xl mx-auto">The minds and hearts behind LSReborn. Dedicated to providing the best roleplay experience.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <AnimatePresence>
+                    {displayedTeam.map((member, index) => (
+                        <motion.div
+                            key={member.name}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 20 }}
+                            transition={{ delay: index * 0.1 }}
+                        >
+                            <TeamMember {...member} />
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+            </div>
+
+            <div className="text-center mt-12">
+                <button 
+                    onClick={() => setShowAllTeam(!showAllTeam)} 
+                    className="group flex items-center gap-2 mx-auto text-gray-400 hover:text-cyan-400 transition-colors font-medium border border-gray-800 hover:border-cyan-500/50 rounded-full px-6 py-3 bg-gray-900/50 hover:bg-gray-900"
+                >
+                    {showAllTeam ? 'Show Less' : 'View Full Roster'}
+                    {showAllTeam ? <ChevronUp className="w-4 h-4 group-hover:-translate-y-1 transition-transform" /> : <ChevronDown className="w-4 h-4 group-hover:translate-y-1 transition-transform" />}
                 </button>
             </div>
         </div>
