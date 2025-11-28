@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
-import { Play } from 'lucide-react';
+import { Play, Users } from 'lucide-react';
 
 const HomePage = ({ setPage, onApplyClick }) => {
   const [status, setStatus] = useState({ online: false, players: 0, maxPlayers: 0 });
@@ -9,7 +9,10 @@ const HomePage = ({ setPage, onApplyClick }) => {
   useEffect(() => {
     const fetchStatus = () => {
         setStatus(prevStatus => ({ ...prevStatus, online: 'fetching' }));
-        fetch(`${import.meta.env.VITE_API_URL}/api/status`)
+        // Safe check for import.meta to prevent crash if environment differs
+        const apiUrl = import.meta?.env?.VITE_API_URL || 'http://localhost:3001';
+        
+        fetch(`${apiUrl}/api/status`)
             .then(res => res.json())
             .then(data => setStatus(data))
             .catch(err => {
@@ -22,13 +25,6 @@ const HomePage = ({ setPage, onApplyClick }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const getStatusJsx = () => {
-      if(status.online === 'fetching') {
-          return <span className="font-bold px-3 py-1 rounded-full text-xs bg-yellow-500/10 text-yellow-300 border border-yellow-500/20">CONNECTING...</span>
-      }
-      return <span className={`font-bold px-3 py-1 rounded-full text-xs border ${status.online ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>{status.online ? 'ONLINE' : 'OFFLINE'}</span>
-  }
-
   return (
     <div className="animate-fade-in w-full">
       {/* Full-Screen Hero Section */}
@@ -38,7 +34,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
                <div className="absolute inset-0 bg-gray-950/70 z-10"></div>
                <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-transparent to-transparent z-10 h-full"></div>
                <video autoPlay loop muted playsInline className="w-full h-full object-cover">
-                  <source src="[https://cdn.discordapp.com/attachments/1080221764562137158/1149341142544760842/gta.mp4](https://cdn.discordapp.com/attachments/1080221764562137158/1149341142544760842/gta.mp4)" type="video/mp4" />
+                  <source src="https://cdn.discordapp.com/attachments/1080221764562137158/1149341142544760842/gta.mp4" type="video/mp4" />
                </video>
           </div>
 
@@ -54,7 +50,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
                   <AnimatedButton onClick={onApplyClick} className="bg-cyan-500 shadow-lg shadow-cyan-500/20 px-10 py-4 text-lg">
                       Start Your Journey
                   </AnimatedButton>
-                  <a href="[https://discord.gg/lsreborn1](https://discord.gg/lsreborn1)" target="_blank" rel="noopener noreferrer">
+                  <a href="https://discord.gg/lsreborn1" target="_blank" rel="noopener noreferrer">
                     <button className="px-10 py-4 rounded-lg font-bold text-white border border-white/20 hover:bg-white/10 transition-all duration-300 backdrop-blur-sm">
                         Join Community
                     </button>
@@ -73,27 +69,41 @@ const HomePage = ({ setPage, onApplyClick }) => {
         
         {/* Stats & Info Grid */}
         <div className="grid md:grid-cols-12 gap-8">
-            {/* Status Card */}
+            
+            {/* Modern Minimalist Status Card */}
             <div className="md:col-span-4">
-                <Card className="h-full flex flex-col justify-center p-8 bg-gradient-to-br from-gray-900 to-gray-800 border-cyan-500/10">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-2xl font-bold text-white">Server Status</h3>
-                        {getStatusJsx()}
+                <div className="h-full bg-gray-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden group hover:border-cyan-500/20 transition-all duration-500">
+                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <Users size={100} />
                     </div>
-                    <div className="space-y-4">
-                        <div className="flex justify-between text-sm text-gray-400">
-                            <span>Current Population</span>
-                            <span>{status.players} / {status.maxPlayers}</span>
+                    
+                    <div>
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="text-gray-400 text-sm font-medium tracking-wider uppercase">Los Santos Status</span>
+                            {status.online && status.online !== 'fetching' && (
+                                <span className="relative flex h-3 w-3">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                </span>
+                            )}
                         </div>
-                        <div className="w-full bg-gray-700/50 rounded-full h-3 overflow-hidden">
-                            <div 
-                                className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full rounded-full transition-all duration-1000 ease-out" 
-                                style={{ width: status.maxPlayers > 0 ? `${(status.players / status.maxPlayers) * 100}%` : '0%' }}
-                            ></div>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2 text-center">Refreshes automatically every 30s</p>
+                        <h3 className="text-3xl font-bold text-white">
+                            {status.online === 'fetching' ? 'Connecting...' : (status.online ? 'Live Server' : 'Offline')}
+                        </h3>
                     </div>
-                </Card>
+
+                    <div className="mt-8">
+                        <div className="flex items-end gap-2">
+                            <span className="text-6xl font-black text-white tracking-tighter">
+                                {status.players}
+                            </span>
+                            <span className="text-xl text-gray-500 font-medium mb-2">
+                                / {status.maxPlayers}
+                            </span>
+                        </div>
+                        <div className="text-cyan-400 text-sm font-medium mt-1">Active Citizens</div>
+                    </div>
+                </div>
             </div>
 
             {/* About / Why Join */}
@@ -106,7 +116,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
                         {['Custom Cars', 'Player Housing', 'Illegal Jobs', 'Whitelisted PD'].map((feature, i) => (
-                            <div key={i} className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 text-center text-sm text-gray-300 font-medium">
+                            <div key={i} className="bg-gray-800/40 border border-gray-700/50 rounded-lg p-3 text-center text-sm text-gray-300 font-medium hover:bg-gray-800/60 transition-colors cursor-default">
                                 {feature}
                             </div>
                         ))}
@@ -122,13 +132,12 @@ const HomePage = ({ setPage, onApplyClick }) => {
                 <div className="relative aspect-video rounded-xl overflow-hidden shadow-2xl shadow-black/50 border border-gray-800 bg-gray-900">
                     <iframe 
                         className="w-full h-full" 
-                        src="[https://www.youtube.com/embed/Xr3GZDRQ1lo?autoplay=1&mute=1&loop=1&playlist=Xr3GZDRQ1lo&controls=0&showinfo=0&rel=0&modestbranding=1](https://www.youtube.com/embed/Xr3GZDRQ1lo?autoplay=1&mute=1&loop=1&playlist=Xr3GZDRQ1lo&controls=0&showinfo=0&rel=0&modestbranding=1)" 
+                        src="https://www.youtube.com/embed/Xr3GZDRQ1lo?si=wQezikgYsIb1y4sf&autoplay=0&controls=1&rel=0" 
                         title="Server Trailer" 
                         frameBorder="0" 
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                         allowFullScreen>
                     </iframe>
-                    <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_100px_rgba(0,0,0,0.8)]"></div>
                 </div>
             </div>
             

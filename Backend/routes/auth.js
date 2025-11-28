@@ -5,9 +5,9 @@ require('dotenv').config();
 const db = require('../db');
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
+const MASTER_ADMIN_ID = "444043711094194200"; // Your ID
 
-// FIX: We now use the BOT TOKEN to check guild membership.
-// This is 100x more reliable than the user token.
+// Helper to get member data (Bot dependent)
 async function getGuildMember(userId) {
     try {
         const response = await fetch(`${DISCORD_API_URL}/guilds/${process.env.GUILD_ID}/members/${userId}`, {
@@ -26,7 +26,7 @@ router.get('/discord', (req, res) => {
         client_id: process.env.DISCORD_CLIENT_ID,
         redirect_uri: `${process.env.BACKEND_URL}/auth/discord/callback`,
         response_type: 'code',
-        scope: 'identify' // We only need identify now, bot handles the rest
+        scope: 'identify' 
     });
     res.redirect(`${DISCORD_API_URL}/oauth2/authorize?${params}`);
 });
@@ -56,32 +56,40 @@ router.get('/discord/callback', async (req, res) => {
         });
         const userProfile = await userRes.json();
 
-        // 3. SUPER FIX: Use Bot Token to fetch Guild Member Data
-        // This fixes the "Not in server" bug permanently.
+        // 3. Guild Membership & Roles
         const memberData = await getGuildMember(userProfile.id);
-        
         const inGuild = !!memberData;
         const roles = memberData ? memberData.roles : [];
 
-        // 4. Check DB for Cooldowns
+        // 4. Cooldown Check
         let cooldownExpiry = null;
         if (inGuild) {
             const [rows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [userProfile.id]);
             if (rows.length > 0) cooldownExpiry = rows[0].cooldown_expiry;
         }
 
-        // 5. Identify Permissions
-        const isStaff = roles.includes(process.env.STAFF_ROLE_ID) || roles.includes(process.env.LSR_ADMIN_ROLE_ID);
-        const isAdmin = roles.includes(process.env.LSR_ADMIN_ROLE_ID);
-        const isPDLead = roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID); // Add to .env
-        const isEMSLead = roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID); // Add to .env
+        // 5. PERMISSIONS LOGIC (WITH MASTER OVERRIDE)
+        let isStaff = roles.includes(process.env.STAFF_ROLE_ID) || roles.includes(process.env.LSR_ADMIN_ROLE_ID);
+        let isAdmin = roles.includes(process.env.LSR_ADMIN_ROLE_ID);
+        let isPDLead = roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
+        let isEMSLead = roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
+
+        // --- MASTER OVERRIDE START ---
+        if (userProfile.id === MASTER_ADMIN_ID) {
+            console.log(`[AUTH] Master Admin Logged In: ${userProfile.username}`);
+            isStaff = true;
+            isAdmin = true;
+            isPDLead = true;
+            isEMSLead = true;
+        }
+        // --- MASTER OVERRIDE END ---
 
         const userPayload = {
             id: userProfile.id,
             username: userProfile.username,
             avatar: userProfile.avatar,
             roles,
-            inGuild,
+            inGuild: inGuild || userProfile.id === MASTER_ADMIN_ID, // Bypass guild check for you too
             cooldownExpiry,
             isStaff, isAdmin, isPDLead, isEMSLead
         };
@@ -96,12 +104,14 @@ router.get('/discord/callback', async (req, res) => {
 });
 
 router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
-    // Refresh data on every page load using Bot Token
+    // 1. Try to refresh data using Bot Token
     const memberData = await getGuildMember(req.user.id);
     
+    // 2. Refresh basic role flags
     if (memberData) {
         req.user.roles = memberData.roles;
         req.user.inGuild = true;
+        
         req.user.isStaff = memberData.roles.includes(process.env.STAFF_ROLE_ID) || memberData.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
         req.user.isAdmin = memberData.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
         req.user.isPDLead = memberData.roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
@@ -111,8 +121,18 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
         const [rows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
         req.user.cooldownExpiry = rows.length > 0 ? rows[0].cooldown_expiry : null;
     } else {
+        // If bot fails or user left, set basics
         req.user.inGuild = false;
-        req.user.roles = [];
+        // Don't wipe roles immediately if bot is down, just keep session ones unless critical
+    }
+
+    // 3. APPLY MASTER OVERRIDE AGAIN (Crucial for page refreshes)
+    if (req.user.id === MASTER_ADMIN_ID) {
+        req.user.isStaff = true;
+        req.user.isAdmin = true;
+        req.user.isPDLead = true;
+        req.user.isEMSLead = true;
+        req.user.inGuild = true; // Pretend we are in guild even if bot says no
     }
     
     res.json(req.user);

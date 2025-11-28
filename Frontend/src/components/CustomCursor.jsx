@@ -1,4 +1,3 @@
-// File: frontend/src/components/CustomCursor.jsx
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 
@@ -29,20 +28,29 @@ const CustomCursor = () => {
 
   return (
     <>
+      {/* Outer Ring - Changes on hover */}
       <motion.div
-        className="fixed top-0 left-0 w-8 h-8 border-2 border-cyan-400 rounded-full pointer-events-none z-[9999]"
+        className="fixed top-0 left-0 w-6 h-6 border-2 rounded-full pointer-events-none z-[9999]"
         animate={{ 
-            x: mousePosition.x - 16, 
-            y: mousePosition.y - 16,
+            x: mousePosition.x - 12, 
+            y: mousePosition.y - 12,
             scale: isHovering ? 1.5 : 1,
-            borderColor: isHovering ? '#22d3ee' : 'rgba(34, 211, 238, 0.5)'
+            opacity: isHovering ? 1 : 0.5,
+            borderColor: isHovering ? '#22d3ee' : '#ffffff' // Cyan on hover, White normally
         }}
-        transition={{ type: "spring", stiffness: 500, damping: 28 }}
+        // Extremely fast transition to minimize latency feeling
+        transition={{ type: "tween", ease: "linear", duration: 0.05 }}
       />
+      
+      {/* Inner Dot - Sharp and precise */}
       <motion.div
-        className="fixed top-0 left-0 w-2 h-2 bg-cyan-400 rounded-full pointer-events-none z-[9999]"
-        animate={{ x: mousePosition.x - 4, y: mousePosition.y - 4 }}
-        transition={{ type: "spring", stiffness: 1500, damping: 20 }}
+        className="fixed top-0 left-0 w-1.5 h-1.5 bg-white rounded-full pointer-events-none z-[9999]"
+        animate={{ 
+            x: mousePosition.x - 3, 
+            y: mousePosition.y - 3,
+            backgroundColor: isHovering ? '#22d3ee' : '#ffffff'
+        }}
+        transition={{ type: "tween", ease: "linear", duration: 0 }}
       />
     </>
   );
