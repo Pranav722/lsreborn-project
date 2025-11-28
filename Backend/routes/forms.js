@@ -2,12 +2,86 @@ const router = require('express').Router();
 const db = require('../db');
 const { isAuthenticated } = require('../middleware/auth');
 
+// --- SELF-HEALING DATABASE INITIALIZATION ---
+// This ensures tables exist before we try to use them.
+const initializeTables = async () => {
+    try {
+        console.log("Checking database tables...");
+        
+        // 1. Form Settings Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS form_settings (
+                form_name VARCHAR(50) PRIMARY KEY,
+                is_open BOOLEAN DEFAULT true
+            )
+        `);
+        // Insert defaults if empty
+        await db.query(`
+            INSERT IGNORE INTO form_settings (form_name, is_open) VALUES 
+            ('whitelist', 1), ('pd', 1), ('ems', 1), ('staff', 1)
+        `);
+
+        // 2. PD Applications Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS pd_applications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                discord_id VARCHAR(255),
+                character_name VARCHAR(255),
+                irl_name VARCHAR(255),
+                irl_age INT,
+                experience TEXT,
+                reason TEXT,
+                scenario_cop TEXT,
+                status VARCHAR(50) DEFAULT 'pending',
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // 3. EMS Applications Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS ems_applications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                discord_id VARCHAR(255),
+                character_name VARCHAR(255),
+                irl_name VARCHAR(255),
+                irl_age INT,
+                medical_knowledge TEXT,
+                scenarios TEXT,
+                status VARCHAR(50) DEFAULT 'pending',
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // 4. Staff Applications Table
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS staff_applications (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                discord_id VARCHAR(255),
+                irl_age INT,
+                experience TEXT,
+                weekly_hours VARCHAR(50),
+                responsibilities TEXT,
+                definitions TEXT,
+                scenarios TEXT,
+                status VARCHAR(50) DEFAULT 'pending',
+                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        
+        console.log("Database tables verified/created successfully.");
+    } catch (e) {
+        console.error("Database Initialization Error:", e);
+    }
+};
+
+// Run initialization once on startup
+initializeTables();
+
+
 // --- QUIZ QUESTIONS ---
-// (Keeping the pool concise for brevity, assumes full pool exists)
 const QUIZ_POOL = [
     { q: "What does 'NVL' (No Value of Life) mean?", a: "Not fearing for your life in a dangerous situation", wrong: ["Not Valuing Loot", "New Vehicle License", "No Valid License"] },
     { q: "You are held at gunpoint. What do you do?", a: "Comply with demands to save my life", wrong: ["Pull out my own gun", "Run away", "Call the police on radio"] },
-    // ... (All other questions remain as per your original file)
     { q: "What is 'Metagaming'?", a: "Using OOC info in IC", wrong: ["Playing the game efficiently", "Using glitches", "Playing with friends"] },
     { q: "What is 'RDM'?", a: "Random Death Match", wrong: ["Real Drift Mode", "Rapid Deployment Method", "Roleplay Death Mode"] },
     { q: "What is 'VDM'?", a: "Vehicle Death Match", wrong: ["Virtual Death Match", "Vehicle Drift Mode", "Visual Damage Mod"] },
@@ -43,11 +117,20 @@ router.post('/submit/whitelist', isAuthenticated, async (req, res) => {
     const { answers } = req.body; 
     
     // Check Settings
-    const [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'whitelist'");
+    let settings;
+    try {
+        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'whitelist'");
+    } catch (err) {
+        // Fallback if table still creating
+        await initializeTables();
+        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'whitelist'");
+    }
     
     // Admin Override for Closed Forms
     const isAdmin = req.user.isAdmin || req.user.isStaff;
-    if (!settings[0].is_open && !isAdmin) return res.status(403).json({ message: "Whitelist applications are currently closed." });
+    if (settings && settings[0] && !settings[0].is_open && !isAdmin) {
+        return res.status(403).json({ message: "Whitelist applications are currently closed." });
+    }
 
     // Verify User Roles (Admins bypass this check too)
     const { roles } = req.user;
@@ -83,10 +166,16 @@ router.post('/submit/whitelist', isAuthenticated, async (req, res) => {
 
 // Submit PD Application
 router.post('/submit/pd', isAuthenticated, async (req, res) => {
-    const [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'pd'");
+    let settings;
+    try {
+        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'pd'");
+    } catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'pd'"); }
+
     const isAdmin = req.user.isAdmin || req.user.isStaff;
     
-    if (!settings[0].is_open && !isAdmin) return res.status(403).json({ message: "PD applications are closed." });
+    if (settings && settings[0] && !settings[0].is_open && !isAdmin) {
+        return res.status(403).json({ message: "PD applications are closed." });
+    }
 
     const { irlName, irlAge, icName, experience, whyJoin, scenario } = req.body;
     
@@ -110,10 +199,16 @@ router.post('/submit/pd', isAuthenticated, async (req, res) => {
 
 // Submit EMS Application
 router.post('/submit/ems', isAuthenticated, async (req, res) => {
-    const [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'ems'");
+    let settings;
+    try {
+        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'ems'");
+    } catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'ems'"); }
+
     const isAdmin = req.user.isAdmin || req.user.isStaff;
 
-    if (!settings[0].is_open && !isAdmin) return res.status(403).json({ message: "EMS applications are closed." });
+    if (settings && settings[0] && !settings[0].is_open && !isAdmin) {
+        return res.status(403).json({ message: "EMS applications are closed." });
+    }
 
     const { icName, irlName, irlAge, medicalKnowledge, scenarios } = req.body;
     
@@ -136,10 +231,16 @@ router.post('/submit/ems', isAuthenticated, async (req, res) => {
 
 // Submit Staff Application
 router.post('/submit/staff', isAuthenticated, async (req, res) => {
-    const [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'staff'");
+    let settings;
+    try {
+        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'staff'");
+    } catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'staff'"); }
+
     const isAdmin = req.user.isAdmin || req.user.isStaff;
 
-    if (!settings[0].is_open && !isAdmin) return res.status(403).json({ message: "Staff applications are closed." });
+    if (settings && settings[0] && !settings[0].is_open && !isAdmin) {
+        return res.status(403).json({ message: "Staff applications are closed." });
+    }
 
     const { age, experience, hours, responsibilities, definitions, scenarios } = req.body;
     
