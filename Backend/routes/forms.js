@@ -1,84 +1,39 @@
 const router = require('express').Router();
 const db = require('../db');
+const fetch = require('node-fetch');
 const { isAuthenticated } = require('../middleware/auth');
+require('dotenv').config();
 
-// --- SELF-HEALING DATABASE INITIALIZATION ---
-// This ensures tables exist before we try to use them.
+// --- CONFIG FOR AUTO-WHITELIST ---
+const DISCORD_API_URL = 'https://discord.com/api/v10';
+const ACTIVE_BOT_TOKEN = "MTMyNjE0MDIwNzY0MDA4NDUwMA.GepqXG.ucPzxtiaxHcECkCHAsHMXaOcn2lni7y9mv2mTs";
+const ACTIVE_GUILD_ID = "1322660458888695818";
+const WHITELISTED_ROLE_ID = process.env.WHITELISTED_ROLE_ID || "1322674155107127458"; 
+
+// Helper to Add Role
+async function addDiscordRole(userId, roleId) {
+    try {
+        await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${userId}/roles/${roleId}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bot ${ACTIVE_BOT_TOKEN}` }
+        });
+    } catch (e) {
+        console.error("Failed to add role:", e);
+    }
+}
+
+// ... (initializeTables function remains same as previous) ...
 const initializeTables = async () => {
     try {
-        console.log("Checking database tables...");
-        
-        // 1. Form Settings Table
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS form_settings (
-                form_name VARCHAR(50) PRIMARY KEY,
-                is_open BOOLEAN DEFAULT true
-            )
-        `);
-        // Insert defaults if empty
-        await db.query(`
-            INSERT IGNORE INTO form_settings (form_name, is_open) VALUES 
-            ('whitelist', 1), ('pd', 1), ('ems', 1), ('staff', 1)
-        `);
-
-        // 2. PD Applications Table
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS pd_applications (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                discord_id VARCHAR(255),
-                character_name VARCHAR(255),
-                irl_name VARCHAR(255),
-                irl_age INT,
-                experience TEXT,
-                reason TEXT,
-                scenario_cop TEXT,
-                status VARCHAR(50) DEFAULT 'pending',
-                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        // 3. EMS Applications Table
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS ems_applications (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                discord_id VARCHAR(255),
-                character_name VARCHAR(255),
-                irl_name VARCHAR(255),
-                irl_age INT,
-                medical_knowledge TEXT,
-                scenarios TEXT,
-                status VARCHAR(50) DEFAULT 'pending',
-                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
-        // 4. Staff Applications Table
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS staff_applications (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                discord_id VARCHAR(255),
-                irl_age INT,
-                experience TEXT,
-                weekly_hours VARCHAR(50),
-                responsibilities TEXT,
-                definitions TEXT,
-                scenarios TEXT,
-                status VARCHAR(50) DEFAULT 'pending',
-                submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        
-        console.log("Database tables verified/created successfully.");
-    } catch (e) {
-        console.error("Database Initialization Error:", e);
-    }
+        await db.query(`CREATE TABLE IF NOT EXISTS form_settings (form_name VARCHAR(50) PRIMARY KEY, is_open BOOLEAN DEFAULT true)`);
+        await db.query(`INSERT IGNORE INTO form_settings (form_name, is_open) VALUES ('whitelist', 1), ('pd', 1), ('ems', 1), ('staff', 1)`);
+        await db.query(`CREATE TABLE IF NOT EXISTS pd_applications (id INT AUTO_INCREMENT PRIMARY KEY, discord_id VARCHAR(255), character_name VARCHAR(255), irl_name VARCHAR(255), irl_age INT, experience TEXT, reason TEXT, scenario_cop TEXT, status VARCHAR(50) DEFAULT 'pending', submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+        await db.query(`CREATE TABLE IF NOT EXISTS ems_applications (id INT AUTO_INCREMENT PRIMARY KEY, discord_id VARCHAR(255), character_name VARCHAR(255), irl_name VARCHAR(255), irl_age INT, medical_knowledge TEXT, scenarios TEXT, status VARCHAR(50) DEFAULT 'pending', submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+        await db.query(`CREATE TABLE IF NOT EXISTS staff_applications (id INT AUTO_INCREMENT PRIMARY KEY, discord_id VARCHAR(255), irl_age INT, experience TEXT, weekly_hours VARCHAR(50), responsibilities TEXT, definitions TEXT, scenarios TEXT, status VARCHAR(50) DEFAULT 'pending', submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+    } catch (e) { console.error("DB Init Error:", e); }
 };
-
-// Run initialization once on startup
 initializeTables();
 
-
-// --- QUIZ QUESTIONS ---
 const QUIZ_POOL = [
     { q: "What does 'NVL' (No Value of Life) mean?", a: "Not fearing for your life in a dangerous situation", wrong: ["Not Valuing Loot", "New Vehicle License", "No Valid License"] },
     { q: "You are held at gunpoint. What do you do?", a: "Comply with demands to save my life", wrong: ["Pull out my own gun", "Run away", "Call the police on radio"] },
@@ -102,41 +57,14 @@ const QUIZ_POOL = [
     { q: "Can you drive off road in a supercar?", a: "No, that is NVL/Powergaming", wrong: ["Yes", "Slowly", "If escaping"] }
 ];
 
-// Get Random Quiz
 router.get('/quiz', isAuthenticated, (req, res) => {
     const shuffled = QUIZ_POOL.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 15).map(q => ({
-        question: q.q,
-        options: [q.a, ...q.wrong].sort(() => 0.5 - Math.random()) 
-    }));
-    res.json(selected);
+    res.json(shuffled.slice(0, 15).map(q => ({ question: q.q, options: [q.a, ...q.wrong].sort(() => 0.5 - Math.random()) })));
 });
 
-// Submit Quiz (Whitelist Application)
 router.post('/submit/whitelist', isAuthenticated, async (req, res) => {
     const { answers } = req.body; 
-    
-    // Check Settings
-    let settings;
-    try {
-        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'whitelist'");
-    } catch (err) {
-        // Fallback if table still creating
-        await initializeTables();
-        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'whitelist'");
-    }
-    
-    // Admin Override for Closed Forms
     const isAdmin = req.user.isAdmin || req.user.isStaff;
-    if (settings && settings[0] && !settings[0].is_open && !isAdmin) {
-        return res.status(403).json({ message: "Whitelist applications are currently closed." });
-    }
-
-    // Verify User Roles (Admins bypass this check too)
-    const { roles } = req.user;
-    const hasAccess = roles.includes(process.env.PREMIUM_APPLICANT_ROLE_ID) || roles.includes(process.env.APPLICATION_ROLE_ID) || isAdmin;
-    
-    if (!hasAccess) return res.status(403).json({ message: "Missing Application Pass." });
 
     // Grade Quiz
     let score = 0;
@@ -145,51 +73,61 @@ router.post('/submit/whitelist', isAuthenticated, async (req, res) => {
         if (correctQ && correctQ.a === ans.answer) score++;
     });
 
-    if (score < 12) { 
-        return res.status(400).json({ message: `You scored ${score}/15. You need 12 to pass. Please try again.` });
-    }
+    const passed = score >= 12;
+    const total = 15;
 
-    // Check if user already has an app (Admin Bypass here)
-    if (!isAdmin) {
-        const [existing] = await db.query("SELECT * FROM applications WHERE discordId = ? AND status IN ('pending', 'approved')", [req.user.id]);
-        if (existing.length > 0) return res.status(400).json({ message: "You already have an active application." });
-    }
-
-    // Pass!
-    await db.query(
-        "INSERT INTO applications (discordId, characterName, characterAge, backstory, status, notified) VALUES (?, 'Quiz User', 0, 'Passed Whitelist Quiz', 'pending', 0)", 
-        [req.user.id]
-    );
+    // PASS LOGIC
+    if (passed) {
+        // Auto-assign Discord Role
+        await addDiscordRole(req.user.id, WHITELISTED_ROLE_ID);
+        
+        // Log in DB
+        await db.query("INSERT INTO applications (discordId, characterName, characterAge, backstory, status, notified) VALUES (?, 'Quiz User', 0, 'Passed Whitelist Quiz', 'approved', 1)", [req.user.id]);
+        
+        return res.json({ 
+            passed: true, 
+            score, total, 
+            message: "Congratulations! You have demonstrated sufficient knowledge of our server rules. You have been automatically whitelisted. You can now connect to the server!" 
+        });
+    } 
     
-    res.json({ success: true, message: "Quiz Passed! Application submitted for processing." });
+    // FAIL LOGIC
+    else {
+        // Apply 24h Cooldown (skip if Admin)
+        if (!isAdmin) {
+            const expiryTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+            await db.query("INSERT INTO discord_users (discord_id, cooldown_expiry) VALUES (?, ?) ON DUPLICATE KEY UPDATE cooldown_expiry = ?", [req.user.id, expiryTime, expiryTime]);
+        }
+
+        return res.json({ 
+            passed: false, 
+            score, total, 
+            message: "Unfortunately, you did not meet the required score. We recommend reviewing the Server Rules page carefully, focusing on definitions of NVL, RDM, and Powergaming." 
+        });
+    }
 });
 
+// ... (Other PD/EMS/Staff routes remain same) ...
 // Submit PD Application
 router.post('/submit/pd', isAuthenticated, async (req, res) => {
-    let settings;
-    try {
-        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'pd'");
-    } catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'pd'"); }
-
     const isAdmin = req.user.isAdmin || req.user.isStaff;
-    
+    let settings;
+    try { [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'pd'"); }
+    catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'pd'"); }
+
     if (settings && settings[0] && !settings[0].is_open && !isAdmin) {
         return res.status(403).json({ message: "PD applications are closed." });
     }
 
     const { irlName, irlAge, icName, experience, whyJoin, scenario } = req.body;
     
-    // Allow admins to submit multiple times
     if (!isAdmin) {
         const [existing] = await db.query("SELECT * FROM pd_applications WHERE discord_id = ? AND status = 'pending'", [req.user.id]);
         if (existing.length > 0) return res.status(400).json({ message: "You already have a pending PD application." });
     }
 
     try {
-        await db.query(
-            "INSERT INTO pd_applications (discord_id, character_name, irl_name, irl_age, experience, reason, scenario_cop, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')",
-            [req.user.id, icName, irlName, irlAge, experience, whyJoin, scenario]
-        );
+        await db.query("INSERT INTO pd_applications (discord_id, character_name, irl_name, irl_age, experience, reason, scenario_cop, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')", [req.user.id, icName, irlName, irlAge, experience, whyJoin, scenario]);
         res.json({ success: true, message: "PD Application Submitted!" });
     } catch (e) {
         console.error(e);
@@ -199,12 +137,10 @@ router.post('/submit/pd', isAuthenticated, async (req, res) => {
 
 // Submit EMS Application
 router.post('/submit/ems', isAuthenticated, async (req, res) => {
-    let settings;
-    try {
-        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'ems'");
-    } catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'ems'"); }
-
     const isAdmin = req.user.isAdmin || req.user.isStaff;
+    let settings;
+    try { [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'ems'"); }
+    catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'ems'"); }
 
     if (settings && settings[0] && !settings[0].is_open && !isAdmin) {
         return res.status(403).json({ message: "EMS applications are closed." });
@@ -218,10 +154,7 @@ router.post('/submit/ems', isAuthenticated, async (req, res) => {
     }
 
     try {
-        await db.query(
-            "INSERT INTO ems_applications (discord_id, character_name, irl_name, irl_age, medical_knowledge, scenarios, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
-            [req.user.id, icName, irlName, irlAge, medicalKnowledge, scenarios]
-        );
+        await db.query("INSERT INTO ems_applications (discord_id, character_name, irl_name, irl_age, medical_knowledge, scenarios, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')", [req.user.id, icName, irlName, irlAge, medicalKnowledge, scenarios]);
         res.json({ success: true, message: "EMS Application Submitted!" });
     } catch (e) {
         console.error(e);
@@ -231,12 +164,10 @@ router.post('/submit/ems', isAuthenticated, async (req, res) => {
 
 // Submit Staff Application
 router.post('/submit/staff', isAuthenticated, async (req, res) => {
-    let settings;
-    try {
-        [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'staff'");
-    } catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'staff'"); }
-
     const isAdmin = req.user.isAdmin || req.user.isStaff;
+    let settings;
+    try { [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'staff'"); }
+    catch (err) { await initializeTables(); [settings] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'staff'"); }
 
     if (settings && settings[0] && !settings[0].is_open && !isAdmin) {
         return res.status(403).json({ message: "Staff applications are closed." });
@@ -250,10 +181,7 @@ router.post('/submit/staff', isAuthenticated, async (req, res) => {
     }
 
      try {
-        await db.query(
-            "INSERT INTO staff_applications (discord_id, irl_age, experience, weekly_hours, responsibilities, definitions, scenarios, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')",
-            [req.user.id, age, experience, hours, responsibilities, definitions, scenarios]
-        );
+        await db.query("INSERT INTO staff_applications (discord_id, irl_age, experience, weekly_hours, responsibilities, definitions, scenarios, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')", [req.user.id, age, experience, hours, responsibilities, definitions, scenarios]);
         res.json({ success: true, message: "Staff Application Submitted!" });
     } catch (e) {
         console.error(e);
