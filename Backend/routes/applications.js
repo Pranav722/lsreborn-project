@@ -1,6 +1,31 @@
 const router = require('express').Router();
 const db = require('../db');
 const { isAuthenticated } = require('../middleware/auth');
+const fetch = require('node-fetch');
+require('dotenv').config();
+
+const DISCORD_API_URL = 'https://discord.com/api/v10';
+const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN;
+
+// --- DISCORD UTILS ---
+async function sendDiscordMessage(channelId, content, embed = null) {
+    if (!channelId || !ACTIVE_BOT_TOKEN) return;
+    try {
+        const body = { content };
+        if (embed) body.embeds = [embed];
+
+        await fetch(`${DISCORD_API_URL}/channels/${channelId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bot ${ACTIVE_BOT_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+    } catch (e) {
+        console.error("Discord Msg Error:", e);
+    }
+}
 
 // Middleware to check if the user is staff or admin
 const isStaff = (req, res, next) => {
@@ -46,6 +71,20 @@ router.post('/', isAuthenticated, async (req, res) => {
 
         const query = 'INSERT INTO applications (discordId, characterName, characterAge, backstory, irlName, irlAge, questions, isPremium, status, notified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         await db.query(query, [discordId, characterName, characterAge, backstory, irlName, irlAge, JSON.stringify(questions), isPremium, 'pending', 0]);
+
+        // Notify Staff via Discord
+        const logChannel = process.env.LOG_CHANNEL_ID;
+        const embed = {
+            title: "📝 New Written Application",
+            color: 0x3498db,
+            fields: [
+                { name: "User", value: `<@${discordId}>`, inline: true },
+                { name: "Character", value: characterName, inline: true },
+                { name: "Status", value: "Pending Review", inline: true }
+            ],
+            timestamp: new Date().toISOString()
+        };
+        await sendDiscordMessage(logChannel, null, embed);
 
         res.status(201).json({ message: "Application submitted successfully!" });
     } catch (err) {
