@@ -10,15 +10,6 @@ const isStaff = (req, res, next) => {
     return res.status(403).json({ message: 'Forbidden: Staff access required' });
 };
 
-// Middleware to check if the user is an admin
-const isAdmin = (req, res, next) => {
-    if (req.user && req.user.isAdmin) {
-        return next();
-    }
-    return res.status(403).json({ message: 'Forbidden: Admin access required' });
-};
-
-
 // GET all applications (for staff/admin)
 router.get('/', isAuthenticated, isStaff, async (req, res) => {
     try {
@@ -30,40 +21,40 @@ router.get('/', isAuthenticated, isStaff, async (req, res) => {
     }
 });
 
-// POST a new application
+// POST submit application
 router.post('/', isAuthenticated, async (req, res) => {
-    const { characterName, characterAge, backstory } = req.body;
-    
-    if (!characterName || !characterAge || !backstory) {
+    const { characterName, characterAge, backstory, irlName, irlAge, questions } = req.body;
+    const discordId = req.user.id;
+    const isPremium = req.user && req.user.roles && req.user.roles.includes(process.env.PREMIUM_APPLICANT_ROLE_ID);
+
+    if (!characterName || !characterAge || !backstory || !irlName || !irlAge) {
         return res.status(400).json({ message: "All fields are required." });
     }
-    const wordCount = backstory.trim().split(/\s+/).filter(Boolean).length;
+
+    // Word count validation
+    const wordCount = backstory.trim().split(/\s+/).length;
     if (wordCount < 200) {
-        return res.status(400).json({ message: "Backstory must be at least 200 words." });
+        return res.status(400).json({ message: `Backstory is too short (${wordCount}/200 words).` });
     }
-
-    const discordId = req.user.id;
-    const userRoles = req.user.roles || [];
-    
-    // Check if user already has a pending/approved application
-    const [existingApps] = await db.query("SELECT * FROM applications WHERE discordId = ? AND status IN ('pending', 'approved')", [discordId]);
-    if (existingApps.length > 0) {
-        return res.status(400).json({ message: "You already have an active application." });
-    }
-
-    const isPremium = userRoles.includes(process.env.PREMIUM_APPLICANT_ROLE_ID);
 
     try {
-        const query = 'INSERT INTO applications (discordId, characterName, characterAge, backstory, isPremium, status, notified) VALUES (?, ?, ?, ?, ?, ?, ?)';
-        await db.query(query, [discordId, characterName, characterAge, backstory, isPremium, 'pending', 0]); 
-        res.status(201).json({ message: 'Application submitted successfully' });
+        // Check for existing pending application
+        const [existing] = await db.query('SELECT id FROM applications WHERE discordId = ? AND status = "pending"', [discordId]);
+        if (existing.length > 0) {
+            return res.status(400).json({ message: "You already have a pending application." });
+        }
+
+        const query = 'INSERT INTO applications (discordId, characterName, characterAge, backstory, irlName, irlAge, questions, isPremium, status, notified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+        await db.query(query, [discordId, characterName, characterAge, backstory, irlName, irlAge, JSON.stringify(questions), isPremium, 'pending', 0]);
+
+        res.status(201).json({ message: "Application submitted successfully!" });
     } catch (err) {
         console.error("Error submitting application:", err);
-        res.status(500).json({ message: 'Server Error' });
+        res.status(500).json({ message: "Database error." });
     }
 });
 
-// PUT to update an application's status (approve/reject)
+// PUT update application status
 router.put('/:id', isAuthenticated, isStaff, async (req, res) => {
     const { id } = req.params;
     const { status, reason } = req.body;
@@ -80,6 +71,5 @@ router.put('/:id', isAuthenticated, isStaff, async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-
 
 module.exports = router;
