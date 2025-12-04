@@ -6,18 +6,13 @@ require('dotenv').config();
 
 // --- CONFIG FOR AUTO-WHITELIST ---
 const DISCORD_API_URL = 'https://discord.com/api/v10';
-// REPLACED HARDCODED TOKEN WITH ENV VARIABLE TO FIX GITHUB PUSH ERROR
-const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN;
-const ACTIVE_GUILD_ID = process.env.ACTIVE_GUILD_ID || "1322660458888695818";
+const ACTIVE_BOT_TOKEN = "MTMyNjE0MDIwNzY0MDA4NDUwMA.GepqXG.ucPzxtiaxHcECkCHAsHMXaOcn2lni7y9mv2mTs";
+const ACTIVE_GUILD_ID = "1322660458888695818";
 const WHITELISTED_ROLE_ID = process.env.WHITELISTED_ROLE_ID || "1322674155107127458"; 
 
 // Helper to Add Role
 async function addDiscordRole(userId, roleId) {
     try {
-        if (!ACTIVE_BOT_TOKEN) {
-             console.error("Cannot add role: ACTIVE_BOT_TOKEN missing env.");
-             return;
-        }
         await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${userId}/roles/${roleId}`, {
             method: 'PUT',
             headers: { 'Authorization': `Bot ${ACTIVE_BOT_TOKEN}` }

@@ -6,20 +6,16 @@ const db = require('../db');
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
-// --- CONFIGURATION: USE ENVIRONMENT VARIABLES ---
-// REPLACED HARDCODED TOKEN WITH ENV VARIABLE TO FIX GITHUB PUSH ERROR
-const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN;
-const ACTIVE_GUILD_ID = process.env.ACTIVE_GUILD_ID || "1322660458888695818";
-const MASTER_ADMIN_ID = process.env.MASTER_ADMIN_ID || "444043711094194200"; 
+// --- CONFIGURATION: USE THE RESPONSE BOT TOKEN ---
+// This specific token is for the bot that is already present in your server.
+// We use IT to check if users are members, bypassing OAuth limitations.
+const ACTIVE_BOT_TOKEN = "MTMyNjE0MDIwNzY0MDA4NDUwMA.GepqXG.ucPzxtiaxHcECkCHAsHMXaOcn2lni7y9mv2mTs";
+const ACTIVE_GUILD_ID = "1322660458888695818";
+const MASTER_ADMIN_ID = "444043711094194200"; 
 
-// Helper to get member data using the BOT TOKEN
+// Helper: Check membership using the RESPONSE BOT credentials
 async function getGuildMember(userId) {
     try {
-        if (!ACTIVE_BOT_TOKEN) {
-            console.error("[AUTH] Missing ACTIVE_BOT_TOKEN in environment variables.");
-            return null;
-        }
-        
         const response = await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${userId}`, {
             headers: { 'Authorization': `Bot ${ACTIVE_BOT_TOKEN}` }
         });
@@ -30,7 +26,7 @@ async function getGuildMember(userId) {
             // If 404, the user is NOT in the server.
             // If 401/403, the bot token is wrong or bot is not in the server.
             if (response.status !== 404) {
-                console.warn(`[AUTH] Guild check failed for ${userId}: ${response.status} ${response.statusText}`);
+                console.warn(`[AUTH] Guild check warning for ${userId}: ${response.status} ${response.statusText}`);
             }
             return null;
         }
@@ -102,11 +98,9 @@ router.get('/discord/callback', async (req, res) => {
         let isPDLead = roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
         let isEMSLead = roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
 
-        // --- MASTER ADMIN OVERRIDE ---
+        // --- Master Admin Override ---
         if (userProfile.id === MASTER_ADMIN_ID) {
             isStaff = true; isAdmin = true; isPDLead = true; isEMSLead = true;
-            // Also force inGuild to true for master admin to prevent lockout during testing
-            if (!inGuild) console.log("[AUTH] Master Admin is bypassing guild check.");
         }
 
         const userPayload = {
