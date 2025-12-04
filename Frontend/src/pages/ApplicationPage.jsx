@@ -21,12 +21,25 @@ const ClosedFormUI = ({ title, message }) => (
 const WhitelistForm = ({ user }) => {
     const [formData, setFormData] = useState({});
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [success, setSuccess] = useState(false);
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
+        setSuccess(false);
+
+        // Client-side validation for word count
+        const backstory = formData.backstory || "";
+        const wordCount = backstory.trim().split(/\s+/).length;
+        if (wordCount < 200) {
+            setError(`Backstory is too short (${wordCount}/200 words). Please provide more detail.`);
+            setLoading(false);
+            return;
+        }
 
         const payload = {
             ...formData,
@@ -52,18 +65,18 @@ const WhitelistForm = ({ user }) => {
                 data = JSON.parse(responseText);
             } catch (jsonError) {
                 console.error("Server returned non-JSON response:", responseText);
-                throw new Error(`Server Error: ${res.status} ${res.statusText}. See console for details.`);
+                throw new Error(`Server Error: ${res.status} ${res.statusText}. The server returned an invalid response.`);
             }
 
             if (!res.ok) {
                 throw new Error(data.message || "Server Error");
             }
 
-            alert(data.message);
-            window.location.reload();
+            setSuccess(true);
+            setTimeout(() => window.location.reload(), 2000);
         } catch (e) {
             console.error("Submission Error:", e);
-            alert(`Submission failed: ${e.message}`);
+            setError(e.message);
         }
         setLoading(false);
     };
@@ -72,6 +85,18 @@ const WhitelistForm = ({ user }) => {
         <Card className="max-w-4xl mx-auto pt-10 pb-20">
             <h2 className="text-3xl font-bold text-cyan-400 mb-4">Citizenship Application (Written)</h2>
             <p className="text-gray-400 mb-6">Please fill out the full written application form below.</p>
+
+            {error && (
+                <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 animate-fade-in">
+                    <strong>Submission Failed:</strong> {error}
+                </div>
+            )}
+
+            {success && (
+                <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200 animate-fade-in">
+                    <strong>Success!</strong> Application submitted successfully. Redirecting...
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">

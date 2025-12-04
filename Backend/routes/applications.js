@@ -82,7 +82,7 @@ router.post('/', isAuthenticated, async (req, res) => {
 
     try {
         // Check for existing pending application
-        const [existing] = await db.query('SELECT id FROM applications WHERE discordId = ? AND status = "pending"', [discordId]);
+        const [existing] = await db.query('SELECT id FROM applications WHERE discordId = ? AND status = \'pending\'', [discordId]);
         if (existing.length > 0) {
             return res.status(400).json({ message: "You already have a pending application." });
         }
