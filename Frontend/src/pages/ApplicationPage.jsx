@@ -46,7 +46,14 @@ const WhitelistForm = ({ user }) => {
                 body: JSON.stringify(payload)
             });
 
-            const data = await res.json();
+            const responseText = await res.text();
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (jsonError) {
+                console.error("Server returned non-JSON response:", responseText);
+                throw new Error(`Server Error: ${res.status} ${res.statusText}. See console for details.`);
+            }
 
             if (!res.ok) {
                 throw new Error(data.message || "Server Error");
