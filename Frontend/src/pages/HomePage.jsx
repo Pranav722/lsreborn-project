@@ -77,14 +77,14 @@ const HomePage = ({ setPage, onApplyClick }) => {
   const teamMembers = [
       { 
           name: 'Certified Noob', 
-          role: 'OverWatcher', 
-          desc: 'People feel this guy is just a normie but what they need is just 5 mins in VC to understand what a Gem he is.', 
+          role: 'OverSeer', 
+          desc: 'No Intro needed, Just CHAD', 
           image: '/Media/Noob-Avatar.png' 
       },
       { 
-          name: 'Xtracious', 
+          name: 'XTracious', 
           role: 'Karma', 
-          desc: 'The all rounder. Introduction jitna do utna kam hai. From Roleplaying to Developing assets.', 
+          desc: 'The all rounder. Introduction jitna do utna kam hai. From Roleplaying to Developing Custom assets.', 
           image: '/Media/Xtracious-Avatar.png' 
       },
       { 

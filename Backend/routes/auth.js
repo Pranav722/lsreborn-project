@@ -6,13 +6,11 @@ const db = require('../db');
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
-// --- SECURE CONFIGURATION ---
-// Use process.env to avoid GitHub push rejection
-const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN;
-const ACTIVE_GUILD_ID = process.env.GUILD_ID ;
-const MASTER_ADMIN_ID = process.env.MASTER_ADMIN_ID ;
+// --- CONFIGURATION: USE ENVIRONMENT VARIABLES ---
+const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN; 
+const ACTIVE_GUILD_ID = process.env.ACTIVE_GUILD_ID || "1322660458888695818";
+const MASTER_ADMIN_ID = "444043711094194200"; 
 
-// Helper: Check membership using the RESPONSE BOT credentials
 async function getGuildMember(userId) {
     try {
         if (!ACTIVE_BOT_TOKEN) {
@@ -26,12 +24,8 @@ async function getGuildMember(userId) {
         
         if (response.ok) {
             return await response.json();
-        } else {
-            if (response.status !== 404) {
-                console.warn(`[AUTH] Guild check warning for ${userId}: ${response.status} ${response.statusText}`);
-            }
-            return null;
         }
+        return null;
     } catch (e) {
         console.error("[AUTH] Connection error during guild check:", e);
         return null;
@@ -53,7 +47,6 @@ router.get('/discord/callback', async (req, res) => {
     if (!code) return res.redirect(`${process.env.FRONTEND_URL}?login=failed`);
 
     try {
-        // 1. Exchange Code for User Token
         const tokenRes = await fetch(`${DISCORD_API_URL}/oauth2/token`, {
             method: 'POST',
             body: new URLSearchParams({
@@ -68,38 +61,34 @@ router.get('/discord/callback', async (req, res) => {
         const tokenData = await tokenRes.json();
         
         if (!tokenData.access_token) {
-            console.error("[AUTH] Failed to get access token:", tokenData);
             return res.redirect(`${process.env.FRONTEND_URL}?login=failed`);
         }
 
-        // 2. Get User ID
         const userRes = await fetch(`${DISCORD_API_URL}/users/@me`, {
             headers: { Authorization: `Bearer ${tokenData.access_token}` },
         });
         const userProfile = await userRes.json();
 
-        // 3. Verify Membership (Using Bot Token)
+        // Check membership using BOT TOKEN (Reliable)
         const memberData = await getGuildMember(userProfile.id);
         
         const inGuild = !!memberData;
         const roles = memberData ? memberData.roles : [];
 
-        // 4. DB Cooldown Check
         let cooldownExpiry = null;
         if (inGuild) {
             try {
                 const [rows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [userProfile.id]);
                 if (rows.length > 0) cooldownExpiry = rows[0].cooldown_expiry;
-            } catch(dbErr) { console.error("DB Error:", dbErr); }
+            } catch(dbErr) {}
         }
 
-        // 5. Assign Permissions
         let isStaff = roles.includes(process.env.STAFF_ROLE_ID) || roles.includes(process.env.LSR_ADMIN_ROLE_ID);
         let isAdmin = roles.includes(process.env.LSR_ADMIN_ROLE_ID);
         let isPDLead = roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
         let isEMSLead = roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
 
-        // --- Master Admin Override ---
+        // Master Override
         if (userProfile.id === MASTER_ADMIN_ID) {
             isStaff = true; isAdmin = true; isPDLead = true; isEMSLead = true;
         }
@@ -124,10 +113,8 @@ router.get('/discord/callback', async (req, res) => {
 });
 
 router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
-    // 1. Refresh membership
     const memberData = await getGuildMember(req.user.id);
     
-    // 2. Update session
     if (memberData) {
         req.user.roles = memberData.roles;
         req.user.inGuild = true;
@@ -145,7 +132,7 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
         req.user.inGuild = false;
     }
 
-    // 3. Master Admin Override
+    // Master Override
     if (req.user.id === MASTER_ADMIN_ID) {
         req.user.isStaff = true;
         req.user.isAdmin = true;

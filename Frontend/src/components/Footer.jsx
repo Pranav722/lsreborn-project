@@ -64,7 +64,7 @@ const Footer = ({ setPage }) => {
                         &copy; {new Date().getFullYear()} LSReborn Roleplay. All rights reserved.
                     </p>
                     <p className="text-gray-700 text-xs font-medium">
-                        Crafted by Pranav
+                        Crafted with ❤️ by LSReborn
                     </p>
                 </div>
             </div>
