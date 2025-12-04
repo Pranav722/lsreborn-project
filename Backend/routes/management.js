@@ -27,17 +27,22 @@ const isAdmin = (req, res, next) => {
 };
 
 
-// Get Forms Status
+// Get Forms Status (Staff/Admin can view)
 router.get('/settings', isAuthenticated, isStaff, async (req, res) => {
     const [rows] = await db.query("SELECT * FROM form_settings");
     res.json(rows);
 });
 
-// Toggle Form Status (Admin Only for closing, but Staff can view settings)
+// Toggle Form Status (Admin Only)
 router.post('/settings/toggle', isAuthenticated, isAdmin, async (req, res) => {
     const { formName, isOpen } = req.body;
-    await db.query("UPDATE form_settings SET is_open = ? WHERE form_name = ?", [isOpen, formName]);
-    res.json({ success: true, message: `Form ${formName} status updated to ${isOpen ? 'OPEN' : 'CLOSED'}` });
+    try {
+        await db.query("UPDATE form_settings SET is_open = ? WHERE form_name = ?", [isOpen, formName]);
+        res.json({ success: true, message: `Form ${formName} status updated to ${isOpen ? 'OPEN' : 'CLOSED'}` });
+    } catch(e) {
+        console.error("Error toggling form:", e);
+        res.status(500).json({ success: false, message: "Database Error on toggle." });
+    }
 });
 
 // Switch Whitelist Type (Quiz/Form) (Admin Only)
@@ -46,8 +51,13 @@ router.post('/settings/whitelist/switch', isAuthenticated, isAdmin, async (req, 
     if (type !== 'quiz' && type !== 'form') {
         return res.status(400).json({ message: "Invalid type specified." });
     }
-    await db.query("UPDATE form_settings SET type = ? WHERE form_name = 'whitelist'", [type]);
-    res.json({ success: true, message: `Whitelist type switched to ${type.toUpperCase()}` });
+    try {
+        await db.query("UPDATE form_settings SET type = ? WHERE form_name = 'whitelist'", [type]);
+        res.json({ success: true, message: `Whitelist type switched to ${type.toUpperCase()}` });
+    } catch(e) {
+         console.error("Error switching whitelist type:", e);
+        res.status(500).json({ success: false, message: "Database Error on switch." });
+    }
 });
 
 

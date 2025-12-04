@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
 import { ShieldCheck, Siren, HeartPulse, BrainCircuit, LockKeyhole, UserCog, Clock } from 'lucide-react';
-import DepartmentApp from './DepartmentApps'; // Import the main forms
-import QuizPage from './QuizPage'; // Import the quiz
+import DepartmentApp from './DepartmentApps'; 
+import QuizPage from './QuizPage'; 
 
 // New component for the closed/disabled state
 const ClosedFormUI = ({ title, message }) => (
@@ -17,6 +17,17 @@ const ClosedFormUI = ({ title, message }) => (
     </Card>
 );
 
+// Whitelist Form Application (Written Application UI)
+const WhitelistForm = () => (
+    <Card className="max-w-4xl mx-auto pt-10">
+        <h2 className="text-3xl font-bold text-cyan-400 mb-4">Citizenship Application (Written)</h2>
+        <p className="text-gray-400 mb-6">Please fill out the full written application form below. This path is open when the Quiz is disabled.</p>
+        {/* Placeholder for the actual large written form submission */}
+        <AnimatedButton onClick={() => alert("Submitting written application...")} className="bg-cyan-500">Submit Written Application (Placeholder)</AnimatedButton>
+    </Card>
+);
+
+
 const ApplicationPage = ({ user, setPage }) => {
     const [whitelistStatus, setWhitelistStatus] = useState({ is_open: true, type: 'quiz' });
     const [pageType, setPageType] = useState('hub'); // 'hub', 'quiz', 'form', 'department'
@@ -24,12 +35,14 @@ const ApplicationPage = ({ user, setPage }) => {
     const [loadingStatus, setLoadingStatus] = useState(true);
 
     const isWhitelisted = user?.roles?.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
-    const isAdmin = user && user.isAdmin; // Staff access is not Admin access
+    const isAdmin = user && user.isAdmin; 
     const isStaff = user && user.isStaff;
     
-    // Whitelisted user can apply for PD/EMS only if they DON'T have those roles yet
-    const hasPDORoles = user?.roles?.includes(import.meta.env.VITE_SALES_ROLE_ID) || user?.roles?.includes(import.meta.env.VITE_EMS_ROLE_ID);
-    const canApplyJobs = isWhitelisted || isAdmin;
+    // Check if user has PD or EMS role to disable the buttons
+    const hasDeptRoles = user?.roles?.includes(import.meta.env.VITE_SALES_ROLE_ID) || user?.roles?.includes(import.meta.env.VITE_EMS_ROLE_ID);
+    
+    // Whitelisted or Admin can see job forms
+    const canApplyJobs = isWhitelisted || isAdmin; 
 
     useEffect(() => {
         const fetchStatus = async () => {
@@ -53,13 +66,10 @@ const ApplicationPage = ({ user, setPage }) => {
 
     // Logic for Whitelist flow
     const handleWhitelistClick = () => {
-        if (!whitelistStatus.is_open && !isAdmin) {
-            // Normal user blocked if closed
-            return; 
-        }
-
+        if (!whitelistStatus.is_open && !isAdmin) return; // Blocked if closed
+        
         if (isWhitelisted && !isAdmin) {
-             // Whitelisted users should not take the quiz again unless testing
+             // Whitelisted users cannot retake quiz/form unless testing
              return; 
         }
         
@@ -70,16 +80,6 @@ const ApplicationPage = ({ user, setPage }) => {
             setPageType('form'); // Directs to the written form
         }
     };
-    
-    // Whitelist Form Application (Written Application UI)
-    const WhitelistForm = () => (
-        <Card className="max-w-4xl mx-auto pt-10">
-            <h2 className="text-3xl font-bold text-cyan-400 mb-4">Citizenship Application (Written)</h2>
-            <p className="text-gray-400 mb-6">Please fill out the full written application form below. This path is open when the Quiz is disabled.</p>
-            {/* Placeholder for the actual large written form */}
-            <AnimatedButton onClick={() => setPage('home')} className="bg-cyan-500">Submit Written Application (Placeholder)</AnimatedButton>
-        </Card>
-    );
     
     // --- APP LIST CONFIG ---
     const apps = [
@@ -94,7 +94,7 @@ const ApplicationPage = ({ user, setPage }) => {
             locked: !whitelistStatus.is_open && !isAdmin,
             btnText: (isWhitelisted && !isAdmin) ? 'Exam Passed' : (whitelistStatus.type === 'quiz' ? 'Start Exam' : 'Start Form'),
             // Disable button if whitelisted and not admin
-            disabled: (isWhitelisted && !isAdmin) || !whitelistStatus.is_open && !isAdmin 
+            disabled: (isWhitelisted && !isAdmin) && !isAdmin
         },
         {
             id: 'pd',
@@ -103,11 +103,11 @@ const ApplicationPage = ({ user, setPage }) => {
             color: 'text-blue-500',
             borderColor: 'border-blue-500/50',
             desc: 'Apply to join the LSPD. Requires Whitelisted status.',
-            action: () => { if(canApplyJobs && !hasPDORoles) { setSelectedDept('pd'); setPageType('department'); } },
+            action: () => { if(canApplyJobs && !hasDeptRoles) { setSelectedDept('pd'); setPageType('department'); } },
             locked: !canApplyJobs,
-            btnText: hasPDORoles && !isAdmin ? 'Already PD/EMS' : 'Apply for LSPD',
+            btnText: hasDeptRoles && !isAdmin ? 'Already PD/EMS' : 'Apply for LSPD',
             // Disable button if already PD/EMS/Staff
-            disabled: hasPDORoles && !isAdmin 
+            disabled: hasDeptRoles && !isAdmin 
         },
         {
             id: 'ems',
@@ -116,10 +116,10 @@ const ApplicationPage = ({ user, setPage }) => {
             color: 'text-red-500',
             borderColor: 'border-red-500/50',
             desc: 'Apply to join the EMS team. Requires Whitelisted status.',
-            action: () => { if(canApplyJobs && !hasPDORoles) { setSelectedDept('ems'); setPageType('department'); } },
+            action: () => { if(canApplyJobs && !hasDeptRoles) { setSelectedDept('ems'); setPageType('department'); } },
             locked: !canApplyJobs,
-            btnText: hasPDORoles && !isAdmin ? 'Already PD/EMS' : 'Apply for EMS',
-            disabled: hasPDORoles && !isAdmin 
+            btnText: hasDeptRoles && !isAdmin ? 'Already PD/EMS' : 'Apply for EMS',
+            disabled: hasDeptRoles && !isAdmin 
         },
         {
             id: 'staff',
@@ -163,7 +163,7 @@ const ApplicationPage = ({ user, setPage }) => {
                 <p className="text-gray-400 max-w-2xl mx-auto">
                     Welcome to the LSReborn Career Hub. Here you can apply for citizenship or join one of our whitelisted departments.
                 </p>
-                {isAdmin && (
+                {(isAdmin || isStaff) && (
                     <p className="mt-4 text-sm text-yellow-400 border border-yellow-500/30 bg-yellow-500/10 inline-block px-4 py-1 rounded-full">
                         Admin Mode: Recurring Applications Enabled
                     </p>
