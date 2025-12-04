@@ -9,8 +9,8 @@ const DISCORD_API_URL = 'https://discord.com/api/v10';
 // --- SECURE CONFIGURATION ---
 // Use process.env to avoid GitHub push rejection
 const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN;
-const ACTIVE_GUILD_ID = process.env.GUILD_ID || "1322660458888695818";
-const MASTER_ADMIN_ID = "444043711094194200"; 
+const ACTIVE_GUILD_ID = process.env.GUILD_ID ;
+const MASTER_ADMIN_ID = process.env.MASTER_ADMIN_ID ;
 
 // Helper: Check membership using the RESPONSE BOT credentials
 async function getGuildMember(userId) {
