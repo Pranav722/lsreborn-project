@@ -6,7 +6,7 @@ const db = require('../db');
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
-// --- CONFIGURATION: USE ENVIRONMENT VARIABLES ---
+// --- SECURE CONFIGURATION: READ FROM ENV ---
 const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN; 
 const ACTIVE_GUILD_ID = process.env.ACTIVE_GUILD_ID || "1322660458888695818";
 const MASTER_ADMIN_ID = "444043711094194200"; 
@@ -24,8 +24,12 @@ async function getGuildMember(userId) {
         
         if (response.ok) {
             return await response.json();
+        } else {
+            if (response.status !== 404) {
+                console.warn(`[AUTH] Guild check warning for ${userId}: ${response.status} ${response.statusText}`);
+            }
+            return null;
         }
-        return null;
     } catch (e) {
         console.error("[AUTH] Connection error during guild check:", e);
         return null;
@@ -61,6 +65,7 @@ router.get('/discord/callback', async (req, res) => {
         const tokenData = await tokenRes.json();
         
         if (!tokenData.access_token) {
+            console.error("[AUTH] Failed to get access token:", tokenData);
             return res.redirect(`${process.env.FRONTEND_URL}?login=failed`);
         }
 
@@ -69,7 +74,6 @@ router.get('/discord/callback', async (req, res) => {
         });
         const userProfile = await userRes.json();
 
-        // Check membership using BOT TOKEN (Reliable)
         const memberData = await getGuildMember(userProfile.id);
         
         const inGuild = !!memberData;
@@ -80,15 +84,14 @@ router.get('/discord/callback', async (req, res) => {
             try {
                 const [rows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [userProfile.id]);
                 if (rows.length > 0) cooldownExpiry = rows[0].cooldown_expiry;
-            } catch(dbErr) {}
+            } catch(dbErr) { console.error("DB Error:", dbErr); }
         }
 
-        let isStaff = roles.includes(process.env.STAFF_ROLE_ID) || roles.includes(process.env.LSR_ADMIN_ROLE_ID);
+        let isStaff = roles.includes(process.env.STAFF_ROLE_ID);
         let isAdmin = roles.includes(process.env.LSR_ADMIN_ROLE_ID);
         let isPDLead = roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
         let isEMSLead = roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
 
-        // Master Override
         if (userProfile.id === MASTER_ADMIN_ID) {
             isStaff = true; isAdmin = true; isPDLead = true; isEMSLead = true;
         }
@@ -119,7 +122,7 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
         req.user.roles = memberData.roles;
         req.user.inGuild = true;
         
-        req.user.isStaff = memberData.roles.includes(process.env.STAFF_ROLE_ID) || memberData.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
+        req.user.isStaff = memberData.roles.includes(process.env.STAFF_ROLE_ID);
         req.user.isAdmin = memberData.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
         req.user.isPDLead = memberData.roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
         req.user.isEMSLead = memberData.roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
@@ -132,7 +135,6 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
         req.user.inGuild = false;
     }
 
-    // Master Override
     if (req.user.id === MASTER_ADMIN_ID) {
         req.user.isStaff = true;
         req.user.isAdmin = true;
