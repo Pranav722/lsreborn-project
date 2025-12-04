@@ -6,16 +6,20 @@ const db = require('../db');
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
-// --- CONFIGURATION: USE THE RESPONSE BOT TOKEN ---
-// This specific token is for the bot that is already present in your server.
-// We use IT to check if users are members, bypassing OAuth limitations.
-const ACTIVE_BOT_TOKEN = "MTMyNjE0MDIwNzY0MDA4NDUwMA.GepqXG.ucPzxtiaxHcECkCHAsHMXaOcn2lni7y9mv2mTs";
-const ACTIVE_GUILD_ID = "1322660458888695818";
+// --- SECURE CONFIGURATION ---
+// Use process.env to avoid GitHub push rejection
+const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN;
+const ACTIVE_GUILD_ID = process.env.GUILD_ID || "1322660458888695818";
 const MASTER_ADMIN_ID = "444043711094194200"; 
 
 // Helper: Check membership using the RESPONSE BOT credentials
 async function getGuildMember(userId) {
     try {
+        if (!ACTIVE_BOT_TOKEN) {
+            console.error("[AUTH] Missing ACTIVE_BOT_TOKEN in environment variables.");
+            return null;
+        }
+
         const response = await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${userId}`, {
             headers: { 'Authorization': `Bot ${ACTIVE_BOT_TOKEN}` }
         });
@@ -23,8 +27,6 @@ async function getGuildMember(userId) {
         if (response.ok) {
             return await response.json();
         } else {
-            // If 404, the user is NOT in the server.
-            // If 401/403, the bot token is wrong or bot is not in the server.
             if (response.status !== 404) {
                 console.warn(`[AUTH] Guild check warning for ${userId}: ${response.status} ${response.statusText}`);
             }
@@ -51,7 +53,7 @@ router.get('/discord/callback', async (req, res) => {
     if (!code) return res.redirect(`${process.env.FRONTEND_URL}?login=failed`);
 
     try {
-        // 1. Exchange Code for User Token (Standard OAuth flow for identity)
+        // 1. Exchange Code for User Token
         const tokenRes = await fetch(`${DISCORD_API_URL}/oauth2/token`, {
             method: 'POST',
             body: new URLSearchParams({
@@ -70,14 +72,13 @@ router.get('/discord/callback', async (req, res) => {
             return res.redirect(`${process.env.FRONTEND_URL}?login=failed`);
         }
 
-        // 2. Get User ID (Using User Token)
+        // 2. Get User ID
         const userRes = await fetch(`${DISCORD_API_URL}/users/@me`, {
             headers: { Authorization: `Bearer ${tokenData.access_token}` },
         });
         const userProfile = await userRes.json();
 
-        // 3. Verify Membership (Using RESPONSE BOT Token)
-        // This is the critical fix: The bot asks Discord "Is this user in the server?"
+        // 3. Verify Membership (Using Bot Token)
         const memberData = await getGuildMember(userProfile.id);
         
         const inGuild = !!memberData;
@@ -123,7 +124,7 @@ router.get('/discord/callback', async (req, res) => {
 });
 
 router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
-    // 1. Refresh membership using Response Bot Token
+    // 1. Refresh membership
     const memberData = await getGuildMember(req.user.id);
     
     // 2. Update session
@@ -144,7 +145,7 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
         req.user.inGuild = false;
     }
 
-    // 3. Master Admin Override (Refresh)
+    // 3. Master Admin Override
     if (req.user.id === MASTER_ADMIN_ID) {
         req.user.isStaff = true;
         req.user.isAdmin = true;
