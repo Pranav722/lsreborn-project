@@ -1,4 +1,3 @@
-```
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Book } from 'lucide-react';
@@ -36,7 +35,7 @@ const rulesContent = [
             { subtitle: "Vehicle Deathmatch (VDM)", text: "Using vehicles to harm or kill others without proper IC justification is forbidden, as it disrupts roleplay." },
             { subtitle: "No Combat Logging", text: "Players cannot disconnect from the server during active roleplay, such as during a police chase or robbery. Combat logging disrupts the scenario for others and will result in penalties." },
             { subtitle: "Force NLR", text: "You cannot force another player to respawn by creating a situation that makes it unavoidable. If you initiate a situation, you must be prepared to face the consequences." },
-             { subtitle: "Force Permadeath", text: "Players cannot force another player to take permanent death (permadeath). The decision of permadeath lies solely with the player controlling the character." }
+            { subtitle: "Force Permadeath", text: "Players cannot force another player to take permanent death (permadeath). The decision of permadeath lies solely with the player controlling the character." }
         ]
     },
     {
@@ -154,13 +153,13 @@ const RulesPage = () => {
             <div className="relative w-full max-w-4xl aspect-[3/2] bg-gray-900 rounded-lg shadow-2xl flex overflow-hidden border-4 border-yellow-900/50">
                 {/* Book Cover / Background */}
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-20 pointer-events-none"></div>
-                
+
                 {/* Left Page (Previous or Cover) */}
                 <div className="w-1/2 h-full bg-[#fdfbf7] p-8 border-r border-gray-300 shadow-inner relative flex flex-col">
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper.png')] opacity-50 pointer-events-none"></div>
-                    
+
                     {currentPage > 0 ? (
-                        <motion.div 
+                        <motion.div
                             key={currentPage - 1}
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
@@ -194,15 +193,15 @@ const RulesPage = () => {
                 {/* Right Page (Current) */}
                 <div className="w-1/2 h-full bg-[#fdfbf7] p-8 shadow-inner relative flex flex-col">
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/paper.png')] opacity-50 pointer-events-none"></div>
-                    
-                    <motion.div 
+
+                    <motion.div
                         key={currentPage}
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
                         className="relative z-10 h-full overflow-y-auto custom-scrollbar"
                     >
-                         <h2 className="text-2xl font-bold text-yellow-900 mb-6 font-serif border-b-2 border-yellow-900/20 pb-2">
+                        <h2 className="text-2xl font-bold text-yellow-900 mb-6 font-serif border-b-2 border-yellow-900/20 pb-2">
                             {rulesContent[currentPage].title}
                         </h2>
                         <div className="space-y-4">
@@ -220,18 +219,18 @@ const RulesPage = () => {
                 </div>
 
                 {/* Navigation Buttons */}
-                <button 
-                    onClick={prevPage} 
+                <button
+                    onClick={prevPage}
                     disabled={currentPage === 0}
-                    className={`absolute left - 4 top - 1 / 2 - translate - y - 1 / 2 p - 2 rounded - full bg - yellow - 900 / 80 text - white hover: bg - yellow - 800 transition - colors z - 20 ${ currentPage === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100' } `}
+                    className={`absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-yellow-900/80 text-white hover:bg-yellow-800 transition-colors z-20 ${currentPage === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                 >
                     <ChevronLeft size={24} />
                 </button>
 
-                <button 
-                    onClick={nextPage} 
+                <button
+                    onClick={nextPage}
                     disabled={currentPage === rulesContent.length - 1}
-                    className={`absolute right - 4 top - 1 / 2 - translate - y - 1 / 2 p - 2 rounded - full bg - yellow - 900 / 80 text - white hover: bg - yellow - 800 transition - colors z - 20 ${ currentPage === rulesContent.length - 1 ? 'opacity-0 pointer-events-none' : 'opacity-100' } `}
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-yellow-900/80 text-white hover:bg-yellow-800 transition-colors z-20 ${currentPage === rulesContent.length - 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                 >
                     <ChevronRight size={24} />
                 </button>
@@ -244,4 +243,3 @@ const RulesPage = () => {
 };
 
 export default RulesPage;
-```
