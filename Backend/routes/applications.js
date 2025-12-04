@@ -107,7 +107,7 @@ router.post('/', isAuthenticated, async (req, res) => {
         res.status(201).json({ message: "Application submitted successfully!" });
     } catch (err) {
         console.error("Error submitting application:", err);
-        res.status(500).json({ message: "Database error." });
+        res.status(500).json({ message: `Database error: ${err.message}` });
     }
 });
 

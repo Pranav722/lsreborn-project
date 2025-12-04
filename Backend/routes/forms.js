@@ -66,6 +66,7 @@ const initializeTables = async () => {
 
         // 3. Ensure applications table has new columns
         await db.query(`CREATE TABLE IF NOT EXISTS applications(id INT AUTO_INCREMENT PRIMARY KEY, discordId VARCHAR(255), characterName VARCHAR(255), characterAge INT, backstory TEXT, isPremium BOOLEAN, status VARCHAR(50), notified BOOLEAN, submittedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+
         try {
             await db.query("SELECT irlName FROM applications LIMIT 1");
         } catch (err) {
@@ -73,9 +74,17 @@ const initializeTables = async () => {
                 console.log("Adding missing columns to 'applications' table...");
                 await db.query(`ALTER TABLE applications 
                     ADD COLUMN irlName VARCHAR(255),
-                    ADD COLUMN irlAge INT,
-                    ADD COLUMN questions TEXT
+                    ADD COLUMN irlAge INT
                 `);
+            }
+        }
+
+        try {
+            await db.query("SELECT questions FROM applications LIMIT 1");
+        } catch (err) {
+            if (err.code === 'ER_BAD_FIELD_ERROR') {
+                console.log("Adding 'questions' column to 'applications' table...");
+                await db.query("ALTER TABLE applications ADD COLUMN questions TEXT");
             }
         }
 
