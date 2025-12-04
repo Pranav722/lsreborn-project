@@ -209,12 +209,17 @@ const ApplicationPage = ({ user, setPage }) => {
             icon: BrainCircuit,
             color: 'text-cyan-400',
             borderColor: 'border-cyan-500/50',
-            desc: (statuses.whitelist?.is_open || isAdmin) ? `Current Method: ${statuses.whitelist?.type?.charAt(0).toUpperCase() + statuses.whitelist?.type?.slice(1)}.` : 'Currently closed for review.',
+            desc: isWhitelisted && !isAdmin
+                ? 'You are already a citizen of Los Santos.'
+                : ((statuses.whitelist?.is_open || isAdmin)
+                    ? `Current Method: ${statuses.whitelist?.type?.charAt(0).toUpperCase() + statuses.whitelist?.type?.slice(1)}.`
+                    : 'Currently closed for review.'),
             action: handleWhitelistClick,
-            locked: (!statuses.whitelist?.is_open && !isAdmin),
-            btnText: (isWhitelisted && !isAdmin) ? 'Exam Passed' : (statuses.whitelist?.type === 'quiz' ? 'Start Exam' : 'Start Form'),
-            // Disable button if whitelisted and not admin, OR if closed
-            disabled: ((isWhitelisted && !isAdmin) && !isAdmin) || (!statuses.whitelist?.is_open && !isAdmin)
+            // Locked if closed AND not admin AND not whitelisted (if whitelisted, we just disable button, not lock with keyhole)
+            locked: (!statuses.whitelist?.is_open && !isAdmin && !isWhitelisted),
+            btnText: (isWhitelisted && !isAdmin) ? 'Already Whitelisted' : (statuses.whitelist?.type === 'quiz' ? 'Start Exam' : 'Start Form'),
+            // Disable if: (Whitelisted & not admin) OR (Closed & not admin)
+            disabled: (isWhitelisted && !isAdmin) || (!statuses.whitelist?.is_open && !isAdmin)
         },
         {
             id: 'pd',
@@ -224,10 +229,9 @@ const ApplicationPage = ({ user, setPage }) => {
             borderColor: 'border-blue-500/50',
             desc: isFormOpen('pd') ? 'Apply to join the LSPD. Requires Whitelisted status.' : 'Applications are currently closed.',
             action: () => { if (canApplyJobs && !hasDeptRoles && isFormOpen('pd')) { setSelectedDept('pd'); setPageType('department'); } },
-            locked: !canApplyJobs || !isFormOpen('pd'),
+            locked: !canApplyJobs, // Locked if not whitelisted
             btnText: !isFormOpen('pd') ? 'Closed' : (hasDeptRoles && !isAdmin ? 'Already PD/EMS' : 'Apply for LSPD'),
-            // Disable button if already PD/EMS/Staff OR if closed
-            disabled: (hasDeptRoles && !isAdmin) || !isFormOpen('pd')
+            disabled: (hasDeptRoles && !isAdmin) || !isFormOpen('pd') || !canApplyJobs
         },
         {
             id: 'ems',
@@ -237,9 +241,9 @@ const ApplicationPage = ({ user, setPage }) => {
             borderColor: 'border-red-500/50',
             desc: isFormOpen('ems') ? 'Apply to join the EMS team. Requires Whitelisted status.' : 'Applications are currently closed.',
             action: () => { if (canApplyJobs && !hasDeptRoles && isFormOpen('ems')) { setSelectedDept('ems'); setPageType('department'); } },
-            locked: !canApplyJobs || !isFormOpen('ems'),
+            locked: !canApplyJobs, // Locked if not whitelisted
             btnText: !isFormOpen('ems') ? 'Closed' : (hasDeptRoles && !isAdmin ? 'Already PD/EMS' : 'Apply for EMS'),
-            disabled: (hasDeptRoles && !isAdmin) || !isFormOpen('ems')
+            disabled: (hasDeptRoles && !isAdmin) || !isFormOpen('ems') || !canApplyJobs
         },
         {
             id: 'staff',
@@ -249,9 +253,9 @@ const ApplicationPage = ({ user, setPage }) => {
             borderColor: 'border-purple-500/50',
             desc: isFormOpen('staff') ? 'Apply to become a moderator/admin. Requires Whitelisted status.' : 'Applications are currently closed.',
             action: () => { if (canApplyJobs && isFormOpen('staff')) { setSelectedDept('staff'); setPageType('department'); } },
-            locked: !canApplyJobs || !isFormOpen('staff'),
+            locked: !canApplyJobs, // Locked if not whitelisted
             btnText: !isFormOpen('staff') ? 'Closed' : 'Apply for Staff',
-            disabled: !isFormOpen('staff')
+            disabled: !isFormOpen('staff') || !canApplyJobs
         }
     ];
 
@@ -275,7 +279,7 @@ const ApplicationPage = ({ user, setPage }) => {
         return <WhitelistForm user={user} />;
     }
 
-    // 4. MAIN HUB RENDER (or Closed UI)
+    // 4. MAIN HUB RENDER
     return (
         <div className="animate-fade-in max-w-7xl mx-auto px-4 py-10">
             <div className="text-center mb-12">
@@ -290,47 +294,41 @@ const ApplicationPage = ({ user, setPage }) => {
                 )}
             </div>
 
-            {/* If Whitelist is CLOSED (and not admin testing), show marketing screen */}
-            {!statuses.whitelist?.is_open && !isAdmin ? (
-                <ClosedFormUI
-                    title="Whitelist Applications Currently Closed"
-                    message="The application system is temporarily offline for maintenance and review. Join our Discord for announcements and sneak peeks of upcoming features!"
-                />
-            ) : (
-                /* Main Application Grid */
-                <div className="grid md:grid-cols-2 gap-8">
-                    {apps.map((app) => (
-                        <Card key={app.id} className={`hover:border-opacity-100 transition-all duration-300 group border-l-4 ${app.borderColor}`}>
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <app.icon className={`w-8 h-8 ${app.color}`} />
-                                        <h3 className="text-2xl font-bold text-white group-hover:text-cyan-300 transition-colors">{app.title}</h3>
-                                    </div>
-                                    <p className="text-gray-400 mb-6 min-h-[3rem]">{app.desc}</p>
-
-                                    {app.locked && !isAdmin ? (
-                                        <div className="flex items-center gap-2 text-gray-500 bg-gray-800/50 p-3 rounded-lg w-fit">
-                                            <LockKeyhole size={18} />
-                                            <span className="text-sm font-medium">
-                                                {!statuses[app.id]?.is_open && app.id !== 'whitelist' ? 'Applications Closed' : 'Citizenship Required'}
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <AnimatedButton
-                                            onClick={app.action}
-                                            className={`w-full sm:w-auto ${app.id === 'whitelist' && app.disabled ? 'bg-green-600' : 'bg-cyan-600'} ${app.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            disabled={app.disabled}
-                                        >
-                                            {app.btnText}
-                                        </AnimatedButton>
-                                    )}
+            {/* Main Application Grid */}
+            <div className="grid md:grid-cols-2 gap-8">
+                {apps.map((app) => (
+                    <Card key={app.id} className={`hover:border-opacity-100 transition-all duration-300 group border-l-4 ${app.borderColor}`}>
+                        <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <app.icon className={`w-8 h-8 ${app.color}`} />
+                                    <h3 className="text-2xl font-bold text-white group-hover:text-cyan-300 transition-colors">{app.title}</h3>
                                 </div>
+                                <p className="text-gray-400 mb-6 min-h-[3rem]">{app.desc}</p>
+
+                                {app.locked && !isAdmin ? (
+                                    <div className="flex items-center gap-2 text-gray-500 bg-gray-800/50 p-3 rounded-lg w-fit">
+                                        <LockKeyhole size={18} />
+                                        <span className="text-sm font-medium">
+                                            {app.id === 'whitelist' && !statuses.whitelist?.is_open
+                                                ? 'Applications Closed'
+                                                : (app.id !== 'whitelist' && !isWhitelisted ? 'Citizenship Required' : 'Locked')}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <AnimatedButton
+                                        onClick={app.action}
+                                        className={`w-full sm:w-auto ${app.id === 'whitelist' && isWhitelisted && !isAdmin ? 'bg-green-600/50' : (app.disabled ? 'bg-gray-600' : 'bg-cyan-600')} ${app.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        disabled={app.disabled}
+                                    >
+                                        {app.btnText}
+                                    </AnimatedButton>
+                                )}
                             </div>
-                        </Card>
-                    ))}
-                </div>
-            )}
+                        </div>
+                    </Card>
+                ))}
+            </div>
         </div>
     );
 };
