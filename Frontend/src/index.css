@@ -1,10 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .home-page-wrapper {
-    padding-top: 0;
+  padding-top: 0;
 }
 
 .nav-link {
   position: relative;
-  color: #d1d5db; /* gray-300 */
+  color: #d1d5db;
+  /* gray-300 */
 }
 
 .nav-link:hover {
@@ -12,7 +17,8 @@
 }
 
 
-.nav-link:hover::after, .nav-link.active::after {
+.nav-link:hover::after,
+.nav-link.active::after {
   transform: scaleX(1);
   transform-origin: bottom left;
 }
@@ -83,12 +89,29 @@ body {
   box-shadow: 0 0 15px 5px rgba(0, 170, 255, 0.2);
 }
 
-.modern-button.bg-cyan-500:hover { box-shadow: 0 0 15px 5px rgba(6, 182, 212, 0.3); }
-.modern-button.bg-blue-600:hover { box-shadow: 0 0 15px 5px rgba(37, 99, 235, 0.3); }
-.modern-button.bg-red-600:hover { box-shadow: 0 0 15px 5px rgba(220, 38, 38, 0.3); }
-.modern-button.bg-green-600:hover { box-shadow: 0 0 15px 5px rgba(22, 163, 74, 0.3); }
-.modern-button.bg-purple-600:hover { box-shadow: 0 0 15px 5px rgba(147, 51, 234, 0.3); }
-.modern-button.bg-orange-600:hover { box-shadow: 0 0 15px 5px rgba(234, 88, 12, 0.3); }
+.modern-button.bg-cyan-500:hover {
+  box-shadow: 0 0 15px 5px rgba(6, 182, 212, 0.3);
+}
+
+.modern-button.bg-blue-600:hover {
+  box-shadow: 0 0 15px 5px rgba(37, 99, 235, 0.3);
+}
+
+.modern-button.bg-red-600:hover {
+  box-shadow: 0 0 15px 5px rgba(220, 38, 38, 0.3);
+}
+
+.modern-button.bg-green-600:hover {
+  box-shadow: 0 0 15px 5px rgba(22, 163, 74, 0.3);
+}
+
+.modern-button.bg-purple-600:hover {
+  box-shadow: 0 0 15px 5px rgba(147, 51, 234, 0.3);
+}
+
+.modern-button.bg-orange-600:hover {
+  box-shadow: 0 0 15px 5px rgba(234, 88, 12, 0.3);
+}
 
 /* --- NAVBAR BUTTON STYLES --- */
 .nav-link {
@@ -104,7 +127,8 @@ body {
   height: 2px;
   bottom: -2px;
   left: 0;
-  background-color: #22d3ee; /* cyan-400 */
+  background-color: #22d3ee;
+  /* cyan-400 */
   transform-origin: bottom right;
   transition: transform 0.25s ease-out;
 }
@@ -118,35 +142,96 @@ body {
   transform: scaleX(1);
   transform-origin: bottom left;
 }
+
 /* --- END OF NAVBAR STYLES --- */
 
 /* --- NEW PROFILE BUTTON STYLES --- */
 .profile-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.25rem;
-    border-radius: 9999px;
-    background-color: rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-    border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 }
 
 .profile-button:hover {
-    border-color: #06b6d4;
-    box-shadow: 0 0 10px 2px rgba(6, 182, 212, 0.3);
+  border-color: #06b6d4;
+  box-shadow: 0 0 10px 2px rgba(6, 182, 212, 0.3);
 }
+
 /* --- END OF PROFILE STYLES --- */
 
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-.animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
-@keyframes fade-in-fast { from { opacity: 0; } to { opacity: 1; } }
-.animate-fade-in-fast { animation: fade-in-fast 0.3s ease-out forwards; }
-@keyframes slide-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.animate-slide-in-up { animation: slide-in-up 0.6s ease-out forwards; }
-@keyframes slide-in-up-fast { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.animate-slide-in-up-fast { animation: slide-in-up-fast 0.3s ease-out forwards; }
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+@keyframes fade-in-fast {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-fast {
+  animation: fade-in-fast 0.3s ease-out forwards;
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.6s ease-out forwards;
+}
+
+@keyframes slide-in-up-fast {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in-up-fast {
+  animation: slide-in-up-fast 0.3s ease-out forwards;
+}
+
 @keyframes slide-in-right {
-  0% { transform: translateX(50px); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
+  0% {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
