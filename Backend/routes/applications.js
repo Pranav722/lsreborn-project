@@ -40,35 +40,6 @@ router.get('/', isAuthenticated, isStaff, async (req, res) => {
     try {
         const [rows] = await db.query('SELECT *, (isPremium = 1) AS isPremium FROM applications ORDER BY isPremium DESC, submittedAt DESC');
         res.json(rows);
-    } catch (err) {
-        console.error("Error fetching applications:", err);
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// POST submit application
-router.post('/', isAuthenticated, async (req, res) => {
-    const { characterName, characterAge, backstory, irlName, irlAge, questions } = req.body;
-    const discordId = req.user.id;
-    const isPremium = req.user && req.user.roles && req.user.roles.includes(process.env.PREMIUM_APPLICANT_ROLE_ID);
-
-    if (!characterName || !characterAge || !backstory || !irlName || !irlAge) {
-        return res.status(400).json({ message: "All fields are required." });
-    }
-
-    // Word count validation
-    const wordCount = backstory.trim().split(/\s+/).length;
-    if (wordCount < 200) {
-        return res.status(400).json({ message: `Backstory is too short (${wordCount}/200 words).` });
-    }
-
-    try {
-        // Check for existing pending application
-        const [existing] = await db.query('SELECT id FROM applications WHERE discordId = ? AND status = "pending"', [discordId]);
-        if (existing.length > 0) {
-            return res.status(400).json({ message: "You already have a pending application." });
-        }
-
         const query = 'INSERT INTO applications (discordId, characterName, characterAge, backstory, irlName, irlAge, questions, isPremium, status, notified) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         await db.query(query, [discordId, characterName, characterAge, backstory, irlName, irlAge, JSON.stringify(questions), isPremium, 'pending', 0]);
 

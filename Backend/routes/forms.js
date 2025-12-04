@@ -204,7 +204,13 @@ router.post('/submit/whitelist', isAuthenticated, async (req, res) => {
 
 router.post('/submit/pd', isAuthenticated, async (req, res) => {
     const isAdmin = req.user.isAdmin || req.user.isStaff;
-    // ... Same PD logic as before ...
+
+    // Check Status
+    try {
+        const [s] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'pd'");
+        if (s.length > 0 && !s[0].is_open && !isAdmin) return res.status(403).json({ message: "PD Applications are closed." });
+    } catch (e) { console.error(e); return res.status(500).json({ message: "DB Error" }); }
+
     const { irlName, irlAge, icName, experience, whyJoin, scenario } = req.body;
 
     if (!isAdmin) {
@@ -222,7 +228,13 @@ router.post('/submit/pd', isAuthenticated, async (req, res) => {
 
 router.post('/submit/ems', isAuthenticated, async (req, res) => {
     const isAdmin = req.user.isAdmin || req.user.isStaff;
-    // ... Same EMS logic ...
+
+    // Check Status
+    try {
+        const [s] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'ems'");
+        if (s.length > 0 && !s[0].is_open && !isAdmin) return res.status(403).json({ message: "EMS Applications are closed." });
+    } catch (e) { console.error(e); return res.status(500).json({ message: "DB Error" }); }
+
     const { icName, irlName, irlAge, medicalKnowledge, scenarios } = req.body;
 
     if (!isAdmin) {
@@ -240,7 +252,13 @@ router.post('/submit/ems', isAuthenticated, async (req, res) => {
 
 router.post('/submit/staff', isAuthenticated, async (req, res) => {
     const isAdmin = req.user.isAdmin || req.user.isStaff;
-    // ... Same Staff logic ...
+
+    // Check Status
+    try {
+        const [s] = await db.query("SELECT is_open FROM form_settings WHERE form_name = 'staff'");
+        if (s.length > 0 && !s[0].is_open && !isAdmin) return res.status(403).json({ message: "Staff Applications are closed." });
+    } catch (e) { console.error(e); return res.status(500).json({ message: "DB Error" }); }
+
     const { age, experience, hours, responsibilities, definitions, scenarios } = req.body;
 
     if (!isAdmin) {

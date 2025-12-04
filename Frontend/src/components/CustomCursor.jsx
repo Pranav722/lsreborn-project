@@ -60,7 +60,7 @@ const CustomCursor = () => {
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           {/* The 3D Shape Construction */}
-          <div className={`w-6 h-6 border-2 transition-colors duration-200 ease-out ${isHovering ? 'border-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.6)]' : 'border-cyan-500/50'} backdrop-blur-sm`}
+          <div className={`w-6 h-6 border-2 transition-colors duration-200 ease-out ${isHovering ? 'border-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.6)]' : 'border-cyan-500/50'}`}
             style={{
               transform: 'perspective(500px) rotateX(20deg) rotateY(20deg)',
               borderRadius: '4px'
