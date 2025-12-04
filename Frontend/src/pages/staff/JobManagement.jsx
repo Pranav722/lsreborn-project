@@ -1,50 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../../components/Card';
 import AnimatedButton from '../../components/AnimatedButton';
-import { ToggleLeft, ToggleRight } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Loader2, Zap } from 'lucide-react';
 
 const JobManagement = ({ user }) => {
-    const [activeTab, setActiveTab] = useState('pd'); // pd, ems, staff
+    const [activeTab, setActiveTab] = useState('pd'); 
     const [apps, setApps] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [isFormOpen, setIsFormOpen] = useState(true);
+    const [settings, setSettings] = useState({});
+    const [uiMessage, setUIMessage] = useState('');
 
-    // Check permissions
+    const isAdmin = user.isAdmin;
+    const isStaffOrAdmin = user.isStaff || user.isAdmin;
+    
     const showPD = user.isPDLead || user.isAdmin;
     const showEMS = user.isEMSLead || user.isAdmin;
     const showStaff = user.isAdmin;
 
     useEffect(() => {
+        if (!isStaffOrAdmin) return;
         if (showPD) setActiveTab('pd');
         else if (showEMS) setActiveTab('ems');
         else if (showStaff) setActiveTab('staff');
     }, [user]);
+    
+    const fetchSettings = async () => {
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                // Convert array to map: { 'whitelist': {...}, 'pd': {...} }
+                const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.form_name]: item }), {});
+                setSettings(settingsMap);
+            }
+        } catch(e) {
+            console.error("Failed to fetch settings:", e);
+        }
+    };
 
     const fetchApps = async () => {
+        if (!isStaffOrAdmin) return;
         setLoading(true);
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/${activeTab}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
             });
             if (res.ok) setApps(await res.json());
-            
-            // Also fetch status
-            const setRes = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-            });
-            const settings = await setRes.json();
-            const currentSetting = settings.find(s => s.form_name === activeTab);
-            setIsFormOpen(currentSetting ? currentSetting.is_open : true);
-
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Failed to fetch apps:", e); }
         setLoading(false);
     };
 
-    useEffect(() => { fetchApps(); }, [activeTab]);
+    useEffect(() => { 
+        fetchSettings();
+        fetchApps();
+    }, [activeTab, isStaffOrAdmin]);
 
     const handleAction = async (id, status) => {
+        setLoading(true);
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/management/${activeTab}/${id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/${activeTab}/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -52,47 +68,158 @@ const JobManagement = ({ user }) => {
                 },
                 body: JSON.stringify({ status })
             });
+            if (res.ok) {
+                setUIMessage(`${activeTab.toUpperCase()} application ${status} successfully!`);
+            }
+        } catch (e) {
+            setUIMessage(`Error processing action: ${e.message}`);
+        } finally {
             fetchApps();
-        } catch (e) { console.error(e); }
+            setLoading(false);
+            setTimeout(() => setUIMessage(''), 3000);
+        }
     };
 
-    const toggleForm = async () => {
+    const toggleFormStatus = async (formName, currentStatus) => {
+        if (!isAdmin) {
+             setUIMessage("Error: Only Admins can change form status.");
+             return;
+        }
+        setLoading(true);
+        // currentStatus comes from DB as 0 or 1. 
+        const newState = currentStatus ? 0 : 1; 
         try {
-            const newState = !isFormOpen;
-            await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings/toggle`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings/toggle`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
                 },
-                body: JSON.stringify({ formName: activeTab, isOpen: newState ? 1 : 0 })
+                body: JSON.stringify({ formName, isOpen: newState })
             });
-            setIsFormOpen(newState);
-        } catch(e) { console.error(e); }
+            if (res.ok) {
+                setUIMessage(`${formName.toUpperCase()} form is now ${newState ? 'OPEN' : 'CLOSED'}`);
+                await fetchSettings(); // Refresh immediately to show new state
+            }
+        } catch(e) {
+             setUIMessage(`Error updating ${formName}: ${e.message}`);
+        } finally {
+            setLoading(false);
+            setTimeout(() => setUIMessage(''), 3000);
+        }
     };
+
+    const switchWhitelistType = async (newType) => {
+        if (!isAdmin) {
+             setUIMessage("Error: Only Admins can switch whitelist type.");
+             return;
+        }
+        setLoading(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings/whitelist/switch`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                },
+                body: JSON.stringify({ type: newType })
+            });
+            if (res.ok) {
+                setUIMessage(`Whitelist type successfully switched to ${newType.toUpperCase()}`);
+                await fetchSettings();
+            }
+        } catch(e) {
+             setUIMessage(`Error switching type: ${e.message}`);
+        } finally {
+            setLoading(false);
+            setTimeout(() => setUIMessage(''), 3000);
+        }
+    };
+
+    // Helper to get current setting safely
+    const currentFormSetting = settings[activeTab] || { is_open: 1, type: 'form' };
+    const whitelistSetting = settings['whitelist'] || { is_open: 1, type: 'quiz' };
+
 
     return (
         <div className="animate-fade-in">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-wrap gap-4 justify-between items-center mb-6 border-b border-cyan-500/20 pb-4">
                 <h2 className="text-3xl font-bold text-cyan-400">Department Management</h2>
-                {/* Form Toggle Switch */}
-                <button onClick={toggleForm} className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isFormOpen ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-red-500 bg-red-500/10 text-red-400'}`}>
-                    {isFormOpen ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
-                    {isFormOpen ? `${activeTab.toUpperCase()} Apps OPEN` : `${activeTab.toUpperCase()} Apps CLOSED`}
-                </button>
+                
+                {/* APPLICATION MODE TOGGLE (ADMIN ONLY) */}
+                {isAdmin && (
+                    <div className="flex items-center space-x-4">
+                        {/* Status Toggle */}
+                        <button 
+                            onClick={() => toggleFormStatus(activeTab, currentFormSetting.is_open)} 
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${currentFormSetting.is_open ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-red-500 bg-red-500/10 text-red-400'}`}
+                        >
+                            {currentFormSetting.is_open ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                            {activeTab.toUpperCase()} is {currentFormSetting.is_open ? 'OPEN' : 'CLOSED'}
+                        </button>
+                        
+                        {/* Whitelist Type Switch (Only shown on Whitelist Tab or if explicit Whitelist tab added) */}
+                        {/* Since we are in JobManagement, let's show whitelist switch if 'pd/ems/staff' are active tabs but we want to control whitelist too. 
+                            Actually, better to add a 'Whitelist Settings' tab or put it in general settings. 
+                            For now, I will add a specific Whitelist Control block if Admin.
+                        */}
+                    </div>
+                )}
             </div>
             
-            <div className="flex gap-4 mb-6 border-b border-gray-700 pb-2">
-                {showPD && <button onClick={() => setActiveTab('pd')} className={`px-4 py-2 rounded ${activeTab === 'pd' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>Police Dept</button>}
-                {showEMS && <button onClick={() => setActiveTab('ems')} className={`px-4 py-2 rounded ${activeTab === 'ems' ? 'bg-red-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>EMS</button>}
-                {showStaff && <button onClick={() => setActiveTab('staff')} className={`px-4 py-2 rounded ${activeTab === 'staff' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>Staff Apps</button>}
+            <div className="flex gap-4 mb-6 border-b border-gray-700 pb-2 overflow-x-auto">
+                {showPD && <button onClick={() => setActiveTab('pd')} className={`px-4 py-2 rounded whitespace-nowrap ${activeTab === 'pd' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>Police Dept</button>}
+                {showEMS && <button onClick={() => setActiveTab('ems')} className={`px-4 py-2 rounded whitespace-nowrap ${activeTab === 'ems' ? 'bg-red-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>EMS</button>}
+                {showStaff && <button onClick={() => setActiveTab('staff')} className={`px-4 py-2 rounded whitespace-nowrap ${activeTab === 'staff' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>Staff Apps</button>}
+                
+                {/* Admin Extra Tab for Whitelist Config */}
+                {isAdmin && <button onClick={() => setActiveTab('whitelist')} className={`px-4 py-2 rounded whitespace-nowrap ${activeTab === 'whitelist' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>Whitelist Config</button>}
             </div>
+            
+            {/* Special View for Whitelist Config Tab */}
+            {activeTab === 'whitelist' && isAdmin && (
+                <Card className="mb-6 border-cyan-500/50">
+                    <h3 className="text-xl font-bold text-white mb-4">Whitelist Settings</h3>
+                    <div className="flex items-center gap-6">
+                        <div className="flex flex-col gap-2">
+                            <span className="text-sm text-gray-400">Master Toggle</span>
+                            <button 
+                                onClick={() => toggleFormStatus('whitelist', whitelistSetting.is_open)} 
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${whitelistSetting.is_open ? 'border-green-500 text-green-400' : 'border-red-500 text-red-400'}`}
+                            >
+                                {whitelistSetting.is_open ? <ToggleRight /> : <ToggleLeft />}
+                                {whitelistSetting.is_open ? 'WHITELIST OPEN' : 'WHITELIST CLOSED'}
+                            </button>
+                        </div>
+                        <div className="w-px h-12 bg-gray-700"></div>
+                        <div className="flex flex-col gap-2">
+                             <span className="text-sm text-gray-400">Application Method</span>
+                             <div className="flex bg-gray-800 rounded p-1">
+                                <button 
+                                    onClick={() => switchWhitelistType('quiz')}
+                                    className={`px-4 py-1 rounded transition-colors ${whitelistSetting.type === 'quiz' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
+                                >
+                                    Quiz Mode
+                                </button>
+                                <button 
+                                    onClick={() => switchWhitelistType('form')}
+                                    className={`px-4 py-1 rounded transition-colors ${whitelistSetting.type === 'form' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
+                                >
+                                    Written Form
+                                </button>
+                             </div>
+                        </div>
+                    </div>
+                </Card>
+            )}
 
-            {loading ? <p>Loading...</p> : (
+            {uiMessage && <p className="mb-4 text-center text-green-400 bg-green-900/20 p-2 rounded border border-green-500/30">{uiMessage}</p>}
+
+            {loading && activeTab !== 'whitelist' ? <p className="text-center py-8 flex items-center justify-center gap-2 text-cyan-400"><Loader2 className="animate-spin" /> Loading applications...</p> : (
                 <div className="space-y-4">
-                    {apps.map(app => (
+                    {activeTab !== 'whitelist' && apps.map(app => (
                         <Card key={app.id} className="border-l-4 border-cyan-500">
-                            <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3">
                                         <h3 className="text-xl font-bold text-white">{app.character_name || "Applicant"}</h3>
@@ -101,7 +228,6 @@ const JobManagement = ({ user }) => {
                                     
                                     <p className="text-sm text-gray-400 mt-1">Status: <span className={`uppercase font-bold ${app.status === 'approved' ? 'text-green-400' : app.status === 'rejected' ? 'text-red-400' : 'text-yellow-400'}`}>{app.status}</span></p>
                                     
-                                    {/* Collapsible details could go here, for now showing key reason */}
                                     <div className="mt-3 bg-gray-900/50 p-3 rounded text-sm text-gray-300 max-h-40 overflow-y-auto">
                                         <p><strong>Reason/Backstory:</strong> {app.reason || app.experience || app.whyStaff}</p>
                                         {app.scenario_cop && <p className="mt-2"><strong>Scenario:</strong> {app.scenario_cop}</p>}
@@ -118,7 +244,7 @@ const JobManagement = ({ user }) => {
                             </div>
                         </Card>
                     ))}
-                    {apps.length === 0 && <p className="text-gray-500 text-center py-8">No applications found in this category.</p>}
+                    {activeTab !== 'whitelist' && apps.length === 0 && <p className="text-gray-500 text-center py-8">No applications found in this category.</p>}
                 </div>
             )}
         </div>
