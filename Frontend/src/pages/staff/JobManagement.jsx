@@ -4,7 +4,7 @@ import AnimatedButton from '../../components/AnimatedButton';
 import { ToggleLeft, ToggleRight, Loader2, Zap } from 'lucide-react';
 
 const JobManagement = ({ user }) => {
-    const [activeTab, setActiveTab] = useState('pd'); 
+    const [activeTab, setActiveTab] = useState('pd');
     const [apps, setApps] = useState([]);
     const [loading, setLoading] = useState(false);
     const [settings, setSettings] = useState({});
@@ -12,7 +12,7 @@ const JobManagement = ({ user }) => {
 
     const isAdmin = user.isAdmin;
     const isStaffOrAdmin = user.isStaff || user.isAdmin;
-    
+
     const showPD = user.isPDLead || user.isAdmin;
     const showEMS = user.isEMSLead || user.isAdmin;
     const showStaff = user.isAdmin;
@@ -23,7 +23,7 @@ const JobManagement = ({ user }) => {
         else if (showEMS) setActiveTab('ems');
         else if (showStaff) setActiveTab('staff');
     }, [user]);
-    
+
     const fetchSettings = async () => {
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings`, {
@@ -35,7 +35,7 @@ const JobManagement = ({ user }) => {
                 const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.form_name]: item }), {});
                 setSettings(settingsMap);
             }
-        } catch(e) {
+        } catch (e) {
             console.error("Failed to fetch settings:", e);
         }
     };
@@ -52,7 +52,7 @@ const JobManagement = ({ user }) => {
         setLoading(false);
     };
 
-    useEffect(() => { 
+    useEffect(() => {
         fetchSettings();
         fetchApps();
     }, [activeTab, isStaffOrAdmin]);
@@ -82,12 +82,12 @@ const JobManagement = ({ user }) => {
 
     const toggleFormStatus = async (formName, currentStatus) => {
         if (!isAdmin) {
-             setUIMessage("Error: Only Admins can change form status.");
-             return;
+            setUIMessage("Error: Only Admins can change form status.");
+            return;
         }
         setLoading(true);
         // currentStatus comes from DB as 0 or 1. 
-        const newState = currentStatus ? 0 : 1; 
+        const newState = currentStatus ? 0 : 1;
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings/toggle`, {
                 method: 'POST',
@@ -101,8 +101,8 @@ const JobManagement = ({ user }) => {
                 setUIMessage(`${formName.toUpperCase()} form is now ${newState ? 'OPEN' : 'CLOSED'}`);
                 await fetchSettings(); // Refresh immediately to show new state
             }
-        } catch(e) {
-             setUIMessage(`Error updating ${formName}: ${e.message}`);
+        } catch (e) {
+            setUIMessage(`Error updating ${formName}: ${e.message}`);
         } finally {
             setLoading(false);
             setTimeout(() => setUIMessage(''), 3000);
@@ -111,8 +111,8 @@ const JobManagement = ({ user }) => {
 
     const switchWhitelistType = async (newType) => {
         if (!isAdmin) {
-             setUIMessage("Error: Only Admins can switch whitelist type.");
-             return;
+            setUIMessage("Error: Only Admins can switch whitelist type.");
+            return;
         }
         setLoading(true);
         try {
@@ -128,8 +128,8 @@ const JobManagement = ({ user }) => {
                 setUIMessage(`Whitelist type successfully switched to ${newType.toUpperCase()}`);
                 await fetchSettings();
             }
-        } catch(e) {
-             setUIMessage(`Error switching type: ${e.message}`);
+        } catch (e) {
+            setUIMessage(`Error switching type: ${e.message}`);
         } finally {
             setLoading(false);
             setTimeout(() => setUIMessage(''), 3000);
@@ -145,19 +145,19 @@ const JobManagement = ({ user }) => {
         <div className="animate-fade-in">
             <div className="flex flex-wrap gap-4 justify-between items-center mb-6 border-b border-cyan-500/20 pb-4">
                 <h2 className="text-3xl font-bold text-cyan-400">Department Management</h2>
-                
+
                 {/* APPLICATION MODE TOGGLE (ADMIN ONLY) */}
                 {isAdmin && (
                     <div className="flex items-center space-x-4">
                         {/* Status Toggle */}
-                        <button 
-                            onClick={() => toggleFormStatus(activeTab, currentFormSetting.is_open)} 
+                        <button
+                            onClick={() => toggleFormStatus(activeTab, currentFormSetting.is_open)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${currentFormSetting.is_open ? 'border-green-500 bg-green-500/10 text-green-400' : 'border-red-500 bg-red-500/10 text-red-400'}`}
                         >
                             {currentFormSetting.is_open ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                             {activeTab.toUpperCase()} is {currentFormSetting.is_open ? 'OPEN' : 'CLOSED'}
                         </button>
-                        
+
                         {/* Whitelist Type Switch (Only shown on Whitelist Tab or if explicit Whitelist tab added) */}
                         {/* Since we are in JobManagement, let's show whitelist switch if 'pd/ems/staff' are active tabs but we want to control whitelist too. 
                             Actually, better to add a 'Whitelist Settings' tab or put it in general settings. 
@@ -166,16 +166,16 @@ const JobManagement = ({ user }) => {
                     </div>
                 )}
             </div>
-            
+
             <div className="flex gap-4 mb-6 border-b border-gray-700 pb-2 overflow-x-auto">
                 {showPD && <button onClick={() => setActiveTab('pd')} className={`px-4 py-2 rounded whitespace-nowrap ${activeTab === 'pd' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>Police Dept</button>}
                 {showEMS && <button onClick={() => setActiveTab('ems')} className={`px-4 py-2 rounded whitespace-nowrap ${activeTab === 'ems' ? 'bg-red-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>EMS</button>}
                 {showStaff && <button onClick={() => setActiveTab('staff')} className={`px-4 py-2 rounded whitespace-nowrap ${activeTab === 'staff' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>Staff Apps</button>}
-                
+
                 {/* Admin Extra Tab for Whitelist Config */}
                 {isAdmin && <button onClick={() => setActiveTab('whitelist')} className={`px-4 py-2 rounded whitespace-nowrap ${activeTab === 'whitelist' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-800'}`}>Whitelist Config</button>}
             </div>
-            
+
             {/* Special View for Whitelist Config Tab */}
             {activeTab === 'whitelist' && isAdmin && (
                 <Card className="mb-6 border-cyan-500/50">
@@ -183,8 +183,8 @@ const JobManagement = ({ user }) => {
                     <div className="flex items-center gap-6">
                         <div className="flex flex-col gap-2">
                             <span className="text-sm text-gray-400">Master Toggle</span>
-                            <button 
-                                onClick={() => toggleFormStatus('whitelist', whitelistSetting.is_open)} 
+                            <button
+                                onClick={() => toggleFormStatus('whitelist', whitelistSetting.is_open)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${whitelistSetting.is_open ? 'border-green-500 text-green-400' : 'border-red-500 text-red-400'}`}
                             >
                                 {whitelistSetting.is_open ? <ToggleRight /> : <ToggleLeft />}
@@ -193,21 +193,21 @@ const JobManagement = ({ user }) => {
                         </div>
                         <div className="w-px h-12 bg-gray-700"></div>
                         <div className="flex flex-col gap-2">
-                             <span className="text-sm text-gray-400">Application Method</span>
-                             <div className="flex bg-gray-800 rounded p-1">
-                                <button 
+                            <span className="text-sm text-gray-400">Application Method</span>
+                            <div className="flex bg-gray-800 rounded p-1">
+                                <button
                                     onClick={() => switchWhitelistType('quiz')}
                                     className={`px-4 py-1 rounded transition-colors ${whitelistSetting.type === 'quiz' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
                                 >
                                     Quiz Mode
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => switchWhitelistType('form')}
                                     className={`px-4 py-1 rounded transition-colors ${whitelistSetting.type === 'form' ? 'bg-cyan-600 text-white' : 'text-gray-400 hover:bg-gray-700'}`}
                                 >
                                     Written Form
                                 </button>
-                             </div>
+                            </div>
                         </div>
                     </div>
                 </Card>
@@ -219,22 +219,52 @@ const JobManagement = ({ user }) => {
                 <div className="space-y-4">
                     {activeTab !== 'whitelist' && apps.map(app => (
                         <Card key={app.id} className="border-l-4 border-cyan-500">
-                             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                            <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3">
                                         <h3 className="text-xl font-bold text-white">{app.character_name || "Applicant"}</h3>
                                         {app.discord_id && <span className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-400">{app.discord_id}</span>}
                                     </div>
-                                    
+
                                     <p className="text-sm text-gray-400 mt-1">Status: <span className={`uppercase font-bold ${app.status === 'approved' ? 'text-green-400' : app.status === 'rejected' ? 'text-red-400' : 'text-yellow-400'}`}>{app.status}</span></p>
-                                    
-                                    <div className="mt-3 bg-gray-900/50 p-3 rounded text-sm text-gray-300 max-h-40 overflow-y-auto">
-                                        <p><strong>Reason/Backstory:</strong> {app.reason || app.experience || app.whyStaff}</p>
-                                        {app.scenario_cop && <p className="mt-2"><strong>Scenario:</strong> {app.scenario_cop}</p>}
-                                        {app.medical_knowledge && <p className="mt-2 whitespace-pre-wrap"><strong>Medical:</strong> {app.medical_knowledge}</p>}
+
+                                    <div className="mt-3 bg-gray-900/50 p-3 rounded text-sm text-gray-300 max-h-60 overflow-y-auto space-y-2">
+                                        {/* Common Fields */}
+                                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 border-b border-gray-700 pb-2 mb-2">
+                                            {app.irl_name && <div><span className="text-cyan-400 font-bold">IRL Name:</span> {app.irl_name}</div>}
+                                            {app.irl_age && <div><span className="text-cyan-400 font-bold">IRL Age:</span> {app.irl_age}</div>}
+                                            {app.weekly_hours && <div><span className="text-cyan-400 font-bold">Weekly Hours:</span> {app.weekly_hours}</div>}
+                                        </div>
+
+                                        {/* PD Fields */}
+                                        {activeTab === 'pd' && (
+                                            <>
+                                                <div><span className="text-cyan-400 font-bold">Experience:</span> <p className="whitespace-pre-wrap">{app.experience}</p></div>
+                                                <div><span className="text-cyan-400 font-bold">Reason for Joining:</span> <p className="whitespace-pre-wrap">{app.reason}</p></div>
+                                                <div><span className="text-cyan-400 font-bold">Scenario:</span> <p className="whitespace-pre-wrap">{app.scenario_cop}</p></div>
+                                            </>
+                                        )}
+
+                                        {/* EMS Fields */}
+                                        {activeTab === 'ems' && (
+                                            <>
+                                                <div><span className="text-cyan-400 font-bold">Medical Knowledge:</span> <p className="whitespace-pre-wrap">{app.medical_knowledge}</p></div>
+                                                <div><span className="text-cyan-400 font-bold">Scenarios:</span> <p className="whitespace-pre-wrap">{app.scenarios}</p></div>
+                                            </>
+                                        )}
+
+                                        {/* Staff Fields */}
+                                        {activeTab === 'staff' && (
+                                            <>
+                                                <div><span className="text-cyan-400 font-bold">Experience:</span> <p className="whitespace-pre-wrap">{app.experience}</p></div>
+                                                <div><span className="text-cyan-400 font-bold">Responsibilities:</span> <p className="whitespace-pre-wrap">{app.responsibilities}</p></div>
+                                                <div><span className="text-cyan-400 font-bold">Definitions:</span> <p className="whitespace-pre-wrap">{app.definitions}</p></div>
+                                                <div><span className="text-cyan-400 font-bold">Scenarios:</span> <p className="whitespace-pre-wrap">{app.scenarios}</p></div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
-                                
+
                                 {app.status === 'pending' && (
                                     <div className="flex gap-2 shrink-0">
                                         <AnimatedButton onClick={() => handleAction(app.id, 'approved')} className="bg-green-600 !px-4 !py-2 text-sm">Approve</AnimatedButton>

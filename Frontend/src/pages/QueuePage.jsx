@@ -15,7 +15,7 @@ const QueuePage = ({ user, setPage }) => {
         }
         try {
             const token = localStorage.getItem('authToken');
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/queue/status`, { 
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/queue/status`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
@@ -33,7 +33,7 @@ const QueuePage = ({ user, setPage }) => {
         fetchStatus();
         const interval = setInterval(fetchStatus, 5000);
         return () => clearInterval(interval);
-    }, [fetchStatus]);
+    }, [fetchStatus]); // fetchStatus is memoized with [user], so this is safe.
 
     const handleJoin = async (queueType) => {
         setIsLoading(true);
@@ -41,9 +41,9 @@ const QueuePage = ({ user, setPage }) => {
         try {
             await fetch(`${import.meta.env.VITE_API_URL}/api/queue/join`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ queueType })
             });
@@ -78,7 +78,7 @@ const QueuePage = ({ user, setPage }) => {
     );
 
     if (isLoading) return <div className="text-center text-cyan-400">Loading Queue...</div>;
-    
+
     if (queueStatus.inQueue) {
         const estimatedTime = queueStatus.position * 1.5;
         return (
@@ -108,7 +108,7 @@ const QueuePage = ({ user, setPage }) => {
             </div>
         );
     }
-    
+
     const userRoles = user?.roles || [];
     const isStaffOrAdmin = userRoles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || userRoles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID);
 
@@ -132,13 +132,13 @@ const QueuePage = ({ user, setPage }) => {
                 <h2 className="text-3xl font-bold text-cyan-400 mb-6 text-center">Join a Queue</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                     {queueData.map(q => (
-                        <QueueCard 
+                        <QueueCard
                             key={q.type}
-                            title={q.title} 
-                            icon={q.icon} 
+                            title={q.title}
+                            icon={q.icon}
                             description={q.desc}
                             allowed={isStaffOrAdmin || userRoles.includes(q.role) || q.type === 'normal'}
-                            onJoin={() => handleJoin(q.type)} 
+                            onJoin={() => handleJoin(q.type)}
                         />
                     ))}
                 </div>

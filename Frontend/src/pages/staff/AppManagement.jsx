@@ -14,7 +14,7 @@ const AppManagement = ({ user }) => {
     const [rejectionReason, setRejectionReason] = useState('');
     const [customReason, setCustomReason] = useState('');
     const [cooldown, setCooldown] = useState(24);
-    
+
     const presetReasons = ["Low effort application.", "Backstory does not meet requirements.", "Not a unique character concept."];
 
     const fetchData = useCallback(async () => {
@@ -51,7 +51,7 @@ const AppManagement = ({ user }) => {
         if (!selectedApp) return;
         const token = localStorage.getItem('authToken');
         const finalReason = rejectionReason === 'custom' ? customReason : rejectionReason;
-        
+
         if (modalAction === 'reject' && !finalReason) {
             alert("Please select or provide a reason for rejection.");
             return;
@@ -60,9 +60,9 @@ const AppManagement = ({ user }) => {
         try {
             await fetch(`${import.meta.env.VITE_API_URL}/api/applications/${selectedApp.id}`, {
                 method: 'PUT',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` 
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ status: modalAction, reason: finalReason })
             });
@@ -75,7 +75,7 @@ const AppManagement = ({ user }) => {
         }
     };
 
-     const finalFilteredApps = apps
+    const finalFilteredApps = apps
         .filter(app => app.status === filter)
         .filter(app => {
             if (viewType === 'premium') return app.isPremium;
@@ -93,16 +93,16 @@ const AppManagement = ({ user }) => {
                         <button key={status} onClick={() => setFilter(status)} className={`px-4 py-2 rounded-t-lg font-semibold transition-colors ${filter === status ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800'}`}>{status.charAt(0).toUpperCase() + status.slice(1)}</button>
                     ))}
                 </div>
-                 <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-4">
                     <div className="flex space-x-2">
                         <button onClick={() => setViewType('all')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'all' ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800'}`}>All Apps</button>
                         <button onClick={() => setViewType('premium')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'premium' ? 'bg-yellow-500/20 text-yellow-300' : 'text-gray-400 hover:bg-gray-800'}`}>Premium Apps</button>
-                         <button onClick={() => setViewType('normal')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'normal' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:bg-gray-800'}`}>Normal Apps</button>
+                        <button onClick={() => setViewType('normal')} className={`px-4 py-2 rounded-lg font-semibold transition-colors text-sm ${viewType === 'normal' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-400 hover:bg-gray-800'}`}>Normal Apps</button>
                     </div>
                     <AnimatedButton onClick={fetchData} className="!px-3 !py-2 text-sm">Refresh</AnimatedButton>
                 </div>
             </div>
-            
+
             {isLoading ? <p>Loading applications...</p> : (
                 <div className="space-y-4">{finalFilteredApps.length > 0 ? finalFilteredApps.map(app => (
                     <Card key={app.id} className={`transition-all hover:border-cyan-500/50 ${app.isPremium ? 'border-yellow-500/30' : ''}`}>
@@ -124,15 +124,46 @@ const AppManagement = ({ user }) => {
                             </div>
                         </div>
                         {selectedApp?.id === app.id && (
-                            <div className="mt-4 pt-4 border-t border-cyan-500/20 animate-fade-in-fast">
-                                <p className="text-gray-300 whitespace-pre-wrap">{app.backstory}</p>
-                                {app.status === 'rejected' && <p className="mt-2 text-red-400">Reason: {app.reason}</p>}
+                            <div className="mt-4 pt-4 border-t border-cyan-500/20 animate-fade-in-fast space-y-3">
+                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-400 mb-2">
+                                    <div><span className="text-cyan-400 font-semibold">IRL Name:</span> {app.irlName}</div>
+                                    <div><span className="text-cyan-400 font-semibold">IRL Age:</span> {app.irlAge}</div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-cyan-400 font-semibold text-sm mb-1">Backstory</h4>
+                                    <p className="text-gray-300 whitespace-pre-wrap text-sm bg-gray-900/50 p-3 rounded">{app.backstory}</p>
+                                </div>
+
+                                {app.questions && (() => {
+                                    try {
+                                        const q = typeof app.questions === 'string' ? JSON.parse(app.questions) : app.questions;
+                                        return (
+                                            <>
+                                                {q.foundUs && (
+                                                    <div>
+                                                        <h4 className="text-cyan-400 font-semibold text-sm mb-1">Found Us</h4>
+                                                        <p className="text-gray-300 text-sm">{q.foundUs}</p>
+                                                    </div>
+                                                )}
+                                                {q.experience && (
+                                                    <div>
+                                                        <h4 className="text-cyan-400 font-semibold text-sm mb-1">Experience</h4>
+                                                        <p className="text-gray-300 whitespace-pre-wrap text-sm bg-gray-900/50 p-3 rounded">{q.experience}</p>
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    } catch (e) { return null; }
+                                })()}
+
+                                {app.status === 'rejected' && <p className="mt-2 text-red-400 font-bold">Rejection Reason: {app.reason}</p>}
                             </div>
                         )}
                     </Card>
                 )) : <p className="text-gray-400 text-center py-8">No {viewType !== 'all' ? viewType : ''} {filter} applications found.</p>}</div>
             )}
-            
+
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalAction === 'approved' ? 'Confirm Approval' : 'Confirm Rejection'}>
                 {modalAction === 'approved' ? (
                     <div>

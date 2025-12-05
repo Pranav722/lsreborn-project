@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
-import { BrainCircuit, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { BrainCircuit, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
 
 const QuizPage = ({ user, setPage }) => {
     const [questions, setQuestions] = useState([]);
@@ -17,11 +17,35 @@ const QuizPage = ({ user, setPage }) => {
         fetch(`${import.meta.env.VITE_API_URL}/api/forms/quiz`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
         })
-        .then(res => res.json())
-        .then(data => {
-            setQuestions(data);
-            setLoading(false);
-        });
+            .then(async res => {
+                const data = await res.json();
+                if (!res.ok) {
+                    if (res.status === 403) {
+                        if (data.status === 'cooldown') {
+                            setResult({ status: 'cooldown', message: "You are currently on cooldown.", expiry: data.expiry });
+                        } else if (data.status === 'pending') {
+                            setResult({ status: 'pending', message: "Your application is pending approval." });
+                        } else {
+                            setResult({ status: 'error', message: data.message || "Access Denied" });
+                        }
+                    } else {
+                        alert(data.message || "Error loading quiz");
+                        setPage('home');
+                    }
+                    return null;
+                }
+                return data;
+            })
+            .then(data => {
+                if (data) {
+                    setQuestions(data);
+                    setLoading(false);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                setLoading(false);
+            });
     }, []);
 
     const handleAnswer = (option) => {
@@ -39,7 +63,7 @@ const QuizPage = ({ user, setPage }) => {
     const submitQuiz = async () => {
         setSubmitting(true);
         const formattedAnswers = Object.entries(answers).map(([q, a]) => ({ question: q, answer: a }));
-        
+
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/forms/submit/whitelist`, {
                 method: 'POST',
@@ -50,12 +74,13 @@ const QuizPage = ({ user, setPage }) => {
                 body: JSON.stringify({ answers: formattedAnswers })
             });
             const data = await res.json();
-            
+
             setResult({
                 passed: data.passed,
                 score: data.score,
                 total: data.total,
-                message: data.message
+                message: data.message,
+                status: data.passed ? 'approved' : 'rejected'
             });
 
         } catch (e) {
@@ -69,35 +94,71 @@ const QuizPage = ({ user, setPage }) => {
 
     // --- RESULTS SCREEN ---
     if (result) {
+        const isApproved = result.status === 'approved' || result.passed;
+        const isRejected = result.status === 'rejected' || (result.passed === false && result.status !== 'cooldown');
+        const isPending = result.status === 'pending';
+        const isCooldown = result.status === 'cooldown';
+        const isError = result.status === 'error';
+
+        let borderColor = 'border-gray-500';
+        let icon = <AlertTriangle className="w-24 h-24 text-gray-400" />;
+        let title = "Application Status";
+        let titleColor = "text-white";
+
+        if (isApproved) {
+            borderColor = 'border-green-500';
+            icon = <CheckCircle className="w-24 h-24 text-green-400 animate-bounce" />;
+            title = "Application Approved";
+            titleColor = "text-green-300";
+        } else if (isRejected) {
+            borderColor = 'border-red-500';
+            icon = <XCircle className="w-24 h-24 text-red-400 animate-pulse" />;
+            title = "Application Rejected";
+            titleColor = "text-red-300";
+        } else if (isPending) {
+            borderColor = 'border-yellow-500';
+            icon = <Clock className="w-24 h-24 text-yellow-400 animate-pulse" />;
+            title = "Waiting for Approval";
+            titleColor = "text-yellow-300";
+        } else if (isCooldown) {
+            borderColor = 'border-orange-500';
+            icon = <Clock className="w-24 h-24 text-orange-400" />;
+            title = "Application Cooldown";
+            titleColor = "text-orange-300";
+        }
+
         return (
             <div className="max-w-2xl mx-auto pt-10 animate-fade-in">
-                <Card className={`border-l-4 ${result.passed ? 'border-green-500' : 'border-red-500'}`}>
+                <Card className={`border-l-4 ${borderColor}`}>
                     <div className="text-center space-y-6 py-8">
                         <div className="flex justify-center">
-                            {result.passed ? (
-                                <CheckCircle className="w-24 h-24 text-green-400 animate-bounce" />
-                            ) : (
-                                <XCircle className="w-24 h-24 text-red-400 animate-pulse" />
-                            )}
+                            {icon}
                         </div>
-                        
+
                         <div>
                             <h2 className="text-4xl font-bold text-white mb-2">
-                                {result.passed ? "Application Approved" : "Application Rejected"}
+                                {title}
                             </h2>
-                            <p className={`text-xl font-medium ${result.passed ? 'text-green-300' : 'text-red-300'}`}>
-                                Score: {result.score} / {result.total}
-                            </p>
+                            {(isApproved || isRejected) && result.total > 0 && (
+                                <p className={`text-xl font-medium ${titleColor}`}>
+                                    Score: {result.score} / {result.total}
+                                </p>
+                            )}
                         </div>
 
                         <div className="bg-gray-900/50 p-6 rounded-xl border border-gray-700 text-left max-w-lg mx-auto">
                             <h4 className="text-gray-400 text-sm uppercase tracking-wider font-bold mb-3">
-                                {result.passed ? "Next Steps" : "Feedback"}
+                                {isApproved ? "Next Steps" : "Status Detail"}
                             </h4>
                             <p className="text-gray-300 leading-relaxed">
                                 {result.message}
                             </p>
-                            {!result.passed && (
+                            {isCooldown && result.expiry && (
+                                <div className="mt-4 text-sm text-orange-400">
+                                    You can re-apply after: {new Date(result.expiry).toLocaleString()}
+                                </div>
+                            )}
+                            {isRejected && !isCooldown && (
                                 <div className="mt-4 flex items-center gap-3 text-yellow-400 text-sm bg-yellow-400/10 p-3 rounded-lg border border-yellow-400/20">
                                     <AlertTriangle size={18} />
                                     <span>You can re-apply in 24 hours. Please review the server rules.</span>
@@ -114,7 +175,7 @@ const QuizPage = ({ user, setPage }) => {
                                     Admin Retake
                                 </AnimatedButton>
                             )}
-                            {result.passed && (
+                            {isApproved && (
                                 <AnimatedButton onClick={() => setPage('queue')} className="bg-green-600">
                                     Connect to Server
                                 </AnimatedButton>
@@ -140,19 +201,18 @@ const QuizPage = ({ user, setPage }) => {
                     </div>
                     <span className="ml-auto text-gray-400 font-mono">Q{currentQuestion + 1} / {questions.length}</span>
                 </div>
-                
+
                 <div className="mb-8 min-h-[200px]">
                     <h3 className="text-xl text-white mb-6 font-medium leading-relaxed">{q.question}</h3>
                     <div className="space-y-3">
                         {q.options.map((opt, idx) => (
-                            <div 
+                            <div
                                 key={idx}
                                 onClick={() => handleAnswer(opt)}
-                                className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 flex items-center gap-3 group ${
-                                    answers[q.question] === opt 
-                                    ? 'bg-cyan-500/20 border-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.2)] transform scale-[1.02]' 
-                                    : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
-                                }`}
+                                className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 flex items-center gap-3 group ${answers[q.question] === opt
+                                        ? 'bg-cyan-500/20 border-cyan-500 text-white shadow-[0_0_15px_rgba(6,182,212,0.2)] transform scale-[1.02]'
+                                        : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+                                    }`}
                             >
                                 <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${answers[q.question] === opt ? 'border-cyan-400 bg-cyan-400' : 'border-gray-500'}`}>
                                     {answers[q.question] === opt && <div className="w-1.5 h-1.5 bg-gray-900 rounded-full" />}
@@ -167,8 +227,8 @@ const QuizPage = ({ user, setPage }) => {
                     <div className="w-full bg-gray-800 h-1.5 rounded-full max-w-[200px] overflow-hidden">
                         <div className="bg-cyan-500 h-full transition-all duration-300" style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}></div>
                     </div>
-                    <AnimatedButton 
-                        onClick={handleNext} 
+                    <AnimatedButton
+                        onClick={handleNext}
                         disabled={!answers[q.question] || submitting}
                         className="bg-cyan-600 min-w-[140px]"
                     >

@@ -246,8 +246,8 @@ export default function App() {
   const isStaffOrAdmin = user && (user.isStaff || user.isAdmin);
   const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
 
-  // LOGIC FIX: Always show 'Apply' if Admin, regardless of whitelisted status
-  const showApplyButton = !hasWhitelistedRole || isStaffOrAdmin;
+  // LOGIC FIX: Always show 'Apply' button. The ApplicationPage will handle role-based access.
+  const showApplyButton = true;
 
   return (
     <ErrorBoundary>
