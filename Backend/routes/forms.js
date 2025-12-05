@@ -98,6 +98,26 @@ const initializeTables = async () => {
             }
         }
 
+        // Ensure ems_applications has 'reason' column
+        try {
+            await db.query("SELECT reason FROM ems_applications LIMIT 1");
+        } catch (err) {
+            if (err.code === 'ER_BAD_FIELD_ERROR') {
+                console.log("Adding 'reason' column to 'ems_applications' table...");
+                await db.query("ALTER TABLE ems_applications ADD COLUMN reason TEXT");
+            }
+        }
+
+        // Ensure pd_applications has 'reason' column
+        try {
+            await db.query("SELECT reason FROM pd_applications LIMIT 1");
+        } catch (err) {
+            if (err.code === 'ER_BAD_FIELD_ERROR') {
+                console.log("Adding 'reason' column to 'pd_applications' table...");
+                await db.query("ALTER TABLE pd_applications ADD COLUMN reason TEXT");
+            }
+        }
+
         // 4. Initialize default settings
 
         const forms = ['whitelist', 'pd', 'ems', 'staff'];
