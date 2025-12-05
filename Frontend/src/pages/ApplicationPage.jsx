@@ -13,7 +13,7 @@ const ClosedFormUI = ({ title, message }) => (
         <p className="text-gray-300 mb-6 leading-relaxed">
             {message}
         </p>
-        <p className="text-cyan-400 font-medium">Join our Discord for updates and better marketing of the server!</p>
+        <p className="text-cyan-400 font-medium">Stay tuned and Join our Discord for updates!</p>
     </Card>
 );
 
@@ -265,7 +265,7 @@ const ApplicationPage = ({ user, setPage }) => {
             icon: UserCog,
             color: 'text-purple-500',
             borderColor: 'border-purple-500/50',
-            desc: isFormOpen('staff') ? 'Apply to become a moderator/admin. Requires Whitelisted status.' : 'Applications are currently closed.',
+            desc: isFormOpen('staff') ? 'Apply to become a building block of LSReborn. Requires Whitelisted status.' : 'Applications are currently closed.',
             action: () => { if (canApplyJobs && isFormOpen('staff')) { setSelectedDept('staff'); setPageType('department'); } },
             locked: !canApplyJobs, // Locked if not whitelisted
             btnText: !isFormOpen('staff') ? 'Closed' : 'Apply for Staff',
@@ -299,9 +299,9 @@ const ApplicationPage = ({ user, setPage }) => {
             <div className="text-center mb-12">
                 <h1 className="text-4xl font-bold text-white mb-4">Application Center</h1>
                 <p className="text-gray-400 max-w-2xl mx-auto">
-                    Welcome to the LSReborn Career Hub. Here you can apply for citizenship or join one of our whitelisted departments.
+                    Welcome to the LSReborn. Here you can apply for citizenship or join one of our whitelisted departments.
                 </p>
-                {(isAdmin || isStaff) && (
+                {(isAdmin) && (
                     <p className="mt-4 text-sm text-yellow-400 border border-yellow-500/30 bg-yellow-500/10 inline-block px-4 py-1 rounded-full">
                         Admin Mode: Recurring Applications Enabled
                     </p>
