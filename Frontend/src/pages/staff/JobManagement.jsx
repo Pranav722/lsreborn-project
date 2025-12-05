@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../../components/Card';
 import AnimatedButton from '../../components/AnimatedButton';
-import { ToggleLeft, ToggleRight, Loader2, Zap, User, Clock, Shield, Heart, FileText, Briefcase, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp, Settings, Calendar } from 'lucide-react';
+import Modal from '../../components/Modal';
+import { ToggleLeft, ToggleRight, Loader2, Zap, User, Clock, Shield, Heart, FileText, Briefcase, CheckCircle, XCircle, AlertCircle, ChevronDown, Settings, Calendar, Disc } from 'lucide-react';
 
 const JobManagement = ({ user }) => {
     const [activeTab, setActiveTab] = useState('pd');
@@ -10,6 +11,7 @@ const JobManagement = ({ user }) => {
     const [settings, setSettings] = useState({});
     const [uiMessage, setUIMessage] = useState('');
     const [selectedApp, setSelectedApp] = useState(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
     const isAdmin = user.isAdmin;
     // Authorized if Admin, Staff, PD Lead, or EMS Lead
@@ -285,17 +287,13 @@ const JobManagement = ({ user }) => {
                                         </div>
                                     </div>
 
-                                    {/* Action Buttons (Always visible for easy access or hidden if reviewed?) */}
+                                    {/* Action Buttons */}
                                     <div className="flex items-center gap-3 mb-4">
                                         <button
-                                            onClick={() => setSelectedApp(selectedApp?.id === app.id ? null : app)}
+                                            onClick={() => { setSelectedApp(app); setIsDetailModalOpen(true); }}
                                             className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center gap-1 transition-colors"
                                         >
-                                            {selectedApp?.id === app.id ? (
-                                                <>Hide Full Application <ChevronUp size={16} /></>
-                                            ) : (
-                                                <>View Full Application <ChevronDown size={16} /></>
-                                            )}
+                                            View Full Application <ChevronDown size={16} />
                                         </button>
 
                                         {app.status === 'pending' && (
@@ -305,65 +303,6 @@ const JobManagement = ({ user }) => {
                                             </div>
                                         )}
                                     </div>
-
-
-                                    {/* Expanded Details */}
-                                    {selectedApp?.id === app.id && (
-                                        <div className="mt-4 bg-black/20 p-6 rounded-xl border border-white/5 space-y-6 animate-fade-in">
-                                            {/* Common Fields */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <DetailItem icon={User} label="IRL Name" value={app.irl_name} />
-                                                <DetailItem icon={Calendar} label="IRL Age" value={app.irl_age} />
-                                                <DetailItem icon={Clock} label="Weekly Hours" value={app.weekly_hours} />
-                                            </div>
-
-                                            {/* PD Fields */}
-                                            {activeTab === 'pd' && (
-                                                <div className="space-y-4">
-                                                    <div className="bg-blue-900/10 p-4 rounded-lg border border-blue-500/20">
-                                                        <h4 className="text-blue-400 font-bold text-sm uppercase mb-2">Previous Experience</h4>
-                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{app.experience}</p>
-                                                    </div>
-                                                    <div className="bg-blue-900/10 p-4 rounded-lg border border-blue-500/20">
-                                                        <h4 className="text-blue-400 font-bold text-sm uppercase mb-2">Reason for Joining</h4>
-                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{app.reason}</p>
-                                                    </div>
-                                                    <div className="bg-blue-900/10 p-4 rounded-lg border border-blue-500/20">
-                                                        <h4 className="text-blue-400 font-bold text-sm uppercase mb-2">Scenario Response</h4>
-                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{app.scenario_cop}</p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* EMS Fields */}
-                                            {activeTab === 'ems' && (
-                                                <div className="space-y-4">
-                                                    <div className="bg-red-900/10 p-4 rounded-lg border border-red-500/20">
-                                                        <h4 className="text-red-400 font-bold text-sm uppercase mb-2">Medical Knowledge</h4>
-                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{app.medical_knowledge}</p>
-                                                    </div>
-                                                    <div className="bg-red-900/10 p-4 rounded-lg border border-red-500/20">
-                                                        <h4 className="text-red-400 font-bold text-sm uppercase mb-2">Scenario Responses</h4>
-                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{app.scenarios}</p>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* Staff Fields */}
-                                            {activeTab === 'staff' && (
-                                                <div className="space-y-4">
-                                                    <div className="bg-purple-900/10 p-4 rounded-lg border border-purple-500/20">
-                                                        <h4 className="text-purple-400 font-bold text-sm uppercase mb-2">Staff Experience</h4>
-                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{app.experience}</p>
-                                                    </div>
-                                                    <div className="bg-purple-900/10 p-4 rounded-lg border border-purple-500/20">
-                                                        <h4 className="text-purple-400 font-bold text-sm uppercase mb-2">Responsibilities</h4>
-                                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{app.responsibilities}</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </Card>
@@ -376,6 +315,121 @@ const JobManagement = ({ user }) => {
                     )}
                 </div>
             )}
+
+            {/* DEPARTMENT APPLICATION DETAIL MODAL - ENHANCED */}
+            <Modal
+                isOpen={isDetailModalOpen}
+                onClose={() => setIsDetailModalOpen(false)}
+                title={`${activeTab === 'pd' ? '🛡️ Police Dept' : activeTab === 'ems' ? '❤️ EMS' : '⚡ Staff'} Application`}
+                size="xl"
+            >
+                {selectedApp && (
+                    <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2">
+                        {/* Header - Department colored */}
+                        <div className={`flex items-center gap-6 pb-6 border-b border-gray-700/50 -mx-6 -mt-6 px-6 pt-6 mb-6 ${activeTab === 'pd' ? 'bg-gradient-to-r from-blue-900/30 to-transparent' : activeTab === 'ems' ? 'bg-gradient-to-r from-red-900/30 to-transparent' : 'bg-gradient-to-r from-purple-900/30 to-transparent'}`}>
+                            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg ${activeTab === 'pd' ? 'bg-blue-600/20 text-blue-400 ring-2 ring-blue-500/30' : activeTab === 'ems' ? 'bg-red-600/20 text-red-400 ring-2 ring-red-500/30' : 'bg-purple-600/20 text-purple-400 ring-2 ring-purple-500/30'}`}>
+                                {activeTab === 'pd' ? <Shield size={36} /> : activeTab === 'ems' ? <Heart size={36} /> : <Zap size={36} />}
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-2xl font-bold text-white flex items-center gap-3 mb-1">
+                                    {selectedApp.character_name || 'Applicant'}
+                                    <span className={`text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider ${selectedApp.status === 'approved' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : selectedApp.status === 'rejected' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'}`}>
+                                        {selectedApp.status}
+                                    </span>
+                                </h3>
+                                <p className="text-gray-400 flex items-center gap-2">
+                                    <Disc size={14} /> Discord ID: <span className="text-cyan-400 font-mono">{selectedApp.discord_id}</span>
+                                </p>
+                                <p className="text-gray-500 text-sm mt-1">
+                                    <Clock size={12} className="inline mr-1" /> Submitted: {new Date(selectedApp.submitted_at).toLocaleString()}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Info Grid */}
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                            <DetailItem icon={User} label="IRL Name" value={selectedApp.irl_name || 'N/A'} />
+                            <DetailItem icon={Calendar} label="IRL Age" value={selectedApp.irl_age || 'N/A'} />
+                            <DetailItem icon={Clock} label="Weekly Hours" value={selectedApp.weekly_hours || 'N/A'} />
+                        </div>
+
+                        {/* PD Specific Fields */}
+                        {activeTab === 'pd' && (
+                            <div className="space-y-4">
+                                <div className="bg-blue-900/20 rounded-xl border border-blue-500/20 overflow-hidden">
+                                    <div className="px-5 py-3 bg-blue-500/10 border-b border-blue-500/20 flex items-center gap-2">
+                                        <Shield size={16} className="text-blue-400" />
+                                        <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider">Previous Experience</h4>
+                                    </div>
+                                    <div className="p-5">
+                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.experience || 'Not provided'}</p>
+                                    </div>
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="bg-blue-900/10 p-5 rounded-xl border border-blue-500/20">
+                                        <h4 className="text-xs font-bold text-blue-400 uppercase mb-2 tracking-wider">Reason for Joining</h4>
+                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.reason || 'Not provided'}</p>
+                                    </div>
+                                    <div className="bg-blue-900/10 p-5 rounded-xl border border-blue-500/20">
+                                        <h4 className="text-xs font-bold text-blue-400 uppercase mb-2 tracking-wider">Scenario Response</h4>
+                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.scenario_cop || 'Not provided'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* EMS Specific Fields */}
+                        {activeTab === 'ems' && (
+                            <div className="space-y-4">
+                                <div className="bg-red-900/20 rounded-xl border border-red-500/20 overflow-hidden">
+                                    <div className="px-5 py-3 bg-red-500/10 border-b border-red-500/20 flex items-center gap-2">
+                                        <Heart size={16} className="text-red-400" />
+                                        <h4 className="text-sm font-bold text-red-400 uppercase tracking-wider">Medical Knowledge</h4>
+                                    </div>
+                                    <div className="p-5">
+                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.medical_knowledge || 'Not provided'}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-red-900/10 p-5 rounded-xl border border-red-500/20">
+                                    <h4 className="text-xs font-bold text-red-400 uppercase mb-2 tracking-wider">Scenario Responses</h4>
+                                    <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.scenarios || 'Not provided'}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Staff Specific Fields */}
+                        {activeTab === 'staff' && (
+                            <div className="space-y-4">
+                                <div className="bg-purple-900/20 rounded-xl border border-purple-500/20 overflow-hidden">
+                                    <div className="px-5 py-3 bg-purple-500/10 border-b border-purple-500/20 flex items-center gap-2">
+                                        <Zap size={16} className="text-purple-400" />
+                                        <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider">Staff Experience</h4>
+                                    </div>
+                                    <div className="p-5">
+                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.experience || 'Not provided'}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-purple-900/10 p-5 rounded-xl border border-purple-500/20">
+                                    <h4 className="text-xs font-bold text-purple-400 uppercase mb-2 tracking-wider">Responsibilities</h4>
+                                    <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.responsibilities || 'Not provided'}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Actions for pending */}
+                        {selectedApp.status === 'pending' && (
+                            <div className="flex gap-4 pt-6 border-t border-gray-700/50">
+                                <button onClick={() => { setIsDetailModalOpen(false); handleAction(selectedApp.id, 'approved'); }} className={`flex-1 flex items-center justify-center gap-3 text-white px-6 py-4 rounded-xl text-base font-bold transition-all shadow-lg ${activeTab === 'pd' ? 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-blue-900/30' : activeTab === 'ems' ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-red-900/30' : 'bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 shadow-purple-900/30'}`}>
+                                    <CheckCircle size={20} /> Approve Application
+                                </button>
+                                <button onClick={() => { setIsDetailModalOpen(false); handleAction(selectedApp.id, 'rejected'); }} className="flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white px-6 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-gray-900/30">
+                                    <XCircle size={20} /> Reject Application
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 };

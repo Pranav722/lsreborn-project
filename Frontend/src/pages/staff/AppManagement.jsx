@@ -256,42 +256,45 @@ const AppManagement = ({ user }) => {
                 )}
             </Modal>
 
-            {/* Application Detail Modal */}
-            <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="Application Details">
+            {/* Application Detail Modal - ENHANCED */}
+            <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="📋 Application Details" size="xl">
                 {selectedApp && (
-                    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
-                        {/* Header */}
-                        <div className="flex items-center gap-4 pb-4 border-b border-gray-800">
-                            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold ${selectedApp.isPremium ? 'bg-yellow-500/20 text-yellow-400 ring-2 ring-yellow-500/30' : 'bg-cyan-500/20 text-cyan-400 ring-2 ring-cyan-500/30'}`}>
+                    <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent">
+                        {/* Header - Enhanced with more presence */}
+                        <div className="flex items-center gap-6 pb-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/30 to-transparent -mx-6 -mt-6 px-6 pt-6 mb-6">
+                            <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold shadow-lg ${selectedApp.isPremium ? 'bg-gradient-to-br from-yellow-500/30 to-orange-500/20 text-yellow-400 ring-2 ring-yellow-500/30' : 'bg-gradient-to-br from-cyan-500/30 to-blue-500/20 text-cyan-400 ring-2 ring-cyan-500/30'}`}>
                                 {selectedApp.characterName?.charAt(0)}
                             </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                            <div className="flex-1">
+                                <h3 className="text-2xl font-bold text-white flex items-center gap-3 mb-1">
                                     {selectedApp.characterName}
-                                    {selectedApp.isPremium && <span className="text-[10px] font-extrabold bg-yellow-500 text-black px-2 py-0.5 rounded uppercase tracking-wider">Premium</span>}
+                                    {selectedApp.isPremium && <span className="text-xs font-extrabold bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-3 py-1 rounded-full uppercase tracking-wider shadow-lg">Premium</span>}
                                 </h3>
-                                <p className="text-sm text-gray-400 flex items-center gap-1">
-                                    <Disc size={12} /> {selectedApp.discordId}
+                                <p className="text-gray-400 flex items-center gap-2">
+                                    <Disc size={14} /> Discord ID: <span className="text-cyan-400 font-mono">{selectedApp.discordId}</span>
+                                </p>
+                                <p className="text-gray-500 text-sm mt-1">
+                                    <Clock size={12} className="inline mr-1" /> Submitted: {new Date(selectedApp.submittedAt).toLocaleString()}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Grid Details */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <DetailItem icon={User} label="Real Name" value={selectedApp.irlName} />
-                            <DetailItem icon={Calendar} label="Real Age" value={`${selectedApp.irlAge} years`} />
-                            <DetailItem icon={User} label="Char Name" value={selectedApp.characterName} />
-                            <DetailItem icon={Calendar} label="Char Age" value={`${selectedApp.characterAge} years`} />
+                        {/* Info Grid - 2x2 on mobile, 4 columns on larger */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <DetailItem icon={User} label="Real Name" value={selectedApp.irlName || 'N/A'} />
+                            <DetailItem icon={Calendar} label="Real Age" value={selectedApp.irlAge ? `${selectedApp.irlAge} years` : 'N/A'} />
+                            <DetailItem icon={User} label="Character Name" value={selectedApp.characterName} />
+                            <DetailItem icon={Calendar} label="Character Age" value={selectedApp.characterAge ? `${selectedApp.characterAge} years` : 'N/A'} />
                         </div>
 
-                        {/* Backstory Section */}
-                        <div className="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
-                            <div className="px-4 py-3 bg-white/5 border-b border-white/5 flex items-center gap-2">
-                                <FileText size={16} className="text-cyan-400" />
-                                <h4 className="text-sm font-bold text-gray-200 uppercase tracking-wider">Character Backstory</h4>
+                        {/* Backstory Section - Enhanced */}
+                        <div className="bg-gray-800/30 rounded-xl border border-gray-700/50 overflow-hidden">
+                            <div className="px-5 py-4 bg-gradient-to-r from-cyan-500/10 to-transparent border-b border-gray-700/50 flex items-center gap-3">
+                                <FileText size={18} className="text-cyan-400" />
+                                <h4 className="text-base font-bold text-white uppercase tracking-wider">Character Backstory</h4>
                             </div>
                             <div className="p-5">
-                                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-sans">{selectedApp.backstory}</p>
+                                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-sans">{selectedApp.backstory || 'No backstory provided.'}</p>
                             </div>
                         </div>
 
@@ -300,16 +303,16 @@ const AppManagement = ({ user }) => {
                             try {
                                 const q = typeof selectedApp.questions === 'string' ? JSON.parse(selectedApp.questions) : selectedApp.questions;
                                 return (
-                                    <div className="space-y-4">
+                                    <div className="grid md:grid-cols-2 gap-4">
                                         {q.foundUs && (
-                                            <div className="bg-gray-800/30 p-4 rounded-lg border-l-2 border-cyan-500">
-                                                <p className="text-xs font-bold text-cyan-500 uppercase mb-1">Discovery</p>
+                                            <div className="bg-gray-800/20 p-5 rounded-xl border border-gray-700/30">
+                                                <p className="text-xs font-bold text-cyan-400 uppercase mb-2 tracking-wider">How They Found Us</p>
                                                 <p className="text-gray-300 text-sm">{q.foundUs}</p>
                                             </div>
                                         )}
                                         {q.experience && (
-                                            <div className="bg-gray-800/30 p-4 rounded-lg border-l-2 border-cyan-500">
-                                                <p className="text-xs font-bold text-cyan-500 uppercase mb-1">Previous Experience</p>
+                                            <div className="bg-gray-800/20 p-5 rounded-xl border border-gray-700/30">
+                                                <p className="text-xs font-bold text-cyan-400 uppercase mb-2 tracking-wider">Previous RP Experience</p>
                                                 <p className="text-gray-300 text-sm whitespace-pre-wrap">{q.experience}</p>
                                             </div>
                                         )}
@@ -320,23 +323,23 @@ const AppManagement = ({ user }) => {
 
                         {/* Rejection Note */}
                         {selectedApp.status === 'rejected' && selectedApp.reason && (
-                            <div className="bg-red-900/20 border border-red-500/40 p-4 rounded-lg flex items-start gap-3">
-                                <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={18} />
+                            <div className="bg-red-900/20 border border-red-500/30 p-5 rounded-xl flex items-start gap-4">
+                                <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={20} />
                                 <div>
-                                    <p className="text-red-400 font-bold text-sm uppercase tracking-wider mb-1">Rejection Reason</p>
+                                    <p className="text-red-400 font-bold text-sm uppercase tracking-wider mb-2">Rejection Reason</p>
                                     <p className="text-red-200 text-sm">{selectedApp.reason}</p>
                                 </div>
                             </div>
                         )}
 
-                        {/* Actions for pending */}
+                        {/* Actions for pending - Full width buttons */}
                         {filter === 'pending' && (
-                            <div className="flex gap-3 pt-4 border-t border-gray-800">
-                                <button onClick={() => { setIsDetailModalOpen(false); handleOpenModal(selectedApp, 'approved'); }} className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-3 rounded-lg text-sm font-bold transition-all shadow-lg shadow-green-900/20">
-                                    <CheckCircle size={16} /> Approve
+                            <div className="flex gap-4 pt-6 border-t border-gray-700/50">
+                                <button onClick={() => { setIsDetailModalOpen(false); handleOpenModal(selectedApp, 'approved'); }} className="flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-green-900/30">
+                                    <CheckCircle size={20} /> Approve Application
                                 </button>
-                                <button onClick={() => { setIsDetailModalOpen(false); handleOpenModal(selectedApp, 'rejected'); }} className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-3 rounded-lg text-sm font-bold transition-all shadow-lg shadow-red-900/20">
-                                    <XCircle size={16} /> Reject
+                                <button onClick={() => { setIsDetailModalOpen(false); handleOpenModal(selectedApp, 'rejected'); }} className="flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white px-6 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-red-900/30">
+                                    <XCircle size={20} /> Reject Application
                                 </button>
                             </div>
                         )}
