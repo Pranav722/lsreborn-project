@@ -1,253 +1,297 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Shield, AlertTriangle, Users, Gavel, BookOpen, XCircle, Info, GripVertical } from 'lucide-react';
+import { Shield, AlertTriangle, Users, Gavel, BookOpen, XCircle, GripVertical, ChevronRight, ChevronLeft } from 'lucide-react';
 
 const Rules = () => {
     const [currentPage, setCurrentPage] = useState(0);
-    // We track the specific rotation of the page currently being interacted with
-    const [dragRotation, setDragRotation] = useState(0);
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragDirection, setDragDirection] = useState(null); // 'next' or 'prev'
-
-    const bookRef = useRef(null);
     const totalPages = pages.length;
 
-    // --- Drag Handlers ---
+    // Drag State
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [currentDragRotation, setCurrentDragRotation] = useState(0);
+    const [dragDirection, setDragDirection] = useState(null); // 'next' (flipping right to left) or 'prev' (left to right)
 
-    const handleMouseDown = (e, direction) => {
+    const bookRef = useRef(null);
+
+    // --- Interaction Handlers ---
+
+    const startDrag = (e, direction) => {
         e.preventDefault();
         setIsDragging(true);
+        setStartX(e.clientX || e.touches?.[0].clientX);
         setDragDirection(direction);
-        setDragRotation(direction === 'next' ? 0 : -180);
+        // If going next, we start at 0 and go negative. If prev, we start at -180 and go positive.
+        setCurrentDragRotation(direction === 'next' ? 0 : -180);
     };
 
-    const handleMouseMove = (e) => {
+    const onDrag = (e) => {
         if (!isDragging) return;
 
-        const bookRect = bookRef.current.getBoundingClientRect();
-        const centerX = bookRect.left + bookRect.width / 2;
-        const mouseX = e.clientX;
+        const clientX = e.clientX || e.touches?.[0].clientX;
+        const delta = clientX - startX;
+        const width = bookRef.current ? bookRef.current.offsetWidth / 2 : 300; // Half book width
 
-        // Calculate angle based on mouse position relative to book width
-        // Range is typically 0 to -180 degrees
-        let angle;
+        let rotation = 0;
 
         if (dragDirection === 'next') {
-            // Dragging from right to left (0 to -180)
-            const progress = Math.min(Math.max((centerX - mouseX) / (bookRect.width / 2), -0.2), 1.2);
-            angle = -180 * progress;
-            // Clamp
-            if (angle > 0) angle = 0;
-            if (angle < -180) angle = -180;
+            // Dragging Next: 0 -> -180
+            // Delta is negative (moving left)
+            const progress = Math.max(Math.min(-delta / width, 1.5), -0.2); // Allow slight overdrag
+            rotation = -(progress * 180);
         } else {
-            // Dragging from left to right (-180 to 0)
-            const progress = Math.min(Math.max((mouseX - centerX) / (bookRect.width / 2), -0.2), 1.2);
-            angle = -180 + (180 * progress);
-            // Clamp
-            if (angle > 0) angle = 0;
-            if (angle < -180) angle = -180;
+            // Dragging Prev: -180 -> 0
+            // Delta is positive (moving right)
+            const progress = Math.max(Math.min(delta / width, 1.5), -0.2);
+            rotation = -180 + (progress * 180);
         }
 
-        setDragRotation(angle);
+        setCurrentDragRotation(rotation);
     };
 
-    const handleMouseUp = () => {
+    const endDrag = () => {
         if (!isDragging) return;
         setIsDragging(false);
 
-        // Threshold check to decide if we complete the flip or revert
+        // Snap Logic
         if (dragDirection === 'next') {
-            if (dragRotation < -60) {
-                // Complete flip
-                setCurrentPage(curr => Math.min(curr + 1, totalPages));
+            if (currentDragRotation < -45) { // If flipped more than 45 degrees
+                setCurrentPage(p => Math.min(p + 1, totalPages));
             }
-            // If reverted, state stays at curr, CSS transition handles the snap back
         } else {
-            if (dragRotation > -120) {
-                // Complete flip back
-                setCurrentPage(curr => Math.max(curr - 1, 0));
+            if (currentDragRotation > -135) { // If flipped back more than 45 degrees (from -180)
+                setCurrentPage(p => Math.max(p - 1, 0));
             }
         }
 
-        setDragRotation(0);
         setDragDirection(null);
+        setCurrentDragRotation(0);
     };
 
-    // Global mouse up/move listener to handle dragging outside the element
+    // Global listeners for smooth drag outside component
     useEffect(() => {
         if (isDragging) {
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp);
-        } else {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
+            window.addEventListener('mousemove', onDrag);
+            window.addEventListener('touchmove', onDrag);
+            window.addEventListener('mouseup', endDrag);
+            window.addEventListener('touchend', endDrag);
         }
         return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('mousemove', onDrag);
+            window.removeEventListener('touchmove', onDrag);
+            window.removeEventListener('mouseup', endDrag);
+            window.removeEventListener('touchend', endDrag);
         };
-    }, [isDragging, dragRotation]);
+    }, [isDragging, currentDragRotation, dragDirection]);
+
 
     return (
-        <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden font-sans selection:bg-cyan-500/30">
+        <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center p-4 overflow-hidden font-sans selection:bg-indigo-500/30">
 
-            {/* Background Ambience - Integrated Deeply */}
+            {/* --- Ambient Background --- */}
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(17,24,39,0)_0%,rgba(2,6,23,1)_100%)] z-0" />
-                <div className="absolute top-[-10%] left-[20%] w-[600px] h-[600px] bg-indigo-900/20 rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-10%] right-[20%] w-[600px] h-[600px] bg-cyan-900/10 rounded-full blur-[120px]" />
-                {/* Grid Overlay */}
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
+                <div className="absolute top-[-20%] left-[-20%] w-[80vw] h-[80vw] bg-indigo-950/20 rounded-full blur-[150px]" />
+                <div className="absolute bottom-[-20%] right-[-20%] w-[80vw] h-[80vw] bg-cyan-950/20 rounded-full blur-[150px]" />
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02]" />
             </div>
 
-            {/* Header - Minimalist & Modern */}
-            <div className="z-10 mb-12 text-center animate-fade-in-down">
-                <div className="inline-flex items-center justify-center p-2 mb-4 rounded-full bg-slate-900/50 border border-slate-800 backdrop-blur-md">
-                    <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse mr-2"></span>
-                    <span className="text-xs font-mono text-cyan-400 tracking-widest uppercase">Official Documentation</span>
+            {/* --- Header --- */}
+            <div className="z-10 mb-8 md:mb-12 text-center animate-fade-in-down">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="h-[1px] w-8 bg-gradient-to-r from-transparent to-cyan-500" />
+                    <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-cyan-500">Official Protocol</span>
+                    <div className="h-[1px] w-8 bg-gradient-to-l from-transparent to-cyan-500" />
                 </div>
-                <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter mb-4 drop-shadow-2xl">
-                    SERVER <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-500">RULES</span>
+                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter drop-shadow-2xl">
+                    SERVER <span className="text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-500">RULES</span>
                 </h1>
             </div>
 
-            {/* 3D Interactive Notebook */}
+            {/* --- 3D BOOK CONTAINER --- */}
             <div
+                className="relative z-20 w-full max-w-6xl h-[600px] flex justify-center items-center perspective-camera"
                 ref={bookRef}
-                className="relative z-20 w-full max-w-5xl aspect-[3/2] md:aspect-[2/1] perspective-2000"
             >
-                <div className="relative w-full h-full transform-style-3d">
+                {/* The Book Itself */}
+                <div className="relative w-full h-full md:w-[800px] md:h-[550px] transform-style-3d transition-transform duration-500">
 
-                    {/* Base Layer (Shadow & Depth) */}
-                    <div className="absolute inset-x-4 bottom-[-20px] top-4 bg-slate-900/80 blur-xl rounded-full opacity-50 transform translate-y-8" />
+                    {/* Back Cover (Static Base) */}
+                    <div className="absolute right-0 w-1/2 h-full bg-[#111] rounded-r-xl shadow-2xl border-l border-white/5 transform-style-3d -z-50 hidden md:block">
+                        {/* Simulates the thickness of right pages stack */}
+                        <div className="absolute left-0 top-1 bottom-1 w-full border-r-[4px] border-[#222] rounded-r-md" />
+                    </div>
+                    <div className="absolute left-0 w-1/2 h-full bg-[#111] rounded-l-xl shadow-2xl transform-style-3d -z-50 hidden md:block">
+                        {/* Simulates the thickness of left pages stack */}
+                        <div className="absolute right-0 top-1 bottom-1 w-full border-l-[4px] border-[#222] rounded-l-md" />
+                    </div>
 
-                    {/* PAGES */}
-                    {pages.map((page, index) => {
-                        // Z-Index: 
-                        // If dragging, the dragged page needs high z-index.
-                        // Otherwise, standard stack order.
-                        let zIndex = totalPages - Math.abs(currentPage - index);
-                        if (isDragging) {
-                            if (dragDirection === 'next' && index === currentPage) zIndex = 100;
-                            if (dragDirection === 'prev' && index === currentPage - 1) zIndex = 100;
+
+                    {/* --- PAGES --- */}
+                    {pages.map((page, i) => {
+                        // Z-Index Logic for perfect stacking
+                        // Closed stack (Right): Order is 5, 4, 3, 2, 1 (Top is low index? No, Top must be high index)
+                        // Actually: Page 0 is on top of right stack. Page 1 is under it.
+                        // Open stack (Left): Page 0 is bottom. Page 1 is on top of it.
+
+                        // Let's simplify:
+                        // Pages > current are on right. Order: i ascending = deeper. So z-index = total - i.
+                        // Pages < current are on left. Order: i ascending = higher. So z-index = i.
+                        // Current page being flipped needs highest z-index.
+
+                        let zIndex = 0;
+
+                        if (i === currentPage && dragDirection === 'next' && isDragging) {
+                            zIndex = 100; // Active dragging page
+                        } else if (i === currentPage - 1 && dragDirection === 'prev' && isDragging) {
+                            zIndex = 100; // Active dragging back page
+                        } else if (i < currentPage) {
+                            zIndex = i; // Left stack
+                        } else {
+                            zIndex = totalPages - i; // Right stack
                         }
 
                         // Rotation Logic
-                        let rotation = 0; // Default flat
+                        let rotation = 0;
+                        if (i < currentPage) rotation = -180;
 
-                        if (index < currentPage) {
-                            rotation = -180; // Already flipped
-                        } else if (index === currentPage) {
-                            rotation = 0; // Current visible
-                        }
-
-                        // Apply Drag Override
-                        let isMoving = false;
+                        // Drag Override
+                        let isAnimating = true;
                         if (isDragging) {
-                            if (dragDirection === 'next' && index === currentPage) {
-                                rotation = dragRotation;
-                                isMoving = true;
-                            } else if (dragDirection === 'prev' && index === currentPage - 1) {
-                                rotation = dragRotation;
-                                isMoving = true;
+                            if (dragDirection === 'next' && i === currentPage) {
+                                rotation = currentDragRotation;
+                                isAnimating = false;
+                            } else if (dragDirection === 'prev' && i === currentPage - 1) {
+                                rotation = currentDragRotation;
+                                isAnimating = false;
                             }
                         }
 
                         return (
                             <div
-                                key={index}
-                                className="absolute top-0 left-0 w-full md:w-1/2 h-full origin-right md:origin-right transform-style-3d will-change-transform"
+                                key={i}
+                                className="absolute top-0 left-0 md:left-1/2 w-full md:w-1/2 h-full origin-left transform-style-3d will-change-transform"
                                 style={{
                                     zIndex: zIndex,
-                                    left: '50%',
                                     transform: `rotateY(${rotation}deg)`,
-                                    transition: isMoving ? 'none' : 'transform 0.6s cubic-bezier(0.25, 1, 0.5, 1)',
+                                    transition: isAnimating ? 'transform 0.8s cubic-bezier(0.19, 1, 0.22, 1)' : 'none', // Smooth "Framer-like" spring bezier
                                 }}
                             >
-                                {/* --- FRONT OF PAGE (Visible when 0deg) --- */}
-                                <div
-                                    className="absolute inset-0 backface-hidden bg-slate-900 rounded-r-2xl border border-slate-800/60 overflow-hidden"
-                                    style={{
-                                        boxShadow: `inset 10px 0 20px -10px rgba(0,0,0,0.8), 
-                                    ${rotation < -10 ? '-5px 0 15px rgba(0,0,0,0.3)' : '0 0 0 transparent'}`
-                                    }}
-                                >
-                                    {/* Content Container */}
-                                    <div className="h-full flex flex-col relative bg-gradient-to-br from-slate-900 to-slate-950">
-                                        {/* Subtle Noise Texture */}
-                                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none" />
+                                {/* --- FRONT FACE (Visible 0 to -90) --- */}
+                                <div className="absolute inset-0 backface-hidden bg-[#1a1a1e] rounded-r-xl border border-white/5 overflow-hidden shadow-inner">
+                                    {/* Paper Texture & Lighting */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent pointer-events-none z-10" />
+                                    <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-white/10 z-20" /> {/* Spine Highlight */}
 
-                                        {/* Header */}
-                                        <div className="h-12 border-b border-white/5 flex items-center justify-between px-6 bg-white/[0.02]">
-                                            <span className="text-[10px] font-mono text-cyan-500/50 uppercase tracking-widest">LS Reborn // Protocol</span>
-                                            <span className="text-[10px] font-mono text-slate-600">{index + 1} / {totalPages}</span>
-                                        </div>
-
-                                        {/* Main Text Content */}
-                                        <div className="flex-1 p-8 md:p-10 overflow-y-auto custom-scrollbar relative">
-                                            {page.content}
-                                        </div>
-
-                                        {/* Page Turn Handle (Visual Hint) */}
+                                    {/* Interactive Grab Area (Next) */}
+                                    {i === currentPage && (
                                         <div
-                                            className="absolute right-0 top-0 bottom-0 w-12 cursor-e-resize z-50 flex items-center justify-center group opacity-0 hover:opacity-100 transition-opacity"
-                                            onMouseDown={(e) => handleMouseDown(e, 'next')}
+                                            className="absolute inset-y-0 right-0 w-24 cursor-grab active:cursor-grabbing z-50 flex items-center justify-end pr-4 group"
+                                            onMouseDown={(e) => startDrag(e, 'next')}
+                                            onTouchStart={(e) => startDrag(e, 'next')}
                                         >
-                                            <div className="w-1 h-12 rounded-full bg-cyan-500/20 group-hover:bg-cyan-500/50 transition-colors backdrop-blur-sm" />
+                                            <div className="w-1 h-12 rounded-full bg-white/10 group-hover:bg-cyan-500/50 transition-colors duration-300" />
+                                        </div>
+                                    )}
+
+                                    {/* Content */}
+                                    <div className="relative h-full p-8 md:p-10 flex flex-col bg-gradient-to-br from-[#1a1a1e] to-[#151518]">
+                                        <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-6">
+                                            <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">LS Reborn // Rulebook</span>
+                                            <span className="text-[10px] text-slate-600 font-mono">0{i + 1}</span>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                            {page.front}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* --- BACK OF PAGE (Visible when -180deg) --- */}
+                                {/* --- BACK FACE (Visible -90 to -180) --- */}
                                 <div
-                                    className="absolute inset-0 backface-hidden bg-slate-900 rounded-l-2xl border border-slate-800/60 overflow-hidden transform rotate-y-180"
-                                    style={{
-                                        transform: 'rotateY(180deg)',
-                                        boxShadow: `inset -10px 0 20px -10px rgba(0,0,0,0.8)`
-                                    }}
+                                    className="absolute inset-0 backface-hidden bg-[#1a1a1e] rounded-l-xl border border-white/5 overflow-hidden shadow-inner"
+                                    style={{ transform: 'rotateY(180deg)' }}
                                 >
-                                    <div className="h-full w-full bg-slate-950 flex items-center justify-center relative">
-                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
-                                        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-black/50 to-transparent" />
-                                        <div className="text-slate-800 transform scale-x-[-1] text-6xl font-black opacity-20 select-none">
-                                            LS REBORN
-                                        </div>
+                                    {/* Paper Texture & Lighting (Reversed) */}
+                                    <div className="absolute inset-0 bg-gradient-to-l from-black/20 to-transparent pointer-events-none z-10" />
 
-                                        {/* Handle to flip BACK */}
+                                    {/* Interactive Grab Area (Prev) */}
+                                    {i === currentPage - 1 && (
                                         <div
-                                            className="absolute left-0 top-0 bottom-0 w-12 cursor-w-resize z-50 flex items-center justify-center group opacity-0 hover:opacity-100 transition-opacity"
-                                            onMouseDown={(e) => handleMouseDown(e, 'prev')}
+                                            className="absolute inset-y-0 left-0 w-24 cursor-grab active:cursor-grabbing z-50 flex items-center justify-start pl-4 group"
+                                            onMouseDown={(e) => startDrag(e, 'prev')}
+                                            onTouchStart={(e) => startDrag(e, 'prev')}
                                         >
-                                            <div className="w-1 h-12 rounded-full bg-indigo-500/20 group-hover:bg-indigo-500/50 transition-colors backdrop-blur-sm" />
+                                            <div className="w-1 h-12 rounded-full bg-white/10 group-hover:bg-indigo-500/50 transition-colors duration-300" />
+                                        </div>
+                                    )}
+
+                                    {/* Content (We display the "back" content if defined, or just a stylized back) */}
+                                    <div className="relative h-full p-8 md:p-10 flex flex-col bg-gradient-to-bl from-[#1a1a1e] to-[#151518]">
+                                        <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-6 dir-rtl">
+                                            <span className="text-[10px] text-slate-600 font-mono">BACK</span>
+                                            <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">SECTION {i + 1}</span>
+                                        </div>
+                                        <div className="flex-1 flex items-center justify-center opacity-10">
+                                            <div className="text-8xl font-black text-white rotate-90 md:rotate-0">LS</div>
+                                        </div>
+                                        <div className="text-center text-[10px] text-slate-700 font-mono mt-auto">
+                                            OFFICIAL SERVER DOCUMENTATION
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         );
                     })}
-
-                    {/* Static Left Base (Back Cover when book is open) */}
-                    <div className="absolute top-0 left-0 w-1/2 h-full bg-slate-950 rounded-l-2xl border border-slate-800 -z-10 shadow-2xl flex items-center justify-center">
-                        <div className="text-slate-800 text-sm font-mono rotate-90 tracking-widest opacity-20">PROPERTY OF LS GOV</div>
-                    </div>
-
                 </div>
             </div>
 
-            {/* Interaction Hint */}
-            <div className="mt-12 flex items-center gap-3 text-slate-500/60 text-sm font-mono animate-pulse">
-                <GripVertical size={16} />
-                <span>DRAG PAGE CORNERS TO NAVIGATE</span>
-                <GripVertical size={16} />
+            {/* --- Footer Controls & Hints --- */}
+            <div className="mt-12 flex items-center gap-6 text-slate-500 text-xs font-mono animate-fade-in-up">
+                <button
+                    onClick={() => {
+                        if (currentPage > 0) setCurrentPage(p => p - 1);
+                    }}
+                    disabled={currentPage === 0}
+                    className="p-3 rounded-full hover:bg-white/5 disabled:opacity-20 transition-colors"
+                >
+                    <ChevronLeft size={20} />
+                </button>
+
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5">
+                    <GripVertical size={14} />
+                    <span>DRAG CORNER OR CLICK ARROWS</span>
+                    <GripVertical size={14} />
+                </div>
+
+                <button
+                    onClick={() => {
+                        if (currentPage < totalPages) setCurrentPage(p => p + 1);
+                    }}
+                    disabled={currentPage === totalPages}
+                    className="p-3 rounded-full hover:bg-white/5 disabled:opacity-20 transition-colors"
+                >
+                    <ChevronRight size={20} />
+                </button>
             </div>
 
             <style jsx>{`
-        .perspective-2000 { perspective: 2500px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
-        
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        .perspective-camera {
+            perspective: 1500px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 2px;
+        }
       `}</style>
         </div>
     );
@@ -255,293 +299,205 @@ const Rules = () => {
 
 // --- CONTENT COMPONENTS ---
 
-const SectionTitle = ({ icon, title }) => (
-    <div className="flex items-center gap-4 mb-8 pb-4 border-b border-slate-800">
-        <div className="p-3 bg-cyan-950/30 rounded-xl text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(34,211,238,0.1)]">
+const SectionHeader = ({ icon, title }) => (
+    <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             {icon}
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-white uppercase tracking-tight">{title}</h2>
+        <h2 className="text-xl font-bold text-white uppercase tracking-tight">{title}</h2>
     </div>
 );
 
-const RuleItem = ({ title, text, type = 'neutral' }) => {
-    let borderColor = 'border-slate-800';
-    let bgColor = 'bg-slate-900/40';
-    let titleColor = 'text-slate-200';
-    let decoration = null;
-
-    if (type === 'danger') {
-        borderColor = 'border-red-500/30';
-        bgColor = 'bg-red-500/5';
-        titleColor = 'text-red-400';
-        decoration = <div className="absolute -left-[1px] top-4 bottom-4 w-1 bg-red-500 rounded-r shadow-[0_0_10px_rgba(239,68,68,0.4)]" />;
-    } else if (type === 'warning') {
-        borderColor = 'border-amber-500/30';
-        bgColor = 'bg-amber-500/5';
-        titleColor = 'text-amber-400';
-        decoration = <div className="absolute -left-[1px] top-4 bottom-4 w-1 bg-amber-500 rounded-r" />;
-    } else {
-        decoration = <div className="absolute -left-[1px] top-4 bottom-4 w-1 bg-slate-700 rounded-r" />;
-    }
+const RuleBlock = ({ title, content, variant = 'neutral' }) => {
+    const variants = {
+        neutral: 'border-slate-800 bg-slate-900/50 text-slate-300',
+        danger: 'border-red-900/50 bg-red-950/20 text-red-200',
+        warning: 'border-amber-900/50 bg-amber-950/20 text-amber-200'
+    };
 
     return (
-        <div className={`relative mb-6 p-5 pl-7 rounded-r-xl border-y border-r ${borderColor} ${bgColor} backdrop-blur-sm transition-all hover:bg-white/[0.02]`}>
-            {decoration}
-            <h3 className={`text-lg font-bold mb-2 tracking-tight ${titleColor}`}>{title}</h3>
-            <p className="text-slate-400 text-sm leading-relaxed font-light">{text}</p>
+        <div className={`mb-4 p-4 rounded-lg border ${variants[variant]} backdrop-blur-sm`}>
+            <h3 className="font-bold text-sm mb-1 opacity-90">{title}</h3>
+            <p className="text-xs leading-relaxed opacity-70">{content}</p>
         </div>
     );
 };
 
-const HighlightBox = ({ children }) => (
-    <div className="my-6 p-5 bg-gradient-to-r from-indigo-500/10 to-transparent border-l-2 border-indigo-500 text-indigo-200 text-sm font-medium tracking-wide">
-        {children}
-    </div>
-);
-
-// --- PAGE CONTENT ---
+// --- PAGES DATA ---
 
 const pages = [
     // Page 1: Cover
     {
-        content: (
-            <div className="h-full flex flex-col items-center justify-center text-center relative overflow-hidden">
-                {/* Decorative Circles */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] border border-slate-800 rounded-full opacity-30 animate-[spin_10s_linear_infinite]" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] border border-dashed border-slate-700 rounded-full opacity-30 animate-[spin_15s_linear_infinite_reverse]" />
-
-                <div className="relative z-10 p-8 bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-700 shadow-2xl">
-                    <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-indigo-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg transform rotate-3">
-                        <span className="text-4xl font-black text-white tracking-tighter">LS</span>
-                    </div>
-                    <h1 className="text-4xl font-black text-white mb-2 tracking-tighter">RULEBOOK</h1>
-                    <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent my-4" />
-                    <h2 className="text-sm text-cyan-400 font-mono tracking-[0.2em] mb-8">VERSION 2.0 // 2025</h2>
+        front: (
+            <div className="h-full flex flex-col items-center justify-center text-center">
+                <div className="w-32 h-32 mb-8 rounded-full border border-white/10 flex items-center justify-center bg-gradient-to-br from-indigo-900/50 to-cyan-900/50 shadow-2xl animate-pulse-slow">
+                    <span className="text-4xl font-black text-white italic tracking-tighter">LS</span>
                 </div>
-
-                <p className="absolute bottom-10 text-slate-500 text-xs font-mono max-w-[200px]">
-                    "Order in chaos. Structure in anarchy."
+                <h1 className="text-5xl font-black text-white mb-2 tracking-tighter">RULEBOOK</h1>
+                <div className="w-12 h-1 bg-cyan-500 mb-6" />
+                <p className="text-xs text-slate-400 font-mono max-w-[200px] leading-relaxed">
+                    THE DEFINITIVE GUIDE TO CONDUCT AND SURVIVAL IN LOS SANTOS REBORN.
                 </p>
+                <div className="mt-12 text-[10px] text-slate-600 font-mono border border-slate-800 px-3 py-1 rounded-full">
+                    UPDATED 2025
+                </div>
             </div>
         )
     },
 
     // Page 2: General Conduct
     {
-        content: (
+        front: (
             <>
-                <SectionTitle icon={<Shield size={24} />} title="Conduct" />
-
-                <RuleItem
-                    title="01 // Respect & Community"
-                    text="Respect is the currency of this city. Hate speech, bullying, or derogatory language towards players or staff results in immediate expulsion."
+                <SectionHeader icon={<Shield size={18} />} title="Conduct" />
+                <RuleBlock
+                    title="Respect & Community"
+                    content="Respect is non-negotiable. Hate speech, OOC toxicity, and bullying result in immediate bans. We build stories, not egos."
                 />
-
-                <RuleItem
-                    title="02 // Toxic Behavior"
-                    type="danger"
-                    text="Trolling, spamming, or manufacturing OOC drama is strictly prohibited. Keep your ego checked. If you lose, roleplay the loss."
+                <RuleBlock
+                    title="Microphone Mandatory"
+                    variant="warning"
+                    content="A working, high-quality microphone is required. Text RP is strictly disabled unless you have an approved Medical Mute application."
                 />
-
-                <RuleItem
-                    title="03 // Microphone Mandatory"
-                    type="warning"
-                    text="A high-quality microphone is required. Text-based RP is disabled unless you have an approved Medical Mute application."
+                <RuleBlock
+                    title="Staff Impersonation"
+                    variant="danger"
+                    content="Claiming to be Admin/Staff In-Character to threaten or coerce others is a permanent ban offense."
                 />
-
-                <div className="p-4 rounded border border-slate-800 bg-slate-950/50 text-xs text-slate-500 font-mono">
-                    SYS_ADMIN_NOTE: Staff decisions are final during active scenarios. Appeal later via ticket.
-                </div>
             </>
         )
     },
 
     // Page 3: Roleplay Integrity
     {
-        content: (
+        front: (
             <>
-                <SectionTitle icon={<Users size={24} />} title="Roleplay" />
-
-                <RuleItem
-                    title="Stay In Character"
-                    text="Immersion is paramount. Never break character unless a Game Admin pauses the scene. Glitches are to be roleplayed around."
+                <SectionHeader icon={<Users size={18} />} title="Integrity" />
+                <RuleBlock
+                    title="Fear Roleplay (FearRP)"
+                    variant="warning"
+                    content="Value your life. If a gun is pointed at you, you are compliant. Ignoring death threats to 'win' is poor RP."
                 />
-
-                <RuleItem
-                    title="FearRP (Fear Roleplay)"
-                    type="warning"
-                    text="Value your life above all else. If a gun is pointed at you, you are compliant. Acting fearless in the face of death is poor RP."
+                <RuleBlock
+                    title="New Life Rule (NLR)"
+                    content="If you die and respawn, you forget the events leading to your death. No revenge seeking. No returning to the scene."
                 />
-
-                <RuleItem
+                <RuleBlock
                     title="Metagaming"
-                    type="danger"
-                    text="Using external info (Discord, Streams) for In-Character gain is a bannable offense. Your character only knows what they see and hear."
+                    variant="danger"
+                    content="Using external info (Discord, Streams) for In-Character gain is strictly banned. Your character only knows what they experience."
                 />
-
-                <HighlightBox>
-                    NO POWERGAMING: You cannot force an outcome on another player without giving them a chance to resist (e.g., "/me knocks him out" is invalid).
-                </HighlightBox>
             </>
         )
     },
 
     // Page 4: Combat Rules
     {
-        content: (
+        front: (
             <>
-                <SectionTitle icon={<XCircle size={24} />} title="Combat" />
-
-                <RuleItem
+                <SectionHeader icon={<XCircle size={18} />} title="Combat" />
+                <RuleBlock
                     title="RDM (Random Death Match)"
-                    type="danger"
-                    text="Killing without valid story reason and interaction is forbidden. 'Because I can' is not a valid reason."
+                    variant="danger"
+                    content="Killing without valid story reason and interaction is forbidden. 'Because I can' is not a valid reason."
                 />
-
-                <RuleItem
-                    title="VDM (Vehicle Death Match)"
-                    type="danger"
-                    text="Vehicles are transport, not weapons. Ramming people without massive RP justification is a violation."
-                />
-
-                <RuleItem
+                <RuleBlock
                     title="Combat Logging"
-                    type="danger"
-                    text="Disconnecting to avoid arrest, death, or loss of items results in an automated permaban."
+                    variant="danger"
+                    content="Disconnecting during an active RP scenario (chase, arrest, shootout) to avoid consequences results in an automated ban."
                 />
-
-                <RuleItem
+                <RuleBlock
                     title="Safe Zones"
-                    text="Hospitals, Police Stations, City Hall, and Spawn: No violence, no kidnapping, no crime. These are neutral grounds."
+                    content="Hospitals, Police Stations, City Hall, and Spawn Points are Neutral Grounds. No violence, kidnapping, or crime allowed."
                 />
             </>
         )
     },
 
-    // Page 5: Criminal Activity
+    // Page 5: Crimes
     {
-        content: (
+        front: (
             <>
-                <SectionTitle icon={<AlertTriangle size={24} />} title="Crimes" />
-
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                    <div className="p-3 bg-slate-800/50 rounded border border-slate-700">
-                        <div className="text-xs text-slate-500 uppercase">Store Robbery</div>
-                        <div className="text-cyan-400 font-bold">Max 5 • PD Req</div>
+                <SectionHeader icon={<AlertTriangle size={18} />} title="Criminal" />
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="p-2 bg-slate-800/50 rounded border border-slate-700 text-center">
+                        <div className="text-[10px] text-slate-500 uppercase">Store Robbery</div>
+                        <div className="text-xs text-cyan-400 font-bold">Max 5 • PD Req</div>
                     </div>
-                    <div className="p-3 bg-slate-800/50 rounded border border-slate-700">
-                        <div className="text-xs text-slate-500 uppercase">House Robbery</div>
-                        <div className="text-cyan-400 font-bold">Max 5 • Stealth</div>
-                    </div>
-                    <div className="p-3 bg-red-900/10 rounded border border-red-500/20">
-                        <div className="text-xs text-red-400 uppercase">Bank Heist</div>
-                        <div className="text-red-300 font-bold">Code Red • PD Req</div>
-                    </div>
-                    <div className="p-3 bg-red-900/10 rounded border border-red-500/20">
-                        <div className="text-xs text-red-400 uppercase">Warehouse</div>
-                        <div className="text-red-300 font-bold">3 Day Cooldown</div>
+                    <div className="p-2 bg-red-900/10 rounded border border-red-500/20 text-center">
+                        <div className="text-[10px] text-red-400 uppercase">Bank Heist</div>
+                        <div className="text-xs text-red-300 font-bold">Code Red • PD Req</div>
                     </div>
                 </div>
-
-                <RuleItem
-                    title="Hostage Protocol"
-                    text="Fake hostages (friends) are banned. You cannot execute a compliant hostage without significant escalation."
+                <RuleBlock
+                    title="Hostage Rules"
+                    content="Fake hostages (friends) are banned. You cannot execute a compliant hostage without massive escalation."
                 />
-
-                <RuleItem
+                <RuleBlock
                     title="Water Dumping"
-                    text="Driving vehicles into the ocean to evade police is 'Win Mentality' and strictly prohibited."
+                    content="Intentionally driving vehicles into the ocean to evade police is strictly prohibited."
                 />
             </>
         )
     },
 
-    // Page 6: Groups & Gangs
+    // Page 6: Gangs
     {
-        content: (
+        front: (
             <>
-                <SectionTitle icon={<Users size={24} />} title="Gangs" />
-
-                <RuleItem
+                <SectionHeader icon={<Users size={18} />} title="Gangs" />
+                <RuleBlock
                     title="Progression System"
-                    text="You start as a Group. Tasks and influence earn you 'Gang' status. Only Admins grant this title."
+                    content="All orgs start as Groups. Admin approval is required for Gang status. Tasks and influence determine promotion."
                 />
-
-                <RuleItem
+                <RuleBlock
                     title="Gang Wars"
-                    type="warning"
-                    text="Requires Leader initiation and 4+ members online on both sides. Losing a turf war mandates a full retreat from the zone."
+                    variant="warning"
+                    content="Requires Leader initiation & 4+ members online per side. Losing a turf war mandates full retreat from the zone."
                 />
-
-                <HighlightBox>
-                    DRIVE-BY RULES: Requires RP buildup. No aimless shooting. You cannot use a drive-by to initiate a war instantly.
-                </HighlightBox>
-
-                <div className="text-xs text-slate-400 mt-4 italic">
-                    * Wearing gang colors implies consent to gang-related RP violence.
+                <div className="p-3 bg-indigo-500/10 border-l-2 border-indigo-500 text-xs text-indigo-200 rounded-r">
+                    <strong>Drive-By Rules:</strong> Requires RP buildup. No aimless shooting. Cannot be used to instant-initiate war.
                 </div>
             </>
         )
     },
 
-    // Page 7: Legal & Economy
+    // Page 7: Legal
     {
-        content: (
+        front: (
             <>
-                <SectionTitle icon={<Gavel size={24} />} title="Legal" />
-
-                <RuleItem
+                <SectionHeader icon={<Gavel size={18} />} title="Legal" />
+                <RuleBlock
                     title="Emergency Vehicles"
-                    text="Stealing EMS vehicles is Zero Tolerance. PD cars can be stolen with high-tier lockpicks and valid RP."
+                    variant="danger"
+                    content="Stealing EMS vehicles is Zero Tolerance. PD cars can be stolen with high-tier tools and valid RP reasons."
                 />
-
-                <RuleItem
+                <RuleBlock
                     title="Corruption"
-                    text="PD Corruption is prohibited unless approved by High Command for a specific arc. Random corruption = Removal."
+                    content="PD Corruption is prohibited unless explicitly approved by High Command for a specific story arc."
                 />
-
-                <RuleItem
-                    title="Staff Impersonation"
-                    type="danger"
-                    text="Claiming to be Admin/Staff In-Character to threaten others leads to an immediate ban."
-                />
-
-                <RuleItem
+                <RuleBlock
                     title="Economy Exploits"
-                    text="Duplicating items or abusing bugs must be reported immediately. Usage results in a wipe/ban."
+                    variant="danger"
+                    content="Duplicating items or abusing bugs must be reported. Usage results in a wipe/ban."
                 />
             </>
         )
     },
 
-    // Page 8: Final
+    // Page 8: End
     {
-        content: (
-            <>
-                <SectionTitle icon={<BookOpen size={24} />} title="Misc" />
-
-                <RuleItem
-                    title="Stream Sniping"
-                    type="danger"
-                    text="Watching a streamer to find their location is strictly forbidden."
-                />
-
-                <RuleItem
-                    title="AFK in RP"
-                    text="If you must leave during a scene, inform via /ooc. Combat logging rules apply if you leave without notice."
-                />
-
-                <div className="mt-12 p-8 border border-cyan-500/30 rounded-2xl bg-gradient-to-b from-cyan-950/20 to-transparent text-center relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-                    <p className="text-xl font-bold text-white mb-3">Welcome to LS Reborn</p>
-                    <p className="text-slate-400 text-sm leading-relaxed">
-                        These rules exist to facilitate fun, not restrict it. Use common sense. If an action feels "cheap", it's probably against the rules.
-                    </p>
-                    <div className="mt-6 inline-block px-4 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-xs font-mono border border-cyan-500/20">
-                        MAKE YOUR STORY LEGENDARY
-                    </div>
+        front: (
+            <div className="h-full flex flex-col items-center justify-center text-center">
+                <BookOpen size={48} className="text-slate-700 mb-6" />
+                <h3 className="text-xl font-bold text-white mb-2">Enjoy Your Stay</h3>
+                <p className="text-xs text-slate-400 max-w-[200px] leading-relaxed mb-8">
+                    These rules exist to facilitate fun, not restrict it. Use common sense.
+                </p>
+                <div className="text-[10px] font-mono text-cyan-500 bg-cyan-950/30 px-4 py-2 rounded-full border border-cyan-500/20">
+                    MAKE YOUR STORY LEGENDARY
                 </div>
-            </>
+            </div>
         )
     }
 ];
