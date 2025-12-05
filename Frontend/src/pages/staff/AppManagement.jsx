@@ -11,6 +11,7 @@ const AppManagement = ({ user }) => {
     const [viewType, setViewType] = useState('all'); // 'all', 'premium', or 'normal'
     const [selectedApp, setSelectedApp] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false); // New: for viewing details
     const [modalAction, setModalAction] = useState('');
     const [rejectionReason, setRejectionReason] = useState('');
     const [customReason, setCustomReason] = useState('');
@@ -162,93 +163,30 @@ const AppManagement = ({ user }) => {
                                         </div>
                                     </div>
 
-                                    {/* Expanded Details */}
-                                    {selectedApp?.id === app.id && (
-                                        <div className="mt-6 space-y-6 animate-fade-in-fast">
+                                    {/* Actions Column */}
+                                    <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-3 shrink-0 border-t md:border-t-0 md:border-l border-gray-800 pt-4 md:pt-0 md:pl-6 min-w-[140px]">
+                                        <span className="text-xs text-gray-500 font-mono flex items-center gap-1">
+                                            <Clock size={12} /> {new Date(app.submittedAt).toLocaleDateString()}
+                                        </span>
 
-                                            {/* Grid Details */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                <DetailItem icon={User} label="Real Name" value={app.irlName} />
-                                                <DetailItem icon={Calendar} label="Real Age" value={`${app.irlAge} years`} />
-                                                <DetailItem icon={User} label="Char Name" value={app.characterName} />
-                                                <DetailItem icon={Calendar} label="Char Age" value={`${app.characterAge} years`} />
+                                        <button
+                                            onClick={() => { setSelectedApp(app); setIsDetailModalOpen(true); }}
+                                            className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center gap-1 transition-colors"
+                                        >
+                                            View Details <ChevronDown size={16} />
+                                        </button>
+
+                                        {filter === 'pending' && (
+                                            <div className="flex flex-row md:flex-col gap-2 w-full mt-2">
+                                                <button onClick={() => handleOpenModal(app, 'approved')} className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all w-full shadow-lg shadow-green-900/20">
+                                                    <CheckCircle size={16} /> Approve
+                                                </button>
+                                                <button onClick={() => handleOpenModal(app, 'rejected')} className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all w-full shadow-lg shadow-red-900/20">
+                                                    <XCircle size={16} /> Reject
+                                                </button>
                                             </div>
-
-                                            {/* Backstory Section */}
-                                            <div className="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
-                                                <div className="px-4 py-3 bg-white/5 border-b border-white/5 flex items-center gap-2">
-                                                    <FileText size={16} className="text-cyan-400" />
-                                                    <h4 className="text-sm font-bold text-gray-200 uppercase tracking-wider">Character Backstory</h4>
-                                                </div>
-                                                <div className="p-5">
-                                                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-sans">{app.backstory}</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Questions Section */}
-                                            {app.questions && (() => {
-                                                try {
-                                                    const q = typeof app.questions === 'string' ? JSON.parse(app.questions) : app.questions;
-                                                    return (
-                                                        <div className="space-y-4">
-                                                            {q.foundUs && (
-                                                                <div className="bg-gray-800/30 p-4 rounded-lg border-l-2 border-cyan-500">
-                                                                    <p className="text-xs font-bold text-cyan-500 uppercase mb-1">Discovery</p>
-                                                                    <p className="text-gray-300 text-sm">{q.foundUs}</p>
-                                                                </div>
-                                                            )}
-                                                            {q.experience && (
-                                                                <div className="bg-gray-800/30 p-4 rounded-lg border-l-2 border-cyan-500">
-                                                                    <p className="text-xs font-bold text-cyan-500 uppercase mb-1">Previous Experience</p>
-                                                                    <p className="text-gray-300 text-sm whitespace-pre-wrap">{q.experience}</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                } catch (e) { return null; }
-                                            })()}
-
-                                            {/* Rejection Note */}
-                                            {app.status === 'rejected' && app.reason && (
-                                                <div className="bg-red-900/20 border border-red-500/40 p-4 rounded-lg flex items-start gap-3">
-                                                    <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={18} />
-                                                    <div>
-                                                        <p className="text-red-400 font-bold text-sm uppercase tracking-wider mb-1">Rejection Reason</p>
-                                                        <p className="text-red-200 text-sm">{app.reason}</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Actions Column */}
-                                <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-start gap-3 shrink-0 border-t md:border-t-0 md:border-l border-gray-800 pt-4 md:pt-0 md:pl-6 min-w-[140px]">
-                                    <span className="text-xs text-gray-500 font-mono flex items-center gap-1">
-                                        <Clock size={12} /> {new Date(app.submittedAt).toLocaleDateString()}
-                                    </span>
-
-                                    <button
-                                        onClick={() => setSelectedApp(selectedApp?.id === app.id ? null : app)}
-                                        className="text-cyan-400 hover:text-cyan-300 text-sm font-medium flex items-center gap-1 transition-colors"
-                                    >
-                                        {selectedApp?.id === app.id ? (
-                                            <>Hide Details <ChevronUp size={16} /></>
-                                        ) : (
-                                            <>View Details <ChevronDown size={16} /></>
                                         )}
-                                    </button>
-
-                                    {filter === 'pending' && (
-                                        <div className="flex flex-row md:flex-col gap-2 w-full mt-2">
-                                            <button onClick={() => handleOpenModal(app, 'approved')} className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all w-full shadow-lg shadow-green-900/20">
-                                                <CheckCircle size={16} /> Approve
-                                            </button>
-                                            <button onClick={() => handleOpenModal(app, 'rejected')} className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all w-full shadow-lg shadow-red-900/20">
-                                                <XCircle size={16} /> Reject
-                                            </button>
-                                        </div>
-                                    )}
+                                    </div>
                                 </div>
                             </div>
                         </Card>
@@ -314,6 +252,94 @@ const AppManagement = ({ user }) => {
                             <button onClick={() => setIsModalOpen(false)} className="px-5 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">Cancel</button>
                             <AnimatedButton onClick={handleConfirmAction} className="bg-red-600">Reject Application</AnimatedButton>
                         </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Application Detail Modal */}
+            <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="Application Details">
+                {selectedApp && (
+                    <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                        {/* Header */}
+                        <div className="flex items-center gap-4 pb-4 border-b border-gray-800">
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold ${selectedApp.isPremium ? 'bg-yellow-500/20 text-yellow-400 ring-2 ring-yellow-500/30' : 'bg-cyan-500/20 text-cyan-400 ring-2 ring-cyan-500/30'}`}>
+                                {selectedApp.characterName?.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                    {selectedApp.characterName}
+                                    {selectedApp.isPremium && <span className="text-[10px] font-extrabold bg-yellow-500 text-black px-2 py-0.5 rounded uppercase tracking-wider">Premium</span>}
+                                </h3>
+                                <p className="text-sm text-gray-400 flex items-center gap-1">
+                                    <Disc size={12} /> {selectedApp.discordId}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Grid Details */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <DetailItem icon={User} label="Real Name" value={selectedApp.irlName} />
+                            <DetailItem icon={Calendar} label="Real Age" value={`${selectedApp.irlAge} years`} />
+                            <DetailItem icon={User} label="Char Name" value={selectedApp.characterName} />
+                            <DetailItem icon={Calendar} label="Char Age" value={`${selectedApp.characterAge} years`} />
+                        </div>
+
+                        {/* Backstory Section */}
+                        <div className="bg-black/20 rounded-xl border border-white/5 overflow-hidden">
+                            <div className="px-4 py-3 bg-white/5 border-b border-white/5 flex items-center gap-2">
+                                <FileText size={16} className="text-cyan-400" />
+                                <h4 className="text-sm font-bold text-gray-200 uppercase tracking-wider">Character Backstory</h4>
+                            </div>
+                            <div className="p-5">
+                                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-sans">{selectedApp.backstory}</p>
+                            </div>
+                        </div>
+
+                        {/* Questions Section */}
+                        {selectedApp.questions && (() => {
+                            try {
+                                const q = typeof selectedApp.questions === 'string' ? JSON.parse(selectedApp.questions) : selectedApp.questions;
+                                return (
+                                    <div className="space-y-4">
+                                        {q.foundUs && (
+                                            <div className="bg-gray-800/30 p-4 rounded-lg border-l-2 border-cyan-500">
+                                                <p className="text-xs font-bold text-cyan-500 uppercase mb-1">Discovery</p>
+                                                <p className="text-gray-300 text-sm">{q.foundUs}</p>
+                                            </div>
+                                        )}
+                                        {q.experience && (
+                                            <div className="bg-gray-800/30 p-4 rounded-lg border-l-2 border-cyan-500">
+                                                <p className="text-xs font-bold text-cyan-500 uppercase mb-1">Previous Experience</p>
+                                                <p className="text-gray-300 text-sm whitespace-pre-wrap">{q.experience}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            } catch (e) { return null; }
+                        })()}
+
+                        {/* Rejection Note */}
+                        {selectedApp.status === 'rejected' && selectedApp.reason && (
+                            <div className="bg-red-900/20 border border-red-500/40 p-4 rounded-lg flex items-start gap-3">
+                                <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={18} />
+                                <div>
+                                    <p className="text-red-400 font-bold text-sm uppercase tracking-wider mb-1">Rejection Reason</p>
+                                    <p className="text-red-200 text-sm">{selectedApp.reason}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Actions for pending */}
+                        {filter === 'pending' && (
+                            <div className="flex gap-3 pt-4 border-t border-gray-800">
+                                <button onClick={() => { setIsDetailModalOpen(false); handleOpenModal(selectedApp, 'approved'); }} className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white px-4 py-3 rounded-lg text-sm font-bold transition-all shadow-lg shadow-green-900/20">
+                                    <CheckCircle size={16} /> Approve
+                                </button>
+                                <button onClick={() => { setIsDetailModalOpen(false); handleOpenModal(selectedApp, 'rejected'); }} className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-3 rounded-lg text-sm font-bold transition-all shadow-lg shadow-red-900/20">
+                                    <XCircle size={16} /> Reject
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </Modal>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../../components/Card';
 import AnimatedButton from '../../components/AnimatedButton';
-import { ToggleLeft, ToggleRight, Loader2, Zap, User, Clock, Shield, Heart, FileText, Briefcase, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp, Settings } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Loader2, Zap, User, Clock, Shield, Heart, FileText, Briefcase, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp, Settings, Calendar } from 'lucide-react';
 
 const JobManagement = ({ user }) => {
     const [activeTab, setActiveTab] = useState('pd');

@@ -61,18 +61,43 @@ router.get('/settings', isAuthenticated, isStaff, async (req, res) => {
     res.json(rows);
 });
 
-// Toggle Form Status (Admin or Department Lead)
+// Toggle Form Status (Admin or Department Lead) - WITH LIVE ROLE CHECK FALLBACK
 router.post('/settings/toggle', isAuthenticated, async (req, res) => {
     const { formName, isOpen } = req.body;
 
-    // Permission Check
-    const isAdmin = req.user.isAdmin;
-    const isPDLead = req.user.isPDLead;
-    const isEMSLead = req.user.isEMSLead;
+    // Initial permission check from JWT
+    let isAdminFlag = req.user.isAdmin;
+    let isPDLeadFlag = req.user.isPDLead;
+    let isEMSLeadFlag = req.user.isEMSLead;
 
-    const canToggle = isAdmin ||
-        (formName === 'pd' && isPDLead) ||
-        (formName === 'ems' && isEMSLead);
+    let canToggle = isAdminFlag ||
+        (formName === 'pd' && isPDLeadFlag) ||
+        (formName === 'ems' && isEMSLeadFlag);
+
+    // If JWT says no permission, do a LIVE Discord role check as fallback
+    if (!canToggle) {
+        try {
+            const response = await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${req.user.id}`, {
+                headers: { 'Authorization': `Bot ${process.env.ACTIVE_BOT_TOKEN}` }
+            });
+
+            if (response.ok) {
+                const member = await response.json();
+                const roles = member.roles || [];
+
+                // Re-check with live roles
+                isAdminFlag = roles.includes(process.env.LSR_ADMIN_ROLE_ID) || req.user.id === MASTER_ADMIN_ID;
+                isPDLeadFlag = roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
+                isEMSLeadFlag = roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
+
+                canToggle = isAdminFlag ||
+                    (formName === 'pd' && isPDLeadFlag) ||
+                    (formName === 'ems' && isEMSLeadFlag);
+            }
+        } catch (e) {
+            console.error("Live role check failed:", e);
+        }
+    }
 
     if (!canToggle) {
         return res.status(403).json({ message: "Insufficient permissions to toggle this form." });
