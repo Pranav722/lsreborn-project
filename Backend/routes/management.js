@@ -61,9 +61,23 @@ router.get('/settings', isAuthenticated, isStaff, async (req, res) => {
     res.json(rows);
 });
 
-// Toggle Form Status (Admin Only)
-router.post('/settings/toggle', isAuthenticated, isAdmin, async (req, res) => {
+// Toggle Form Status (Admin or Department Lead)
+router.post('/settings/toggle', isAuthenticated, async (req, res) => {
     const { formName, isOpen } = req.body;
+
+    // Permission Check
+    const isAdmin = req.user.isAdmin;
+    const isPDLead = req.user.isPDLead;
+    const isEMSLead = req.user.isEMSLead;
+
+    const canToggle = isAdmin ||
+        (formName === 'pd' && isPDLead) ||
+        (formName === 'ems' && isEMSLead);
+
+    if (!canToggle) {
+        return res.status(403).json({ message: "Insufficient permissions to toggle this form." });
+    }
+
     try {
         await db.query("UPDATE form_settings SET is_open = ? WHERE form_name = ?", [isOpen, formName]);
         res.json({ success: true, message: `Form ${formName} status updated to ${isOpen ? 'OPEN' : 'CLOSED'}` });

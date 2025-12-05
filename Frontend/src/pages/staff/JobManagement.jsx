@@ -11,22 +11,26 @@ const JobManagement = ({ user }) => {
     const [uiMessage, setUIMessage] = useState('');
 
     const isAdmin = user.isAdmin;
-    const isStaffOrAdmin = user.isStaff || user.isAdmin;
+    // Authorized if Admin, Staff, PD Lead, or EMS Lead
+    const isAuthorized = user.isStaff || user.isAdmin || user.isPDLead || user.isEMSLead;
 
+    // Permissions for specific tabs
     const showPD = user.isPDLead || user.isAdmin;
     const showEMS = user.isEMSLead || user.isAdmin;
     const showStaff = user.isAdmin;
 
     useEffect(() => {
-        if (!isStaffOrAdmin) return;
-        if (showPD) setActiveTab('pd');
-        else if (showEMS) setActiveTab('ems');
+        if (!isAuthorized) return;
+        // Auto-select tab based on role priority
+        if (showPD && !showEMS && !showStaff) setActiveTab('pd');
+        else if (showEMS && !showPD && !showStaff) setActiveTab('ems');
         else if (showStaff) setActiveTab('staff');
-    }, [user]);
+        // Fallback or default behavior handled by initial state 'pd'
+    }, [user, isAuthorized]);
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings?t=${Date.now()}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
             });
             if (res.ok) {
@@ -41,7 +45,7 @@ const JobManagement = ({ user }) => {
     };
 
     const fetchApps = async () => {
-        if (!isStaffOrAdmin) return;
+        if (!isAuthorized) return;
         setLoading(true);
         try {
             const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/${activeTab}`, {
@@ -55,7 +59,7 @@ const JobManagement = ({ user }) => {
     useEffect(() => {
         fetchSettings();
         fetchApps();
-    }, [activeTab, isStaffOrAdmin]);
+    }, [activeTab, isAuthorized]);
 
     const handleAction = async (id, status) => {
         setLoading(true);
@@ -81,10 +85,16 @@ const JobManagement = ({ user }) => {
     };
 
     const toggleFormStatus = async (formName, currentStatus) => {
-        if (!isAdmin) {
-            setUIMessage("Error: Only Admins can change form status.");
+        // PERMISSION CHECK: Admin, OR specific Lead for their Department
+        const canToggle = isAdmin ||
+            (formName === 'pd' && user.isPDLead) ||
+            (formName === 'ems' && user.isEMSLead);
+
+        if (!canToggle) {
+            setUIMessage("Error: Insufficient permissions to toggle this form.");
             return;
         }
+
         setLoading(true);
         // currentStatus comes from DB as 0 or 1. 
         const newState = currentStatus ? 0 : 1;
@@ -140,14 +150,16 @@ const JobManagement = ({ user }) => {
     const currentFormSetting = settings[activeTab] || { is_open: 1, type: 'form' };
     const whitelistSetting = settings['whitelist'] || { is_open: 1, type: 'quiz' };
 
+    // Determine if User can toggle CURRENT tab
+    const canToggleCurrent = isAdmin || (activeTab === 'pd' && user.isPDLead) || (activeTab === 'ems' && user.isEMSLead);
 
     return (
         <div className="animate-fade-in">
             <div className="flex flex-wrap gap-4 justify-between items-center mb-6 border-b border-cyan-500/20 pb-4">
                 <h2 className="text-3xl font-bold text-cyan-400">Department Management</h2>
 
-                {/* APPLICATION MODE TOGGLE (ADMIN ONLY) */}
-                {isAdmin && (
+                {/* APPLICATION MODE TOGGLE (ADMIN OR LEAD) */}
+                {canToggleCurrent && (
                     <div className="flex items-center space-x-4">
                         {/* Status Toggle */}
                         <button

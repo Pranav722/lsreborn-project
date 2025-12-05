@@ -218,13 +218,25 @@ export default function App() {
       'job-dashboard': <JobManagement user={user} />
     };
 
-    if ((page === 'queue' || page === 'apply' || page === 'dashboard') && !user) {
+    if ((page === 'queue' || page === 'apply') && !user) {
       return (
         <div className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
           <Card className="text-center max-w-lg mx-auto">
             <h2 className="text-2xl font-bold text-cyan-400 mb-4">Access Denied</h2>
             <p className="text-gray-300 mb-6">You must be logged in to access this page.</p>
             <AnimatedButton onClick={() => setIsLoginModalOpen(true)} className="bg-cyan-500">Login</AnimatedButton>
+          </Card>
+        </div>
+      );
+    }
+
+    if (page === 'dashboard' && (!user || !isStaffOrAdmin)) {
+      return (
+        <div className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
+          <Card className="text-center max-w-lg mx-auto">
+            <h2 className="text-2xl font-bold text-red-500 mb-4">Restricted Access</h2>
+            <p className="text-gray-300 mb-6">You do not have the required permissions to view the Staff Dashboard.</p>
+            <AnimatedButton onClick={() => setPage('home')} className="bg-gray-700">Return Home</AnimatedButton>
           </Card>
         </div>
       );

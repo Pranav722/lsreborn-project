@@ -12,8 +12,8 @@ const StaffDashboard = ({ user, setPage, onLogout }) => {
     const isAdmin = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID);
 
     const NavItem = ({ icon: Icon, label, pageName }) => (
-        <button 
-            onClick={() => setDashboardPage(pageName)} 
+        <button
+            onClick={() => setDashboardPage(pageName)}
             className={`flex items-center space-x-3 px-4 py-3 rounded-lg w-full text-left transition-colors ${dashboardPage === pageName ? 'bg-cyan-500/20 text-cyan-300' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
         >
             <Icon size={20} />
@@ -42,12 +42,12 @@ const StaffDashboard = ({ user, setPage, onLogout }) => {
         <div className="relative z-10 flex flex-col md:flex-row min-h-screen">
             <aside className="w-full md:w-64 bg-gray-900/80 backdrop-blur-md border-r border-cyan-500/20 p-4 flex-shrink-0">
                 <div className="flex items-center space-x-2 mb-8">
-                    <ShieldCheck className="text-cyan-400" size={28}/>
+                    <ShieldCheck className="text-cyan-400" size={28} />
                     <h2 className="text-xl font-bold text-white">Staff Panel</h2>
                 </div>
                 <nav className="space-y-2">
                     <NavItem icon={FileText} label="Citizenship Apps" pageName="apps" />
-                    <NavItem icon={Briefcase} label="Departments" pageName="jobs" />
+                    {(isAdmin || user.isPDLead || user.isEMSLead) && <NavItem icon={Briefcase} label="Departments" pageName="jobs" />}
                     {isAdmin && <NavItem icon={Settings} label="Settings" pageName="settings" />}
                     {isAdmin && <NavItem icon={BookUser} label="Audit Logs" pageName="logs" />}
                 </nav>

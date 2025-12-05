@@ -13,7 +13,7 @@ const SettingsPanel = ({ user }) => {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/management/settings?t=${Date.now()}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
             });
             if (res.ok) {
