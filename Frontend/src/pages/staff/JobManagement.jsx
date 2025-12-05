@@ -157,12 +157,6 @@ const JobManagement = ({ user }) => {
                             {currentFormSetting.is_open ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                             {activeTab.toUpperCase()} is {currentFormSetting.is_open ? 'OPEN' : 'CLOSED'}
                         </button>
-
-                        {/* Whitelist Type Switch (Only shown on Whitelist Tab or if explicit Whitelist tab added) */}
-                        {/* Since we are in JobManagement, let's show whitelist switch if 'pd/ems/staff' are active tabs but we want to control whitelist too. 
-                            Actually, better to add a 'Whitelist Settings' tab or put it in general settings. 
-                            For now, I will add a specific Whitelist Control block if Admin.
-                        */}
                     </div>
                 )}
             </div>
@@ -220,7 +214,7 @@ const JobManagement = ({ user }) => {
                     {activeTab !== 'whitelist' && apps.map(app => (
                         <Card key={app.id} className="border-l-4 border-cyan-500">
                             <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                                <div className="flex-1">
+                                <div className="flex-1 w-full">
                                     <div className="flex items-center gap-3">
                                         <h3 className="text-xl font-bold text-white">{app.character_name || "Applicant"}</h3>
                                         {app.discord_id && <span className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-400">{app.discord_id}</span>}
@@ -228,45 +222,72 @@ const JobManagement = ({ user }) => {
 
                                     <p className="text-sm text-gray-400 mt-1">Status: <span className={`uppercase font-bold ${app.status === 'approved' ? 'text-green-400' : app.status === 'rejected' ? 'text-red-400' : 'text-yellow-400'}`}>{app.status}</span></p>
 
-                                    <div className="mt-3 bg-gray-900/50 p-3 rounded text-sm text-gray-300 max-h-60 overflow-y-auto space-y-2">
+                                    <div className="mt-4 bg-gray-900/30 p-4 rounded-lg border border-gray-700/50 space-y-4">
                                         {/* Common Fields */}
-                                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 border-b border-gray-700 pb-2 mb-2">
-                                            {app.irl_name && <div><span className="text-cyan-400 font-bold">IRL Name:</span> {app.irl_name}</div>}
-                                            {app.irl_age && <div><span className="text-cyan-400 font-bold">IRL Age:</span> {app.irl_age}</div>}
-                                            {app.weekly_hours && <div><span className="text-cyan-400 font-bold">Weekly Hours:</span> {app.weekly_hours}</div>}
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-300 border-b border-gray-700 pb-3">
+                                            {app.irl_name && <div><span className="text-cyan-400 font-bold block text-xs uppercase">IRL Name</span> {app.irl_name}</div>}
+                                            {app.irl_age && <div><span className="text-cyan-400 font-bold block text-xs uppercase">IRL Age</span> {app.irl_age}</div>}
+                                            {app.weekly_hours && <div><span className="text-cyan-400 font-bold block text-xs uppercase">Weekly Hours</span> {app.weekly_hours}</div>}
                                         </div>
 
                                         {/* PD Fields */}
                                         {activeTab === 'pd' && (
                                             <>
-                                                <div><span className="text-cyan-400 font-bold">Experience:</span> <p className="whitespace-pre-wrap">{app.experience}</p></div>
-                                                <div><span className="text-cyan-400 font-bold">Reason for Joining:</span> <p className="whitespace-pre-wrap">{app.reason}</p></div>
-                                                <div><span className="text-cyan-400 font-bold">Scenario:</span> <p className="whitespace-pre-wrap">{app.scenario_cop}</p></div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Experience</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.experience}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Reason for Joining</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.reason}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Scenario</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.scenario_cop}</p>
+                                                </div>
                                             </>
                                         )}
 
                                         {/* EMS Fields */}
                                         {activeTab === 'ems' && (
                                             <>
-                                                <div><span className="text-cyan-400 font-bold">Medical Knowledge:</span> <p className="whitespace-pre-wrap">{app.medical_knowledge}</p></div>
-                                                <div><span className="text-cyan-400 font-bold">Scenarios:</span> <p className="whitespace-pre-wrap">{app.scenarios}</p></div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Medical Knowledge</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.medical_knowledge}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Scenarios</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.scenarios}</p>
+                                                </div>
                                             </>
                                         )}
 
                                         {/* Staff Fields */}
                                         {activeTab === 'staff' && (
                                             <>
-                                                <div><span className="text-cyan-400 font-bold">Experience:</span> <p className="whitespace-pre-wrap">{app.experience}</p></div>
-                                                <div><span className="text-cyan-400 font-bold">Responsibilities:</span> <p className="whitespace-pre-wrap">{app.responsibilities}</p></div>
-                                                <div><span className="text-cyan-400 font-bold">Definitions:</span> <p className="whitespace-pre-wrap">{app.definitions}</p></div>
-                                                <div><span className="text-cyan-400 font-bold">Scenarios:</span> <p className="whitespace-pre-wrap">{app.scenarios}</p></div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Experience</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.experience}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Responsibilities</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.responsibilities}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Definitions</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.definitions}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-cyan-400 font-bold block text-xs uppercase mb-1">Scenarios</span>
+                                                    <p className="whitespace-pre-wrap text-sm text-gray-300 bg-gray-900/50 p-3 rounded">{app.scenarios}</p>
+                                                </div>
                                             </>
                                         )}
                                     </div>
                                 </div>
 
                                 {app.status === 'pending' && (
-                                    <div className="flex gap-2 shrink-0">
+                                    <div className="flex gap-2 shrink-0 ml-4">
                                         <AnimatedButton onClick={() => handleAction(app.id, 'approved')} className="bg-green-600 !px-4 !py-2 text-sm">Approve</AnimatedButton>
                                         <AnimatedButton onClick={() => handleAction(app.id, 'rejected')} className="bg-red-600 !px-4 !py-2 text-sm">Reject</AnimatedButton>
                                     </div>

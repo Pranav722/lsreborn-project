@@ -124,40 +124,65 @@ const AppManagement = ({ user }) => {
                             </div>
                         </div>
                         {selectedApp?.id === app.id && (
-                            <div className="mt-4 pt-4 border-t border-cyan-500/20 animate-fade-in-fast space-y-3">
-                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-400 mb-2">
-                                    <div><span className="text-cyan-400 font-semibold">IRL Name:</span> {app.irlName}</div>
-                                    <div><span className="text-cyan-400 font-semibold">IRL Age:</span> {app.irlAge}</div>
+                            <div className="mt-4 pt-4 border-t border-cyan-500/20 animate-fade-in-fast space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-900/30 p-4 rounded-lg">
+                                    <div>
+                                        <span className="text-cyan-400 font-semibold text-xs uppercase tracking-wider block mb-1">IRL Name</span>
+                                        <span className="text-white">{app.irlName}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-cyan-400 font-semibold text-xs uppercase tracking-wider block mb-1">IRL Age</span>
+                                        <span className="text-white">{app.irlAge}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-cyan-400 font-semibold text-xs uppercase tracking-wider block mb-1">Character Name</span>
+                                        <span className="text-white">{app.characterName}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-cyan-400 font-semibold text-xs uppercase tracking-wider block mb-1">Character Age</span>
+                                        <span className="text-white">{app.characterAge}</span>
+                                    </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="text-cyan-400 font-semibold text-sm mb-1">Backstory</h4>
-                                    <p className="text-gray-300 whitespace-pre-wrap text-sm bg-gray-900/50 p-3 rounded">{app.backstory}</p>
+                                    <h4 className="text-cyan-400 font-semibold text-sm mb-2 uppercase tracking-wider">Backstory</h4>
+                                    <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                                        <p className="text-gray-300 whitespace-pre-wrap text-sm leading-relaxed">{app.backstory}</p>
+                                    </div>
                                 </div>
 
                                 {app.questions && (() => {
                                     try {
                                         const q = typeof app.questions === 'string' ? JSON.parse(app.questions) : app.questions;
                                         return (
-                                            <>
+                                            <div className="space-y-4">
                                                 {q.foundUs && (
                                                     <div>
-                                                        <h4 className="text-cyan-400 font-semibold text-sm mb-1">Found Us</h4>
-                                                        <p className="text-gray-300 text-sm">{q.foundUs}</p>
+                                                        <h4 className="text-cyan-400 font-semibold text-sm mb-2 uppercase tracking-wider">How did you find us?</h4>
+                                                        <div className="bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+                                                            <p className="text-gray-300 text-sm">{q.foundUs}</p>
+                                                        </div>
                                                     </div>
                                                 )}
                                                 {q.experience && (
                                                     <div>
-                                                        <h4 className="text-cyan-400 font-semibold text-sm mb-1">Experience</h4>
-                                                        <p className="text-gray-300 whitespace-pre-wrap text-sm bg-gray-900/50 p-3 rounded">{q.experience}</p>
+                                                        <h4 className="text-cyan-400 font-semibold text-sm mb-2 uppercase tracking-wider">RP Experience</h4>
+                                                        <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                                                            <p className="text-gray-300 whitespace-pre-wrap text-sm leading-relaxed">{q.experience}</p>
+                                                        </div>
                                                     </div>
                                                 )}
-                                            </>
+                                            </div>
                                         );
                                     } catch (e) { return null; }
                                 })()}
 
-                                {app.status === 'rejected' && <p className="mt-2 text-red-400 font-bold">Rejection Reason: {app.reason}</p>}
+                                {app.status === 'rejected' && (
+                                    <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-lg mt-4">
+                                        <p className="text-red-400 font-bold text-sm uppercase tracking-wider mb-1">Rejection Reason</p>
+                                        <p className="text-red-200">{app.reason}</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </Card>

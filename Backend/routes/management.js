@@ -1,6 +1,11 @@
 const router = require('express').Router();
 const db = require('../db');
 const { isAuthenticated } = require('../middleware/auth');
+const fetch = require('node-fetch');
+
+const DISCORD_API_URL = 'https://discord.com/api/v10';
+const ACTIVE_GUILD_ID = process.env.ACTIVE_GUILD_ID || "1322660458888695818";
+const MASTER_ADMIN_ID = "444043711094194200";
 
 // Middleware for PD High Command (PDLead or Admin)
 const isPDLead = (req, res, next) => {
@@ -21,8 +26,31 @@ const isStaff = (req, res, next) => {
 };
 
 // Middleware for Admin (Admin Only)
-const isAdmin = (req, res, next) => {
+const isAdmin = async (req, res, next) => {
     if (req.user.isAdmin) return next();
+
+    // Fallback: Check Discord directly in case JWT is stale
+    try {
+        const response = await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${req.user.id}`, {
+            headers: { 'Authorization': `Bot ${process.env.ACTIVE_BOT_TOKEN}` }
+        });
+
+        if (response.ok) {
+            const member = await response.json();
+            const roles = member.roles || [];
+            // Check if user has the Admin role (if env var is set) or is Master Admin
+            const adminRole = process.env.LSR_ADMIN_ROLE_ID;
+            const isRealAdmin = (adminRole && roles.includes(adminRole)) || req.user.id === MASTER_ADMIN_ID;
+
+            if (isRealAdmin) {
+                req.user.isAdmin = true; // Update req.user for subsequent handlers
+                return next();
+            }
+        }
+    } catch (e) {
+        console.error("Admin check fallback failed:", e);
+    }
+
     res.status(403).json({ message: "Admin Only Access Required" });
 };
 
@@ -39,7 +67,7 @@ router.post('/settings/toggle', isAuthenticated, isAdmin, async (req, res) => {
     try {
         await db.query("UPDATE form_settings SET is_open = ? WHERE form_name = ?", [isOpen, formName]);
         res.json({ success: true, message: `Form ${formName} status updated to ${isOpen ? 'OPEN' : 'CLOSED'}` });
-    } catch(e) {
+    } catch (e) {
         console.error("Error toggling form:", e);
         res.status(500).json({ success: false, message: "Database Error on toggle." });
     }
@@ -54,8 +82,8 @@ router.post('/settings/whitelist/switch', isAuthenticated, isAdmin, async (req, 
     try {
         await db.query("UPDATE form_settings SET type = ? WHERE form_name = 'whitelist'", [type]);
         res.json({ success: true, message: `Whitelist type switched to ${type.toUpperCase()}` });
-    } catch(e) {
-         console.error("Error switching whitelist type:", e);
+    } catch (e) {
+        console.error("Error switching whitelist type:", e);
         res.status(500).json({ success: false, message: "Database Error on switch." });
     }
 });

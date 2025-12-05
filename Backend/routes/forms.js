@@ -138,6 +138,33 @@ router.get('/all-status', isAuthenticated, async (req, res) => {
     }
 });
 
+router.get('/status/:type', isAuthenticated, async (req, res) => {
+    const { type } = req.params;
+    const userId = req.user.id;
+    let table = '';
+
+    if (type === 'pd') table = 'pd_applications';
+    else if (type === 'ems') table = 'ems_applications';
+    else if (type === 'staff') table = 'staff_applications';
+    else if (type === 'whitelist') table = 'applications';
+    else return res.status(400).json({ message: "Invalid type" });
+
+    try {
+        // For whitelist, we check 'applications' table where discordId is the column
+        const colName = type === 'whitelist' ? 'discordId' : 'discord_id';
+        const [rows] = await db.query(`SELECT status FROM ${table} WHERE ${colName} = ? ORDER BY id DESC LIMIT 1`, [userId]);
+
+        if (rows.length > 0) {
+            res.json({ status: rows[0].status });
+        } else {
+            res.json({ status: null });
+        }
+    } catch (e) {
+        console.error("Status fetch error:", e);
+        res.status(500).json({ message: "Server Error" });
+    }
+});
+
 router.get('/quiz', isAuthenticated, async (req, res) => {
     // Check form status on every request
     try {

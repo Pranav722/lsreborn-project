@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
 
@@ -7,6 +7,43 @@ const DepartmentApp = ({ type, user }) => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState(null);
+    const [appStatus, setAppStatus] = useState(null); // 'pending', 'approved', 'rejected', or null
+
+    useEffect(() => {
+        const checkStatus = async () => {
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/forms/status/${type}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setAppStatus(data.status);
+                }
+            } catch (e) {
+                console.error("Status check failed:", e);
+            }
+        };
+        checkStatus();
+    }, [type]);
+
+    if (appStatus === 'pending') {
+        return (
+            <div className="max-w-2xl mx-auto pt-20 animate-fade-in text-center">
+                <Card className="border-l-4 border-yellow-500">
+                    <div className="py-10">
+                        <h2 className="text-3xl font-bold text-yellow-400 mb-4">Application Pending</h2>
+                        <p className="text-gray-300 text-lg mb-6">
+                            You already have a pending {type.toUpperCase()} application. <br />
+                            Please wait for a response from our staff team before applying again.
+                        </p>
+                        <AnimatedButton onClick={() => window.location.href = '/'} className="bg-gray-700">
+                            Return Home
+                        </AnimatedButton>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();

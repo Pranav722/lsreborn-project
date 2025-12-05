@@ -149,6 +149,7 @@ const ApplicationPage = ({ user, setPage }) => {
     const [pageType, setPageType] = useState('hub'); // 'hub', 'quiz', 'form', 'department'
     const [selectedDept, setSelectedDept] = useState(null);
     const [loadingStatus, setLoadingStatus] = useState(true);
+    const [userAppStatus, setUserAppStatus] = useState(null);
 
     const isWhitelisted = user?.roles?.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
     const isAdmin = user && user.isAdmin;
@@ -168,11 +169,21 @@ const ApplicationPage = ({ user, setPage }) => {
             if (!user) return;
             setLoadingStatus(true);
             try {
+                // Fetch global settings
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/forms/all-status`, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
                 });
                 if (response.ok) {
                     setStatuses(await response.json());
+                }
+
+                // Fetch user specific whitelist status
+                const wlRes = await fetch(`${import.meta.env.VITE_API_URL}/api/forms/status/whitelist`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+                });
+                if (wlRes.ok) {
+                    const wlData = await wlRes.json();
+                    setUserAppStatus(wlData.status);
                 }
             } catch (e) {
                 console.error("Failed to fetch form status:", e);
@@ -187,6 +198,7 @@ const ApplicationPage = ({ user, setPage }) => {
     const handleWhitelistClick = () => {
         const wlStatus = statuses.whitelist || { is_open: 1, type: 'quiz' };
         if (!wlStatus.is_open && !isAdmin) return; // Blocked if closed
+        if (userAppStatus === 'pending') return; // Blocked if pending
 
         if (isWhitelisted && !isAdmin) {
             // Whitelisted users cannot retake quiz/form unless testing
@@ -211,15 +223,17 @@ const ApplicationPage = ({ user, setPage }) => {
             borderColor: 'border-cyan-500/50',
             desc: isWhitelisted && !isAdmin
                 ? 'You are already a citizen of Los Santos.'
-                : ((statuses.whitelist?.is_open || isAdmin)
-                    ? `Current Method: ${statuses.whitelist?.type?.charAt(0).toUpperCase() + statuses.whitelist?.type?.slice(1)}.`
-                    : 'Currently closed for review.'),
+                : (userAppStatus === 'pending'
+                    ? 'Your application is currently pending review.'
+                    : ((statuses.whitelist?.is_open || isAdmin)
+                        ? `Current Method: ${statuses.whitelist?.type?.charAt(0).toUpperCase() + statuses.whitelist?.type?.slice(1)}.`
+                        : 'Currently closed for review.')),
             action: handleWhitelistClick,
             // Locked if closed AND not admin AND not whitelisted (if whitelisted, we just disable button, not lock with keyhole)
-            locked: (!statuses.whitelist?.is_open && !isAdmin && !isWhitelisted),
-            btnText: (isWhitelisted && !isAdmin) ? 'Already Whitelisted' : (statuses.whitelist?.type === 'quiz' ? 'Start Exam' : 'Start Form'),
-            // Disable if: (Whitelisted & not admin) OR (Closed & not admin)
-            disabled: (isWhitelisted && !isAdmin) || (!statuses.whitelist?.is_open && !isAdmin)
+            locked: (!statuses.whitelist?.is_open && !isAdmin && !isWhitelisted && userAppStatus !== 'pending'),
+            btnText: (isWhitelisted && !isAdmin) ? 'Already Whitelisted' : (userAppStatus === 'pending' ? 'Application Pending' : (statuses.whitelist?.type === 'quiz' ? 'Start Exam' : 'Start Form')),
+            // Disable if: (Whitelisted & not admin) OR (Closed & not admin) OR (Pending)
+            disabled: (isWhitelisted && !isAdmin) || (!statuses.whitelist?.is_open && !isAdmin) || userAppStatus === 'pending'
         },
         {
             id: 'pd',
