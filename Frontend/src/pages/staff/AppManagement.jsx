@@ -59,7 +59,7 @@ const AppManagement = ({ user }) => {
         }
 
         try {
-            await fetch(`${import.meta.env.VITE_API_URL}/api/applications/${selectedApp.id}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/applications/${selectedApp.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -67,12 +67,19 @@ const AppManagement = ({ user }) => {
                 },
                 body: JSON.stringify({ status: modalAction, reason: finalReason })
             });
-        } catch (error) {
-            console.error("Failed to update application:", error);
-        } finally {
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || 'Update failed');
+            }
+
+            // Success
             setIsModalOpen(false);
             setSelectedApp(null);
             fetchData();
+        } catch (error) {
+            console.error("Failed to update application:", error);
+            alert(`Failed to update application: ${error.message}`);
         }
     };
 
@@ -135,7 +142,7 @@ const AppManagement = ({ user }) => {
                     <p className="text-gray-400">Loading applications...</p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-6">
                     {finalFilteredApps.length > 0 ? finalFilteredApps.map(app => (
                         <Card key={app.id} className={`group transition-all duration-300 border border-transparent hover:border-cyan-500/30 ${app.isPremium ? 'bg-gradient-to-r from-gray-900 to-yellow-900/10' : ''}`}>
                             <div className="flex flex-col md:flex-row justify-between gap-6">

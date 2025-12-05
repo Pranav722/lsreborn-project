@@ -235,3 +235,74 @@ body {
     opacity: 1;
   }
 }
+
+/* ==========================================
+   TOUCH-FRIENDLY / RESPONSIVE STYLES
+   ========================================== */
+
+/* Hover effects ONLY on devices with a mouse */
+@media (hover: hover) and (pointer: fine) {
+  .modern-button:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 15px 5px rgba(0, 170, 255, 0.2);
+  }
+
+  .nav-link:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+  }
+
+  .profile-button:hover {
+    border-color: #06b6d4;
+    box-shadow: 0 0 10px 2px rgba(6, 182, 212, 0.3);
+  }
+}
+
+/* Touch devices - remove hover visual artifacts */
+@media (hover: none) {
+  .modern-button:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .nav-link::after {
+    display: none;
+  }
+
+  .profile-button:hover {
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
+/* Minimum tap target sizes for accessibility */
+@media (max-width: 768px) {
+
+  button,
+  a,
+  .nav-link,
+  input[type="button"],
+  input[type="submit"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Better mobile typography */
+  body {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Prevent horizontal overflow */
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+}
+
+/* Hide system cursor on desktop (since CustomCursor is removed, restore default) */
+body {
+  cursor: auto;
+}

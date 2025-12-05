@@ -264,11 +264,12 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Layout>
-        <CustomCursor />
         <LoginModal
           isOpen={isLoginModalOpen}
           onClose={() => setIsLoginModalOpen(false)}
         />
+        {/* Custom cursor only on devices with a mouse (desktop) */}
+        {typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches && <CustomCursor />}
         <div className="relative z-10 flex flex-col min-h-screen">
           <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 ${isScrolled || page !== 'home' ? 'bg-gray-950/80 backdrop-blur-md border-b border-cyan-500/10 py-2' : 'bg-transparent border-transparent py-4'}`}>
             <div className="max-w-screen-2xl mx-auto px-6 lg:px-12">
@@ -363,7 +364,7 @@ export default function App() {
           </nav>
 
           {/* Content Wrapper: Only apply padding if NOT on home page */}
-          <div className={page === 'home' ? '' : 'pt-24 px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto w-full'}>
+          <div className={page === 'home' ? '' : 'pt-24 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-16 w-full'}>
             {renderCurrentPage()}
           </div>
 
