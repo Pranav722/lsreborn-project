@@ -88,22 +88,22 @@ const NewsPage = () => {
 
     const newsData = [
         {
-            title: "Major Server Update v1.2: The Cyber Revolution",
-            date: "August 12, 2025",
+            title: "Major Server Update v2.5: The LSR Winter Update",
+            date: "December 05, 2025",
             content: "We're excited to announce our biggest update yet! This includes new custom vehicles, a revamped inventory system, and several new player-owned businesses. The Diamond Casino has also been opened for business with a high-tech security system.",
-            image: "https://images.unsplash.com/photo-1504384308090-c54be3855833?q=80&w=1920&auto=format&fit=crop"
+            image: "/Media/Update_1.png"
         },
         {
             title: "Community Meeting: Future of LS Reborn",
             date: "August 10, 2025",
             content: "Join us this Friday at 8 PM EST for our monthly community meeting. We'll be discussing the recent update, future plans for the gang territories, and taking your feedback on the new economy balance.",
-            image: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2032&auto=format&fit=crop"
+            image: "/Media/Community_Meeting_1.gif"
         },
         {
             title: "New Police Fleet Deployed",
-            date: "August 08, 2025",
+            date: "December 05, 2025",
             content: "The LSPD has received a shipment of state-of-the-art pursuit vehicles. These new interceptors are equipped with the latest tracking tech. Criminals beware, the streets just got a lot safer.",
-            image: "https://images.unsplash.com/photo-1605218427306-635ba2439af2?q=80&w=2070&auto=format&fit=crop"
+            image: "/Media/PD_Fleet_1.png"
         }
     ];
 
