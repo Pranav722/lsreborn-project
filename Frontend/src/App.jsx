@@ -137,8 +137,23 @@ export default function App() {
       tokenToUse = token;
       window.history.replaceState({}, document.title, "/");
     }
+
+    // Handle initial URL routing
+    const path = window.location.pathname.substring(1);
+    if (path && ['news', 'rules', 'apply', 'queue', 'dashboard'].includes(path)) {
+      setPage(path);
+    }
+
     checkAuthStatus(tokenToUse);
   }, [checkAuthStatus]);
+
+  // Update URL when page changes
+  useEffect(() => {
+    const path = page === 'home' ? '/' : `/${page}`;
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+  }, [page]);
 
   const handleLogout = () => {
     localStorage.removeItem('authToken');
