@@ -324,7 +324,7 @@ const JobManagement = ({ user }) => {
                 size="xl"
             >
                 {selectedApp && (
-                    <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2">
+                    <div className="space-y-6 max-h-[75vh] overflow-y-auto overflow-x-hidden">
                         {/* Header - Department colored */}
                         <div className={`flex items-center gap-6 pb-6 border-b border-gray-700/50 -mx-6 -mt-6 px-6 pt-6 mb-6 ${activeTab === 'pd' ? 'bg-gradient-to-r from-blue-900/30 to-transparent' : activeTab === 'ems' ? 'bg-gradient-to-r from-red-900/30 to-transparent' : 'bg-gradient-to-r from-purple-900/30 to-transparent'}`}>
                             <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg ${activeTab === 'pd' ? 'bg-blue-600/20 text-blue-400 ring-2 ring-blue-500/30' : activeTab === 'ems' ? 'bg-red-600/20 text-red-400 ring-2 ring-red-500/30' : 'bg-purple-600/20 text-purple-400 ring-2 ring-purple-500/30'}`}>
@@ -400,19 +400,53 @@ const JobManagement = ({ user }) => {
                         {/* Staff Specific Fields */}
                         {activeTab === 'staff' && (
                             <div className="space-y-4">
+                                {/* Staff Experience */}
                                 <div className="bg-purple-900/20 rounded-xl border border-purple-500/20 overflow-hidden">
                                     <div className="px-5 py-3 bg-purple-500/10 border-b border-purple-500/20 flex items-center gap-2">
                                         <Zap size={16} className="text-purple-400" />
-                                        <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider">Staff Experience</h4>
+                                        <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider">Previous Staff Experience</h4>
                                     </div>
                                     <div className="p-5">
-                                        <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.experience || 'Not provided'}</p>
+                                        <p className="text-gray-300 text-sm whitespace-pre-wrap break-words">{selectedApp.experience || 'Not provided'}</p>
                                     </div>
                                 </div>
-                                <div className="bg-purple-900/10 p-5 rounded-xl border border-purple-500/20">
-                                    <h4 className="text-xs font-bold text-purple-400 uppercase mb-2 tracking-wider">Responsibilities</h4>
-                                    <p className="text-gray-300 text-sm whitespace-pre-wrap">{selectedApp.responsibilities || 'Not provided'}</p>
+
+                                {/* Responsibilities */}
+                                <div className="bg-purple-900/15 rounded-xl border border-purple-500/15 overflow-hidden">
+                                    <div className="px-5 py-3 bg-purple-500/5 border-b border-purple-500/15 flex items-center gap-2">
+                                        <FileText size={16} className="text-purple-400" />
+                                        <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider">Staff Responsibilities</h4>
+                                    </div>
+                                    <div className="p-5">
+                                        <p className="text-gray-300 text-sm whitespace-pre-wrap break-words">{selectedApp.responsibilities || 'Not provided'}</p>
+                                    </div>
                                 </div>
+
+                                {/* Definitions */}
+                                {selectedApp.definitions && (
+                                    <div className="bg-purple-900/10 rounded-xl border border-purple-500/10 overflow-hidden">
+                                        <div className="px-5 py-3 bg-purple-500/5 border-b border-purple-500/10 flex items-center gap-2">
+                                            <FileText size={16} className="text-purple-300" />
+                                            <h4 className="text-sm font-bold text-purple-300 uppercase tracking-wider">RP Definitions</h4>
+                                        </div>
+                                        <div className="p-5">
+                                            <p className="text-gray-300 text-sm whitespace-pre-wrap break-words">{selectedApp.definitions}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Scenarios (Combined Responses) */}
+                                {selectedApp.scenarios && (
+                                    <div className="bg-purple-900/10 rounded-xl border border-purple-500/10 overflow-hidden">
+                                        <div className="px-5 py-3 bg-purple-500/5 border-b border-purple-500/10 flex items-center gap-2">
+                                            <AlertCircle size={16} className="text-purple-300" />
+                                            <h4 className="text-sm font-bold text-purple-300 uppercase tracking-wider">Situational Scenarios & Punishments</h4>
+                                        </div>
+                                        <div className="p-5">
+                                            <p className="text-gray-300 text-sm whitespace-pre-wrap break-words">{selectedApp.scenarios}</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

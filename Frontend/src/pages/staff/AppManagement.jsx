@@ -259,7 +259,7 @@ const AppManagement = ({ user }) => {
             {/* Application Detail Modal - ENHANCED */}
             <Modal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} title="📋 Application Details" size="xl">
                 {selectedApp && (
-                    <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-500/20 scrollbar-track-transparent">
+                    <div className="space-y-6 max-h-[75vh] overflow-y-auto overflow-x-hidden">
                         {/* Header - Enhanced with more presence */}
                         <div className="flex items-center gap-6 pb-6 border-b border-gray-700/50 bg-gradient-to-r from-gray-800/30 to-transparent -mx-6 -mt-6 px-6 pt-6 mb-6">
                             <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold shadow-lg ${selectedApp.isPremium ? 'bg-gradient-to-br from-yellow-500/30 to-orange-500/20 text-yellow-400 ring-2 ring-yellow-500/30' : 'bg-gradient-to-br from-cyan-500/30 to-blue-500/20 text-cyan-400 ring-2 ring-cyan-500/30'}`}>
