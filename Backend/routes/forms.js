@@ -88,7 +88,18 @@ const initializeTables = async () => {
             }
         }
 
+        // Ensure staff_applications has 'reason' column
+        try {
+            await db.query("SELECT reason FROM staff_applications LIMIT 1");
+        } catch (err) {
+            if (err.code === 'ER_BAD_FIELD_ERROR') {
+                console.log("Adding 'reason' column to 'staff_applications' table...");
+                await db.query("ALTER TABLE staff_applications ADD COLUMN reason TEXT");
+            }
+        }
+
         // 4. Initialize default settings
+
         const forms = ['whitelist', 'pd', 'ems', 'staff'];
         for (const form of forms) {
             await db.query("INSERT IGNORE INTO form_settings (form_name, is_open, type) VALUES (?, true, 'quiz')", [form]);

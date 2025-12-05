@@ -113,11 +113,14 @@ const HomePage = ({ setPage, onApplyClick }) => {
         },
 
         // Hidden by default (Click 'View Full Roster' to see)
-        { name: 'Luffy', role: 'PD Management & Staff', desc: 'The law enforcer you do not want to mess with. Try doing crime once in server and find out.', hidden: true, image: '/Media/Luffy-Avatar.png' },
+        { name: 'Luffy', role: 'PD Management & Staff', desc: 'The non RR guy who never fights and the website guy of LSR', hidden: true, image: '/Media/Luffy-Avatar.png' },
         { name: 'Tushar Gupta', role: 'PD Management & Staff', desc: 'Aspataal Premium Member. Always in the thick of the action.', hidden: true, image: '/Media/Tushar-Avatar.png' },
-        { name: 'Danny', role: 'Staff', desc: 'Dedicated to keeping the streets clean and the RP quality high.', hidden: true, image: '/Media/Danny-Avatar.png' },
-        { name: 'Draken', role: 'Staff', desc: 'Ensuring fair play and assisting citizens with technical issues.', hidden: true, image: '/Media/Draken-Avatar.png' },
-        { name: 'DaddyWoo', role: 'Staff', desc: 'Watching over the city to ensure everyone has a good time.', hidden: true, image: '/Media/DaddyWoo-Avatar.png' },
+        { name: 'Danny', role: 'EMS Management & Staff', desc: 'Fastest response in the server', hidden: true, image: '/Media/Danny-Avatar.png' },
+        { name: 'Cheeku', role: 'Staff', desc: 'Most Peaceful guy, never ever abuses', hidden: true, image: '/Media/Draken-Avatar.png' },
+        { name: 'Wangu', role: 'Core team', desc: 'Richest grinder even more available than support bots', hidden: true, image: '/Media/Wangu-Avatar.png' },
+        { name: 'Leo', role: 'Core team', desc: 'Richest grinder even more available than support bots', hidden: true, image: '/Media/Leo-Avatar.png' },
+
+        // { name: 'DaddyWoo', role: 'Staff', desc: 'Watching over the city to ensure everyone has a good time.', hidden: true, image: '/Media/DaddyWoo-Avatar.png' },
     ];
 
     const displayedTeam = showAllTeam ? teamMembers : teamMembers.filter(m => !m.hidden);
