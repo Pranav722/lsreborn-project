@@ -270,7 +270,7 @@ router.post('/start', isAuthenticated, async (req, res) => {
 
         // Initialize the model with system instruction
         const model = ai.getGenerativeModel({
-            model: 'gemini-1.5-flash-latest',
+            model: 'gemini-pro',
             generationConfig: {
                 temperature: 0.9, // Higher for more creative responses
                 topP: 0.95,

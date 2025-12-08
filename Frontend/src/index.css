@@ -306,3 +306,40 @@ body {
 body {
   cursor: auto;
 }
+
+/* ==========================================
+   FORM INPUT VISIBILITY FIX
+   Forces text to be visible in all form inputs
+   ========================================== */
+input,
+textarea,
+select {
+  background-color: rgb(15, 23, 42) !important;
+  /* slate-900 */
+  color: white !important;
+  opacity: 1 !important;
+  caret-color: rgb(34, 211, 238) !important;
+  /* cyan-400 */
+  -webkit-text-fill-color: white !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgb(100, 116, 139) !important;
+  /* slate-500 */
+  opacity: 1 !important;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: rgb(6, 182, 212) !important;
+  /* cyan-500 */
+}
+
+/* Ensure form inputs are above any overlays */
+.relative input,
+.relative textarea {
+  position: relative;
+  z-index: 10;
+}
