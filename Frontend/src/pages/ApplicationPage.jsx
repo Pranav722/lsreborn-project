@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
-import { ShieldCheck, Siren, HeartPulse, BrainCircuit, LockKeyhole, UserCog, Clock } from 'lucide-react';
+import AIQualityHUD from '../components/AIQualityHUD';
+import { ShieldCheck, Siren, HeartPulse, BrainCircuit, LockKeyhole, UserCog, Clock, Loader2, ShieldAlert, Sparkles } from 'lucide-react';
 import DepartmentApp from './DepartmentApps';
 import QuizPage from './QuizPage';
 
@@ -24,10 +25,37 @@ const WhitelistForm = ({ user }) => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    // AI Validation State
+    const [aiAnalysis, setAiAnalysis] = useState(null);
+    const [isPlagiarized, setIsPlagiarized] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+        if (aiAnalysis) setIsAnalyzing(true);
+    };
+
+    // AI Analysis callback
+    const handleAnalysisComplete = (data) => {
+        setAiAnalysis(data.analysis);
+        setIsPlagiarized(data.plagiarism?.isPlagiarized || false);
+        setIsAnalyzing(false);
+    };
+
+    // Validation check
+    const isSubmitDisabled = () => {
+        if (aiAnalysis && aiAnalysis.quality < 60) return true;
+        if (isPlagiarized) return true;
+        if (isAnalyzing) return true;
+        return false;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitDisabled()) {
+            setError('Please complete AI validation requirements.');
+            return;
+        }
         setLoading(true);
         setError(null);
         setSuccess(false);
@@ -43,6 +71,12 @@ const WhitelistForm = ({ user }) => {
 
         const payload = {
             ...formData,
+            aiValidation: {
+                qualityScore: aiAnalysis?.quality || 0,
+                uniquenessScore: aiAnalysis?.uniqueness || 0,
+                aiProbability: aiAnalysis?.aiProbability || 0,
+                isPlagiarized
+            },
             questions: {
                 foundUs: formData.foundUs || "",
                 experience: formData.experience || ""
@@ -102,42 +136,61 @@ const WhitelistForm = ({ user }) => {
                 <div className="grid md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">IRL Name</label>
-                        <input name="irlName" onChange={handleChange} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                        <input name="irlName" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">IRL Age</label>
-                        <input name="irlAge" type="number" onChange={handleChange} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                        <input name="irlAge" type="number" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">Character Name</label>
-                        <input name="characterName" onChange={handleChange} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                        <input name="characterName" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">Character Age</label>
-                        <input name="characterAge" type="number" onChange={handleChange} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                        <input name="characterAge" type="number" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
                     </div>
                 </div>
 
+                {/* Backstory with inline AI analysis */}
                 <div>
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory (Min 200 words)</label>
-                    <textarea name="backstory" rows="8" onChange={handleChange} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                    <textarea name="backstory" rows="8" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none" required />
+                    <AIQualityHUD inputText={formData.backstory || ''} onAnalysisComplete={handleAnalysisComplete} />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Where did you find us?</label>
-                    <input name="foundUs" onChange={handleChange} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                    <input name="foundUs" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Previous RP Experience</label>
-                    <textarea name="experience" rows="3" onChange={handleChange} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                    <textarea name="experience" rows="3" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none" required />
                 </div>
 
-                <AnimatedButton type="submit" className="w-full bg-cyan-600">{loading ? "Submitting..." : "Submit Application"}</AnimatedButton>
+                {/* Smart Submit Button */}
+                <button
+                    type="submit"
+                    disabled={isSubmitDisabled() || loading}
+                    className={`w-full py-3 px-6 rounded-lg font-medium text-white transition-all flex items-center justify-center gap-2 ${isSubmitDisabled() || loading ? 'bg-slate-700 cursor-not-allowed opacity-50' : 'bg-cyan-600 hover:opacity-90'
+                        }`}
+                >
+                    {loading ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                    ) : isAnalyzing ? (
+                        <><span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> Scanning...</>
+                    ) : isSubmitDisabled() ? (
+                        <><ShieldAlert className="w-4 h-4" /> Complete Validation</>
+                    ) : (
+                        <><Sparkles className="w-4 h-4" /> Submit Application</>
+                    )}
+                </button>
             </form>
         </Card>
     );
 };
+
 
 const ApplicationPage = ({ user, setPage }) => {
     const [statuses, setStatuses] = useState({

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Send, RotateCcw, Lock, Trophy, Loader2, AlertCircle, User, Bot } from 'lucide-react';
+import { Terminal, Send, RotateCcw, Lock, Trophy, Loader2, AlertCircle, User, Bot, Radio } from 'lucide-react';
 
 /**
- * HoloSimChat - Terminal-style Roleplay Simulation Chat
+ * HoloSimChat - Tactical Roleplay Simulation Terminal
  * 
- * A retro terminal interface for practicing de-escalation skills
- * with an AI-powered criminal NPC.
+ * A high-tech tactical display for practicing RP skills.
+ * Matches slate-900/950 theme with cyan/blue accents.
  */
-const HoloSimChat = ({ onComplete }) => {
+const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +17,7 @@ const HoloSimChat = ({ onComplete }) => {
     const [isComplete, setIsComplete] = useState(false);
     const [grade, setGrade] = useState(null);
     const [error, setError] = useState(null);
+    const [scenarioName, setScenarioName] = useState('');
 
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
@@ -41,27 +42,36 @@ const HoloSimChat = ({ onComplete }) => {
         setGrade(null);
         setIsComplete(false);
 
+        const apiUrl = `${import.meta.env.VITE_API_URL}/api/holosim/start`;
+        console.log('[HoloSim] Starting simulation...');
+        console.log('[HoloSim] API URL:', apiUrl);
+        console.log('[HoloSim] Scenario Type:', scenarioType);
+        console.log('[HoloSim] Auth Token:', localStorage.getItem('authToken') ? 'Present' : 'MISSING!');
+
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/holosim/start`, {
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('authToken')}`
                 },
-                body: JSON.stringify({ scenario: 'traffic_stop' })
+                body: JSON.stringify({ scenarioType })
             });
 
+            console.log('[HoloSim] Response Status:', response.status, response.statusText);
+
             const data = await response.json();
+            console.log('[HoloSim] Response Data:', data);
 
             if (!response.ok) {
-                throw new Error(data.message || 'Failed to start simulation');
+                throw new Error(data.message || `HTTP ${response.status}: Failed to start simulation`);
             }
 
-            // Add system message and NPC's first response
+            setScenarioName(data.scenarioName || 'Roleplay Simulation');
             setMessages([
                 {
                     type: 'system',
-                    content: '> HOLO-SIM v2.0 INITIALIZED\n> Scenario: Traffic Stop - Grove Street\n> Objective: De-escalate the situation\n> Turns: 5\n> [CONNECTION ESTABLISHED]'
+                    content: `// HOLO-SIM v2.0 INITIALIZED\n// Scenario: ${data.scenarioName || 'Traffic Stop'}\n// Objective: Handle the situation professionally\n// Turns: ${data.maxTurns}\n// [LINK ESTABLISHED]`
                 },
                 { type: 'npc', content: data.message }
             ]);
@@ -69,7 +79,12 @@ const HoloSimChat = ({ onComplete }) => {
             setTurnCount(data.turnCount);
 
         } catch (err) {
-            console.error('Start error:', err);
+            console.error('[HoloSim] START ERROR:', err);
+            console.error('[HoloSim] Error Details:', {
+                message: err.message,
+                url: apiUrl,
+                token: localStorage.getItem('authToken') ? 'Present' : 'MISSING'
+            });
             setError(err.message);
         } finally {
             setIsLoading(false);
@@ -85,7 +100,6 @@ const HoloSimChat = ({ onComplete }) => {
         setIsLoading(true);
         setError(null);
 
-        // Add user message immediately
         setMessages(prev => [...prev, { type: 'user', content: userMessage }]);
 
         try {
@@ -104,22 +118,18 @@ const HoloSimChat = ({ onComplete }) => {
                 throw new Error(data.message || 'Failed to send message');
             }
 
-            // Add NPC response
             setMessages(prev => [...prev, { type: 'npc', content: data.message }]);
             setTurnCount(data.turnCount);
 
-            // Check if simulation is complete
             if (data.isComplete) {
                 setIsComplete(true);
                 setGrade(data.grade);
 
-                // Add completion message
                 setMessages(prev => [...prev, {
                     type: 'system',
-                    content: '> [SIMULATION COMPLETE]\n> Processing performance data...'
+                    content: '// [SIMULATION COMPLETE]\n// Analyzing performance...'
                 }]);
 
-                // Callback if provided
                 if (onComplete && data.grade) {
                     onComplete(data.grade);
                 }
@@ -164,77 +174,80 @@ const HoloSimChat = ({ onComplete }) => {
 
     // Get score color
     const getScoreColor = (score) => {
-        if (score >= 80) return 'text-green-400';
-        if (score >= 60) return 'text-yellow-400';
-        if (score >= 40) return 'text-orange-400';
-        return 'text-red-400';
+        if (score >= 80) return 'text-emerald-400';
+        if (score >= 60) return 'text-cyan-400';
+        if (score >= 40) return 'text-amber-400';
+        return 'text-rose-400';
+    };
+
+    // Get score bar color
+    const getScoreBarColor = (score) => {
+        if (score >= 80) return 'bg-emerald-500';
+        if (score >= 60) return 'bg-cyan-500';
+        if (score >= 40) return 'bg-amber-500';
+        return 'bg-rose-500';
     };
 
     return (
-        <div className="bg-black border-2 border-green-500/50 rounded-lg overflow-hidden shadow-2xl shadow-green-500/20 font-mono">
+        <div className="bg-slate-950 border border-slate-700/50 rounded-xl overflow-hidden shadow-xl">
             {/* Terminal Header */}
-            <div className="bg-green-900/30 border-b border-green-500/30 px-4 py-2 flex items-center justify-between">
+            <div className="bg-slate-900 border-b border-slate-700/50 px-4 py-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-green-400" />
-                    <span className="text-green-400 text-sm font-bold tracking-wider">HOLO-SIM™</span>
-                    <span className="text-green-600 text-xs">v2.0</span>
+                    <Radio className="w-4 h-4 text-cyan-400" />
+                    <span className="text-cyan-400 text-sm font-medium tracking-wide">HOLO-SIM</span>
+                    <span className="text-slate-500 text-xs">v2.0</span>
                 </div>
                 <div className="flex items-center gap-4">
                     {sessionActive && (
-                        <span className="text-green-500 text-xs">
-                            TURN {turnCount}/{maxTurns}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-slate-500 text-xs">TURN</span>
+                            <span className="text-cyan-400 text-xs font-mono">{turnCount}/{maxTurns}</span>
+                        </div>
                     )}
-                    <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                        <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
-                        <div className={`w-3 h-3 rounded-full ${sessionActive ? 'bg-green-500 animate-pulse' : 'bg-green-500/30'}`}></div>
+                    <div className="flex gap-1">
+                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500/60"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60"></div>
+                        <div className={`w-2.5 h-2.5 rounded-full ${sessionActive ? 'bg-emerald-500 animate-pulse' : 'bg-emerald-500/30'}`}></div>
                     </div>
                 </div>
             </div>
 
             {/* Terminal Body */}
-            <div className="h-80 overflow-y-auto p-4 bg-black/95 custom-scrollbar">
+            <div className="h-64 overflow-y-auto p-4 bg-slate-950">
                 {!sessionActive ? (
                     // Start Screen
                     <div className="h-full flex flex-col items-center justify-center text-center">
-                        <div className="text-green-500 mb-6 animate-pulse">
-                            <Terminal className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                            <pre className="text-xs leading-relaxed">
-                                {`╔════════════════════════════════════╗
-║     HOLO-SIM TRAINING SYSTEM       ║
-║  Roleplay De-escalation Trainer    ║
-╚════════════════════════════════════╝`}
-                            </pre>
+                        <div className="mb-4">
+                            <Terminal className="w-10 h-10 text-cyan-500/40 mx-auto mb-3" />
+                            <h3 className="text-slate-300 font-medium mb-1">Roleplay Training Simulation</h3>
+                            <p className="text-slate-500 text-xs max-w-xs">
+                                Practice your de-escalation and communication skills in a simulated scenario.
+                            </p>
                         </div>
-                        <p className="text-green-400/70 text-xs mb-6 max-w-xs">
-                            Practice your de-escalation skills in a simulated traffic stop scenario.
-                            You have 5 turns to handle the situation professionally.
-                        </p>
                         <button
                             onClick={startSimulation}
                             disabled={isLoading}
-                            className="px-6 py-2 bg-green-500/20 border border-green-500/50 text-green-400 rounded hover:bg-green-500/30 hover:border-green-400 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
+                            className="px-5 py-2 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-lg hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all duration-200 flex items-center gap-2 text-sm disabled:opacity-50"
                         >
                             {isLoading ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    INITIALIZING...
+                                    Initializing...
                                 </>
                             ) : (
                                 <>
-                                    <Terminal className="w-4 h-4" />
-                                    START SIMULATION
+                                    <Radio className="w-4 h-4" />
+                                    Start Simulation
                                 </>
                             )}
                         </button>
                     </div>
                 ) : (
                     // Chat Messages
-                    <div className="space-y-3">
+                    <div className="space-y-3 font-mono text-sm">
                         {messages.map((msg, idx) => (
-                            <div key={idx} className={`${msg.type === 'system' ? 'text-green-600 text-xs' :
-                                    msg.type === 'user' ? 'text-cyan-400' : 'text-green-400'
+                            <div key={idx} className={`${msg.type === 'system' ? 'text-slate-500 text-xs' :
+                                msg.type === 'user' ? 'text-cyan-300' : 'text-slate-300'
                                 }`}>
                                 {msg.type === 'system' ? (
                                     <pre className="whitespace-pre-wrap leading-relaxed">{msg.content}</pre>
@@ -243,13 +256,13 @@ const HoloSimChat = ({ onComplete }) => {
                                         {msg.type === 'user' ? (
                                             <User className="w-4 h-4 mt-0.5 flex-shrink-0 text-cyan-500" />
                                         ) : (
-                                            <Bot className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" />
+                                            <Bot className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-500" />
                                         )}
                                         <div>
-                                            <span className={`text-xs ${msg.type === 'user' ? 'text-cyan-600' : 'text-green-600'}`}>
-                                                {msg.type === 'user' ? '[OFFICER]' : '[SUSPECT]'}
+                                            <span className={`text-xs ${msg.type === 'user' ? 'text-cyan-600' : 'text-slate-600'}`}>
+                                                {msg.type === 'user' ? '[YOU]' : '[NPC]'}
                                             </span>
-                                            <p className="text-sm leading-relaxed">{msg.content}</p>
+                                            <p className="leading-relaxed">{msg.content}</p>
                                         </div>
                                     </div>
                                 )}
@@ -258,48 +271,40 @@ const HoloSimChat = ({ onComplete }) => {
 
                         {/* Loading indicator */}
                         {isLoading && (
-                            <div className="flex items-center gap-2 text-green-600">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span className="text-xs animate-pulse">Processing response...</span>
+                            <div className="flex items-center gap-2 text-slate-500">
+                                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></div>
+                                <span className="text-xs">Processing...</span>
                             </div>
                         )}
 
                         {/* Grade Display */}
                         {isComplete && grade && (
-                            <div className="mt-4 p-4 border border-green-500/30 bg-green-900/10 rounded">
+                            <div className="mt-4 p-4 border border-slate-700/50 bg-slate-900/50 rounded-lg">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <Trophy className="w-5 h-5 text-yellow-400" />
-                                    <span className="text-green-400 font-bold">PERFORMANCE GRADE</span>
+                                    <Trophy className="w-4 h-4 text-amber-400" />
+                                    <span className="text-slate-400 text-xs uppercase tracking-wider">Performance Grade</span>
                                 </div>
-                                <div className="text-center mb-4">
-                                    <span className={`text-5xl font-bold ${getScoreColor(grade.score)}`}>
+
+                                {/* Score */}
+                                <div className="flex items-baseline gap-1 mb-3">
+                                    <span className={`text-4xl font-bold ${getScoreColor(grade.score)}`}>
                                         {grade.score}
                                     </span>
-                                    <span className="text-green-600 text-lg">/100</span>
+                                    <span className="text-slate-600 text-lg">/100</span>
                                 </div>
+
+                                {/* Score Bar */}
+                                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden mb-3">
+                                    <div
+                                        className={`h-full ${getScoreBarColor(grade.score)} transition-all duration-1000`}
+                                        style={{ width: `${grade.score}%` }}
+                                    />
+                                </div>
+
+                                {/* Feedback */}
                                 {grade.feedback && (
-                                    <p className="text-green-400/80 text-xs text-center mb-3 italic">
-                                        "{grade.feedback}"
-                                    </p>
+                                    <p className="text-slate-400 text-xs italic">"{grade.feedback}"</p>
                                 )}
-                                <div className="grid grid-cols-2 gap-2 text-xs">
-                                    <div className="flex justify-between p-2 bg-black/50 rounded">
-                                        <span className="text-green-600">Professionalism</span>
-                                        <span className="text-green-400">{grade.professionalism || '-'}/25</span>
-                                    </div>
-                                    <div className="flex justify-between p-2 bg-black/50 rounded">
-                                        <span className="text-green-600">De-escalation</span>
-                                        <span className="text-green-400">{grade.deescalation || '-'}/25</span>
-                                    </div>
-                                    <div className="flex justify-between p-2 bg-black/50 rounded">
-                                        <span className="text-green-600">Communication</span>
-                                        <span className="text-green-400">{grade.communication || '-'}/25</span>
-                                    </div>
-                                    <div className="flex justify-between p-2 bg-black/50 rounded">
-                                        <span className="text-green-600">Procedure</span>
-                                        <span className="text-green-400">{grade.procedure || '-'}/25</span>
-                                    </div>
-                                </div>
                             </div>
                         )}
 
@@ -310,47 +315,47 @@ const HoloSimChat = ({ onComplete }) => {
 
             {/* Error Display */}
             {error && (
-                <div className="px-4 py-2 bg-red-900/30 border-t border-red-500/30 flex items-center gap-2 text-red-400 text-xs">
-                    <AlertCircle className="w-4 h-4" />
+                <div className="px-4 py-2 bg-rose-500/10 border-t border-rose-500/20 flex items-center gap-2 text-rose-400 text-xs">
+                    <AlertCircle className="w-3.5 h-3.5" />
                     <span>{error}</span>
                 </div>
             )}
 
             {/* Input Area */}
             {sessionActive && (
-                <div className="border-t border-green-500/30 p-3 bg-green-900/10">
+                <div className="border-t border-slate-700/50 p-3 bg-slate-900/50">
                     {isComplete ? (
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-green-600 text-sm">
-                                <Lock className="w-4 h-4" />
-                                <span>Simulation Complete - Input Locked</span>
+                            <div className="flex items-center gap-2 text-slate-500 text-xs">
+                                <Lock className="w-3.5 h-3.5" />
+                                <span>Simulation Complete</span>
                             </div>
                             <button
                                 onClick={resetSimulation}
-                                className="px-4 py-1.5 bg-green-500/20 border border-green-500/50 text-green-400 rounded text-sm hover:bg-green-500/30 transition-colors flex items-center gap-2"
+                                className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-400 rounded text-xs hover:bg-slate-700 hover:text-slate-300 transition-colors flex items-center gap-1.5"
                             >
-                                <RotateCcw className="w-4 h-4" />
-                                RESTART
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Restart
                             </button>
                         </div>
                     ) : (
                         <div className="flex items-center gap-2">
-                            <span className="text-green-500 text-sm">{'>'}</span>
+                            <span className="text-cyan-500 text-sm">{'>'}</span>
                             <input
                                 ref={inputRef}
                                 type="text"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyPress={handleKeyPress}
-                                placeholder="Type your response as an officer..."
+                                placeholder="Type your response..."
                                 disabled={isLoading}
-                                className="flex-1 bg-transparent text-green-400 placeholder-green-700 text-sm focus:outline-none caret-green-400"
+                                className="flex-1 bg-transparent text-slate-300 placeholder-slate-600 text-sm focus:outline-none"
                                 autoComplete="off"
                             />
                             <button
                                 onClick={sendMessage}
                                 disabled={isLoading || !inputValue.trim()}
-                                className="p-2 text-green-500 hover:text-green-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="p-1.5 text-cyan-500 hover:text-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
                                 <Send className="w-4 h-4" />
                             </button>
@@ -358,23 +363,6 @@ const HoloSimChat = ({ onComplete }) => {
                     )}
                 </div>
             )}
-
-            {/* Custom Scrollbar Styles */}
-            <style jsx>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #22c55e40;
-                    border-radius: 3px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #22c55e60;
-                }
-            `}</style>
         </div>
     );
 };

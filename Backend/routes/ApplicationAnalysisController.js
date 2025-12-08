@@ -1,14 +1,41 @@
+/**
+ * ApplicationAnalysisController.js - AI-Powered Application Analysis
+ * 
+ * Analyzes roleplay applications using Gemini AI and Pinecone for plagiarism detection.
+ * Routes: POST /api/analysis/analyze-text
+ */
+
 const router = require('express').Router();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { isAuthenticated } = require('../middleware/auth');
 const { checkPlagiarism } = require('../VectorStore');
 require('dotenv').config();
 
-// Initialize Gemini AI Client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize Gemini AI Client (lazy initialization to avoid startup crashes)
+let genAI = null;
+function getGenAI() {
+    if (!genAI && process.env.GEMINI_API_KEY) {
+        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    }
+    return genAI;
+}
 
 // Configuration for plagiarism detection
 const PLAGIARISM_THRESHOLD = 0.85; // 85% similarity threshold
+
+// Default analysis response for empty/invalid input
+const DEFAULT_ANALYSIS = {
+    aiProbability: 0,
+    quality: 0,
+    uniqueness: 0,
+    relevance: 0
+};
+
+const DEFAULT_PLAGIARISM = {
+    isPlagiarized: false,
+    similarityScore: 0,
+    matchedRules: []
+};
 
 // System instruction for RP Application analysis
 const SYSTEM_INSTRUCTION = `You are an RP Administrator for LS Reborn, a GTA V Roleplay server. Analyze the submitted roleplay application text and evaluate it based on the following criteria:
@@ -36,36 +63,101 @@ const isStaff = (req, res, next) => {
     if (req.user && (req.user.isStaff || req.user.isAdmin)) {
         return next();
     }
+    console.log(`[ANALYSIS] Access denied for user ${req.user?.id || 'unknown'} - not staff/admin`);
     return res.status(403).json({ message: 'Forbidden: Staff access required' });
 };
 
 /**
- * POST /api/analyze-text
+ * Helper function to safely parse JSON from Gemini response
+ * Strips markdown code blocks and handles common formatting issues
+ */
+function safeParseJSON(responseText) {
+    if (!responseText || typeof responseText !== 'string') {
+        console.log('[ANALYSIS] Empty or invalid response text');
+        return null;
+    }
+
+    let cleaned = responseText.trim();
+
+    // Remove markdown code blocks (```json ... ``` or ``` ... ```)
+    if (cleaned.startsWith('```json')) {
+        cleaned = cleaned.replace(/^```json\s*/i, '').replace(/\s*```\s*$/i, '');
+    } else if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```\s*/i, '').replace(/\s*```\s*$/i, '');
+    }
+
+    // Try to extract JSON if there's extra text around it
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        cleaned = jsonMatch[0];
+    }
+
+    try {
+        return JSON.parse(cleaned);
+    } catch (error) {
+        console.log('[ANALYSIS] JSON parse error:', error.message);
+        console.log('[ANALYSIS] Raw text:', responseText.substring(0, 500));
+        return null;
+    }
+}
+
+/**
+ * POST /api/analysis/analyze-text
  * Analyzes roleplay application text using Gemini AI
  * @body {string} text - The application text to analyze
  * @returns {Object} Analysis results with AI probability, quality, uniqueness, relevance scores, and plagiarism check
  */
-router.post('/analyze-text', isAuthenticated, isStaff, async (req, res) => {
+router.post('/analyze-text', isAuthenticated, async (req, res) => {
+    const requestId = Date.now().toString(36);
+    console.log(`[ANALYSIS][${requestId}] Incoming request from user ${req.user?.id || 'unknown'}`);
+
     const { text } = req.body;
 
-    // Validate input
+    // === FIX 1: Enhanced Input Validation with Default Response ===
     if (!text || typeof text !== 'string') {
-        return res.status(400).json({
-            message: 'Text is required for analysis.',
-            error: 'INVALID_INPUT'
+        console.log(`[ANALYSIS][${requestId}] Invalid input - text is missing or not a string`);
+        return res.json({
+            success: true,
+            analysis: DEFAULT_ANALYSIS,
+            plagiarism: DEFAULT_PLAGIARISM,
+            analyzedAt: new Date().toISOString(),
+            warning: 'No text provided for analysis'
         });
     }
 
-    if (text.trim().length < 50) {
-        return res.status(400).json({
-            message: 'Text is too short for meaningful analysis (minimum 50 characters).',
-            error: 'TEXT_TOO_SHORT'
+    const trimmedText = text.trim();
+    if (trimmedText.length === 0) {
+        console.log(`[ANALYSIS][${requestId}] Empty text after trimming`);
+        return res.json({
+            success: true,
+            analysis: DEFAULT_ANALYSIS,
+            plagiarism: DEFAULT_PLAGIARISM,
+            analyzedAt: new Date().toISOString(),
+            warning: 'Empty text provided'
         });
     }
+
+    if (trimmedText.length < 50) {
+        console.log(`[ANALYSIS][${requestId}] Text too short: ${trimmedText.length} chars`);
+        return res.json({
+            success: true,
+            analysis: {
+                aiProbability: 0,
+                quality: Math.min(trimmedText.length, 30),
+                uniqueness: 50,
+                relevance: 0
+            },
+            plagiarism: DEFAULT_PLAGIARISM,
+            analyzedAt: new Date().toISOString(),
+            warning: 'Text too short for accurate analysis'
+        });
+    }
+
+    console.log(`[ANALYSIS][${requestId}] Text length: ${trimmedText.length} characters`);
 
     // Check if API key is configured
     if (!process.env.GEMINI_API_KEY) {
-        console.error('GEMINI_API_KEY is not configured in environment variables');
+        console.error(`[ANALYSIS][${requestId}] GEMINI_API_KEY is not configured`);
         return res.status(500).json({
             message: 'AI Analysis service is not configured.',
             error: 'SERVICE_NOT_CONFIGURED'
@@ -82,18 +174,28 @@ router.post('/analyze-text', isAuthenticated, isStaff, async (req, res) => {
     // Only run plagiarism check if Pinecone is configured
     if (process.env.PINECONE_API_KEY) {
         try {
-            plagiarismResult = await checkPlagiarism(text, PLAGIARISM_THRESHOLD);
-            console.log(`Plagiarism check: score=${plagiarismResult.maxScore}, isPlagiarized=${plagiarismResult.isPlagiarized}`);
+            console.log(`[ANALYSIS][${requestId}] Running plagiarism check...`);
+            plagiarismResult = await checkPlagiarism(trimmedText, PLAGIARISM_THRESHOLD);
+            console.log(`[ANALYSIS][${requestId}] Plagiarism check: score=${plagiarismResult.maxScore?.toFixed(3)}, isPlagiarized=${plagiarismResult.isPlagiarized}`);
         } catch (plagiarismError) {
-            console.error('Plagiarism check error (non-blocking):', plagiarismError.message);
+            console.error(`[ANALYSIS][${requestId}] Plagiarism check error (non-blocking):`, plagiarismError.message);
             // Continue with analysis even if plagiarism check fails
         }
+    } else {
+        console.log(`[ANALYSIS][${requestId}] Skipping plagiarism check - Pinecone not configured`);
     }
 
     // --- STEP 2: AI Analysis ---
     try {
+        console.log(`[ANALYSIS][${requestId}] Starting Gemini analysis...`);
+
         // Initialize the Gemini model
-        const model = genAI.getGenerativeModel({
+        const ai = getGenAI();
+        if (!ai) {
+            throw new Error('Failed to initialize Gemini AI client');
+        }
+
+        const model = ai.getGenerativeModel({
             model: 'gemini-1.5-flash',
             generationConfig: {
                 temperature: 0.3, // Lower temperature for more consistent analysis
@@ -104,31 +206,36 @@ router.post('/analyze-text', isAuthenticated, isStaff, async (req, res) => {
         });
 
         // Construct the prompt
-        const prompt = `${SYSTEM_INSTRUCTION}\n\n---\n\nApplication Text to Analyze:\n\n${text}`;
+        const prompt = `${SYSTEM_INSTRUCTION}\n\n---\n\nApplication Text to Analyze:\n\n${trimmedText}`;
 
         // Generate content using Gemini
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const responseText = response.text();
 
-        // Parse the JSON response
-        let analysisResult;
-        try {
-            // Clean the response text (remove any markdown code blocks if present)
-            let cleanedResponse = responseText.trim();
-            if (cleanedResponse.startsWith('```json')) {
-                cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
-            } else if (cleanedResponse.startsWith('```')) {
-                cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
-            }
+        console.log(`[ANALYSIS][${requestId}] Gemini response received (${responseText.length} chars)`);
 
-            analysisResult = JSON.parse(cleanedResponse);
-        } catch (parseError) {
-            console.error('Failed to parse Gemini response:', responseText);
-            return res.status(500).json({
-                message: 'Failed to parse AI response. Please try again.',
-                error: 'PARSE_ERROR',
-                rawResponse: responseText
+        // === FIX 2: Safe JSON Parsing ===
+        let analysisResult = safeParseJSON(responseText);
+
+        if (!analysisResult) {
+            console.error(`[ANALYSIS][${requestId}] Failed to parse Gemini response`);
+            // Return a partial result instead of crashing
+            return res.json({
+                success: true,
+                analysis: {
+                    aiProbability: 50,
+                    quality: 50,
+                    uniqueness: 50,
+                    relevance: 50
+                },
+                plagiarism: {
+                    isPlagiarized: plagiarismResult.isPlagiarized,
+                    similarityScore: plagiarismResult.maxScore || 0,
+                    matchedRules: plagiarismResult.matches || []
+                },
+                analyzedAt: new Date().toISOString(),
+                warning: 'AI response parsing failed - using estimated values'
             });
         }
 
@@ -137,21 +244,27 @@ router.post('/analyze-text', isAuthenticated, isStaff, async (req, res) => {
         const missingKeys = requiredKeys.filter(key => !(key in analysisResult));
 
         if (missingKeys.length > 0) {
-            console.error('Invalid Gemini response structure:', analysisResult);
-            return res.status(500).json({
-                message: 'AI returned an incomplete response. Please try again.',
-                error: 'INCOMPLETE_RESPONSE',
-                missingKeys
-            });
+            console.error(`[ANALYSIS][${requestId}] Missing keys in response:`, missingKeys);
+            // Fill in missing keys with defaults
+            for (const key of missingKeys) {
+                analysisResult[key] = 50;
+            }
         }
 
         // Ensure all values are within valid range (0-100)
         for (const key of requiredKeys) {
             const value = analysisResult[key];
-            if (typeof value !== 'number' || value < 0 || value > 100) {
-                analysisResult[key] = Math.max(0, Math.min(100, Number(value) || 0));
+            if (typeof value !== 'number' || isNaN(value) || value < 0 || value > 100) {
+                analysisResult[key] = Math.max(0, Math.min(100, Number(value) || 50));
             }
         }
+
+        console.log(`[ANALYSIS][${requestId}] Analysis complete:`, {
+            aiProbability: analysisResult.aiProbability,
+            quality: analysisResult.quality,
+            uniqueness: analysisResult.uniqueness,
+            relevance: analysisResult.relevance
+        });
 
         // Return the analysis results with plagiarism data
         res.json({
@@ -164,14 +277,15 @@ router.post('/analyze-text', isAuthenticated, isStaff, async (req, res) => {
             },
             plagiarism: {
                 isPlagiarized: plagiarismResult.isPlagiarized,
-                similarityScore: plagiarismResult.maxScore,
+                similarityScore: plagiarismResult.maxScore || 0,
                 matchedRules: plagiarismResult.matches || []
             },
             analyzedAt: new Date().toISOString()
         });
 
     } catch (error) {
-        console.error('Gemini API Error:', error);
+        console.error(`[ANALYSIS][${requestId}] Gemini API Error:`, error.message);
+        console.error(`[ANALYSIS][${requestId}] Full error:`, error);
 
         // Handle specific error types
         if (error.message?.includes('QUOTA_EXCEEDED') || error.message?.includes('429')) {
@@ -195,11 +309,15 @@ router.post('/analyze-text', isAuthenticated, isStaff, async (req, res) => {
             });
         }
 
-        // Generic error fallback
-        return res.status(500).json({
-            message: 'An error occurred while analyzing the text. Please try again.',
-            error: 'INTERNAL_ERROR',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        // Return default values instead of crashing
+        console.log(`[ANALYSIS][${requestId}] Returning default analysis due to error`);
+        return res.json({
+            success: true,
+            analysis: DEFAULT_ANALYSIS,
+            plagiarism: DEFAULT_PLAGIARISM,
+            analyzedAt: new Date().toISOString(),
+            warning: 'Analysis encountered an error - using default values',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 });

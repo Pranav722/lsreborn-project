@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
-import AnimatedButton from '../components/AnimatedButton';
 import AIQualityHUD from '../components/AIQualityHUD';
 import HoloSimChat from '../components/HoloSimChat';
-import { Loader2, AlertTriangle, CheckCircle2, ShieldAlert, Brain, Sparkles } from 'lucide-react';
+import { Loader2, AlertTriangle, CheckCircle2, ShieldAlert, Sparkles } from 'lucide-react';
 
 const DepartmentApp = ({ type, user }) => {
     const [formData, setFormData] = useState({});
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState(null);
-    const [appStatus, setAppStatus] = useState(null); // 'pending', 'approved', 'rejected', or null
+    const [appStatus, setAppStatus] = useState(null);
 
     // AI Validation State
     const [aiAnalysis, setAiAnalysis] = useState(null);
@@ -44,19 +43,16 @@ const DepartmentApp = ({ type, user }) => {
 
     // Validation logic for submit button
     const isSubmitDisabled = () => {
-        // Check HoloSim score for PD applications
+        // HoloSim required for PD only
         if (type === 'pd' && (holoSimScore === null || holoSimScore < 50)) {
             return true;
         }
-        // Check AI quality score
         if (aiAnalysis && aiAnalysis.quality < 60) {
             return true;
         }
-        // Check plagiarism
         if (isPlagiarized) {
             return true;
         }
-        // Check if still analyzing
         if (isAnalyzing) {
             return true;
         }
@@ -81,7 +77,7 @@ const DepartmentApp = ({ type, user }) => {
             return { type: 'info', message: 'Analyzing your application...' };
         }
         if (aiAnalysis && aiAnalysis.quality >= 60 && !isPlagiarized) {
-            return { type: 'success', message: 'All checks passed! You may submit your application.' };
+            return { type: 'success', message: 'All checks passed! You may submit.' };
         }
         return null;
     };
@@ -103,6 +99,7 @@ const DepartmentApp = ({ type, user }) => {
         checkStatus();
     }, [type]);
 
+    // Show pending status
     if (appStatus === 'pending') {
         return (
             <div className="max-w-2xl mx-auto pt-20 animate-fade-in text-center">
@@ -110,12 +107,11 @@ const DepartmentApp = ({ type, user }) => {
                     <div className="py-10">
                         <h2 className="text-3xl font-bold text-yellow-400 mb-4">Application Pending</h2>
                         <p className="text-gray-300 text-lg mb-6">
-                            You already have a pending {type.toUpperCase()} application. <br />
-                            Please wait for a response from our staff team before applying again.
+                            You already have a pending {type.toUpperCase()} application.
                         </p>
-                        <AnimatedButton onClick={() => window.location.href = '/'} className="bg-gray-700">
+                        <button onClick={() => window.location.href = '/'} className="px-6 py-2 bg-gray-700 rounded-lg text-white hover:bg-gray-600">
                             Return Home
-                        </AnimatedButton>
+                        </button>
                     </div>
                 </Card>
             </div>
@@ -124,10 +120,8 @@ const DepartmentApp = ({ type, user }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Final validation check
         if (isSubmitDisabled()) {
-            setError('Please complete all AI validation requirements before submitting.');
+            setError('Please complete all validation requirements.');
             return;
         }
 
@@ -135,52 +129,24 @@ const DepartmentApp = ({ type, user }) => {
         setError(null);
         setSuccess(false);
 
-        // Prepare payload based on type to match backend expectation
         let payload = { ...formData, discordId: user.username };
-
-        // Add AI validation scores to payload
         payload.aiValidation = {
             qualityScore: aiAnalysis?.quality || 0,
             uniquenessScore: aiAnalysis?.uniqueness || 0,
             aiProbability: aiAnalysis?.aiProbability || 0,
             holoSimScore: holoSimScore || 0,
-            isPlagiarized: isPlagiarized
+            isPlagiarized
         };
 
-        // Consolidating specific fields into the generic DB columns
+        // Consolidate fields
         if (type === 'pd') {
-            payload.scenario = `
-                Match of Force: ${formData.matchOfForce || ''}
-                Situation 1: ${formData.situation1 || ''}
-                Handling Rule Breakers: ${formData.ruleBreakers || ''}
-            `;
+            payload.scenario = `Match of Force: ${formData.matchOfForce || ''}\nSituation 1: ${formData.situation1 || ''}\nHandling Rule Breakers: ${formData.ruleBreakers || ''}`;
             payload.whyJoin = formData.whyJoinPD;
         } else if (type === 'ems') {
-            payload.medicalKnowledge = `
-                Scene Accident: ${formData.emsScene || ''}
-                Prioritize Patients: ${formData.emsPriority || ''}
-                Refusal: ${formData.emsRefusal || ''}
-                CPR: ${formData.emsCPR || ''}
-                Commands: ${formData.emsCommands || ''}
-            `;
-            payload.scenarios = `
-                Shooting Scene: ${formData.emsShooting || ''}
-                Trolling: ${formData.emsTrolling || ''}
-                Lone Duty: ${formData.emsLone || ''}
-                Refusing Hospital: ${formData.emsFakeInjury || ''}
-                Perma RP: ${formData.emsPerma || ''}
-                Coordination: ${formData.emsCoord || ''}
-                Rude Patient: ${formData.emsRude || ''}
-                Speed vs Accuracy: ${formData.emsSpeed || ''}
-            `;
+            payload.medicalKnowledge = `Scene Accident: ${formData.emsScene || ''}\nPrioritize Patients: ${formData.emsPriority || ''}\nCPR: ${formData.emsCPR || ''}`;
+            payload.scenarios = `Shooting Scene: ${formData.emsShooting || ''}\nTrolling: ${formData.emsTrolling || ''}`;
         } else if (type === 'staff') {
-            payload.scenarios = `
-                OOC Argue: ${formData.scenarios || ''}
-                Accusation: ${formData.accusation || ''}
-                Abuse: ${formData.abuse || ''}
-                Stress: ${formData.stress || ''}
-                Punishments: VDM(${formData.punishVDM}), RDM(${formData.punishRDM}), Hack(${formData.punishHack}), Racism(${formData.punishRacism})
-            `;
+            payload.scenarios = `OOC Argue: ${formData.scenarios || ''}\nAccusation: ${formData.accusation || ''}\nAbuse: ${formData.abuse || ''}`;
         }
 
         try {
@@ -193,13 +159,10 @@ const DepartmentApp = ({ type, user }) => {
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-
             if (!res.ok) throw new Error(data.message || "Submission failed");
-
             setSuccess(true);
             setTimeout(() => window.location.reload(), 3000);
         } catch (e) {
-            console.error(e);
             setError(e.message || "Submission failed.");
         }
         setLoading(false);
@@ -207,374 +170,217 @@ const DepartmentApp = ({ type, user }) => {
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
-        // Reset analysis when content changes significantly
-        if (aiAnalysis) {
-            setIsAnalyzing(true);
-        }
+        if (aiAnalysis) setIsAnalyzing(true);
     };
 
-    // Validation Status Banner Component
+    // Validation Banner
     const ValidationBanner = () => {
         const status = getValidationMessage();
         if (!status) return null;
-
         const styles = {
-            warning: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-200',
-            error: 'bg-red-500/20 border-red-500/50 text-red-200',
-            info: 'bg-blue-500/20 border-blue-500/50 text-blue-200',
-            success: 'bg-green-500/20 border-green-500/50 text-green-200'
+            warning: 'bg-amber-500/10 border-amber-500/30 text-amber-300',
+            error: 'bg-rose-500/10 border-rose-500/30 text-rose-300',
+            info: 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300',
+            success: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
         };
-
         const icons = {
-            warning: <AlertTriangle className="w-5 h-5" />,
-            error: <ShieldAlert className="w-5 h-5" />,
-            info: <Loader2 className="w-5 h-5 animate-spin" />,
-            success: <CheckCircle2 className="w-5 h-5" />
+            warning: <AlertTriangle className="w-4 h-4" />,
+            error: <ShieldAlert className="w-4 h-4" />,
+            info: <Loader2 className="w-4 h-4 animate-spin" />,
+            success: <CheckCircle2 className="w-4 h-4" />
         };
-
         return (
-            <div className={`mb-6 p-4 border rounded-lg flex items-center gap-3 ${styles[status.type]}`}>
+            <div className={`p-3 border rounded-lg flex items-center gap-2 text-sm ${styles[status.type]}`}>
                 {icons[status.type]}
                 <span>{status.message}</span>
             </div>
         );
     };
 
-    // Smart Submit Button with scanning animation
-    const SmartSubmitButton = ({ color }) => {
+    // Submit Button
+    const SubmitButton = ({ color }) => {
         const disabled = isSubmitDisabled() || loading;
-
         return (
             <button
                 type="submit"
                 disabled={disabled}
-                className={`w-full py-3 px-6 rounded-lg font-bold text-white transition-all duration-300 flex items-center justify-center gap-2 ${disabled
-                    ? 'bg-gray-600 cursor-not-allowed opacity-60'
-                    : `${color} hover:opacity-90 shadow-lg`
+                className={`w-full py-3 px-6 rounded-lg font-medium text-white transition-all flex items-center justify-center gap-2 ${disabled ? 'bg-slate-700 cursor-not-allowed opacity-50' : `${color} hover:opacity-90`
                     }`}
             >
                 {loading ? (
-                    <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        Submitting...
-                    </>
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
                 ) : isAnalyzing ? (
-                    <>
-                        <Brain className="w-5 h-5 animate-pulse" />
-                        <span className="relative">
-                            Scanning
-                            <span className="animate-pulse">...</span>
-                        </span>
-                    </>
+                    <><span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> Scanning...</>
                 ) : disabled ? (
-                    <>
-                        <ShieldAlert className="w-5 h-5" />
-                        Complete Validation First
-                    </>
+                    <><ShieldAlert className="w-4 h-4" /> Complete Validation</>
                 ) : (
-                    <>
-                        <Sparkles className="w-5 h-5" />
-                        Submit Application
-                    </>
+                    <><Sparkles className="w-4 h-4" /> Submit Application</>
                 )}
             </button>
         );
     };
 
-    // --- PD APPLICATION FORM ---
+    // TextArea with inline AI analysis
+    const AnalyzedTextArea = ({ label, name, ...props }) => (
+        <div>
+            <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
+            <textarea
+                name={name}
+                onChange={handleChange}
+                rows={props.rows || 4}
+                className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none"
+                required
+                {...props}
+            />
+            <AIQualityHUD inputText={formData[name] || ''} onAnalysisComplete={handleAnalysisComplete} />
+        </div>
+    );
+
+    // === PD APPLICATION ===
     if (type === 'pd') {
         return (
             <div className="max-w-4xl mx-auto pt-10 animate-fade-in pb-20">
                 <Card>
                     <div className="border-b border-blue-500/30 pb-4 mb-6">
-                        <h2 className="text-3xl font-bold text-blue-500">LSPD Application</h2>
-                        <p className="text-gray-400 mt-2">"To Protect and To Serve"</p>
+                        <h2 className="text-3xl font-bold text-blue-400">LSPD Application</h2>
+                        <p className="text-slate-400 mt-1">"To Protect and To Serve"</p>
                     </div>
 
-                    {success && (
-                        <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200 animate-fade-in">
-                            <strong>Success!</strong> Application submitted successfully. Redirecting...
-                        </div>
-                    )}
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 animate-fade-in">
-                            <strong>Error:</strong> {error}
-                        </div>
-                    )}
+                    {success && <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-300 text-sm">Application submitted successfully!</div>}
+                    {error && <div className="mb-4 p-3 bg-rose-500/20 border border-rose-500/30 rounded-lg text-rose-300 text-sm">{error}</div>}
 
-                    <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/20 mb-8 text-sm text-gray-300">
-                        <h4 className="font-bold text-blue-300 mb-2">Why Join PD?</h4>
-                        <ul className="list-disc list-inside space-y-1">
-                            <li><strong>Sense of Duty:</strong> Protecting citizens is an honorable mission.</li>
-                            <li><strong>Stability:</strong> Government jobs offer reliable benefits.</li>
-                            <li><strong>Challenge:</strong> No two days are the same.</li>
-                            <li><strong>Growth:</strong> Special units (Cyber, Forensics, Intel).</li>
-                        </ul>
-                        <div className="mt-4 pt-4 border-t border-blue-500/20">
-                            <h4 className="font-bold text-blue-300 mb-2">Requirements:</h4>
-                            <p>• Must be 18+ & have a functional mic.</p>
-                            <p>• Must commit ~14 hours/week.</p>
-                            <p>• Must follow Server Rules & Guidelines.</p>
-                        </div>
-                    </div>
-
-                    {/* HoloSim Training Section */}
-                    <div className="mb-8">
-                        <h3 className="text-xl font-bold text-blue-400 mb-4 flex items-center gap-2">
-                            <Brain className="w-5 h-5" />
-                            De-escalation Training (HoloSim)
-                        </h3>
-                        <p className="text-gray-400 text-sm mb-4">
-                            Complete this simulated traffic stop to demonstrate your de-escalation skills.
-                            You need a minimum score of 50 to proceed.
-                        </p>
-                        <HoloSimChat onComplete={handleHoloSimComplete} />
-                        {holoSimScore !== null && (
-                            <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${holoSimScore >= 50 ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-                                <CheckCircle2 className="w-5 h-5" />
-                                <span>HoloSim Score: <strong>{holoSimScore}/100</strong> {holoSimScore >= 50 ? '✓ Passed' : '✗ Try Again'}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-8">
-                        {/* Personal Info */}
-                        <div className="grid md:grid-cols-2 gap-6">
-                            <Input label="Name (IRL)" name="irlName" onChange={handleChange} required />
-                            <Input label="Age (IRL)" name="irlAge" type="number" onChange={handleChange} required />
-                            <Input label="Your IC Name" name="icName" onChange={handleChange} required />
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <Input label="Name (IRL)" name="irlName" onChange={handleChange} />
+                            <Input label="Age (IRL)" name="irlAge" type="number" onChange={handleChange} />
+                            <Input label="IC Name" name="icName" onChange={handleChange} />
                             <Input label="Discord ID" name="discordId" value={user.username} readOnly />
                         </div>
 
-                        <TextArea label="Character Backstory" name="backstory" onChange={handleChange} required />
+                        <AnalyzedTextArea label="Character Backstory" name="backstory" />
+                        <AnalyzedTextArea label="Why do you want to join the Police Department?" name="whyJoinPD" />
+                        <AnalyzedTextArea label="What is Match of Force and why is it important?" name="matchOfForce" />
 
-                        <div>
-                            <label className="block text-gray-300 mb-2">Experience Level</label>
-                            <select name="experience" onChange={handleChange} className="w-full bg-gray-900 border border-gray-700 p-3 rounded text-white focus:border-blue-500 outline-none">
-                                <option value="">Select Level...</option>
-                                <option value="Fresher">Fresher</option>
-                                <option value="Experienced">Experienced</option>
-                            </select>
+                        <TextArea label="How would you handle rule breakers?" name="ruleBreakers" onChange={handleChange} />
+                        <TextArea label="What actions should we take if you fail as a Cop?" name="unprofessional" onChange={handleChange} />
+
+                        {/* HoloSim at bottom */}
+                        <div className="pt-4 border-t border-slate-700">
+                            <h3 className="text-lg font-medium text-blue-400 mb-2">De-escalation Training</h3>
+                            <p className="text-slate-500 text-sm mb-4">Complete this simulated traffic stop. Minimum score: 50.</p>
+                            <HoloSimChat scenarioType="pd" onComplete={handleHoloSimComplete} />
+                            {holoSimScore !== null && (
+                                <div className={`mt-3 p-2 rounded text-sm flex items-center gap-2 ${holoSimScore >= 50 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                                    <span>Score: {holoSimScore}/100 {holoSimScore >= 50 ? '✓' : '✗'}</span>
+                                </div>
+                            )}
                         </div>
 
-                        <TextArea label="Why do you want to join the Police Department?" name="whyJoinPD" onChange={handleChange} required />
-
-                        {/* Scenarios */}
-                        <div className="space-y-6">
-                            <h3 className="text-xl font-bold text-blue-400 border-b border-gray-700 pb-2">Situational Assessment</h3>
-
-                            <TextArea label="How would you handle a situation where you have to work with other players who may not be following the rules?" name="ruleBreakers" onChange={handleChange} required />
-
-                            <TextArea label="What actions should we take if you don't maintain professionalism and fail as a Cop?" name="unprofessional" onChange={handleChange} required />
-
-                            <TextArea label="What is Match of Force and why is it important?" name="matchOfForce" onChange={handleChange} required />
-
-                            <div className="bg-gray-800/50 p-4 rounded-lg">
-                                <p className="text-gray-300 text-sm mb-4 italic">
-                                    <strong>Situation 1:</strong> In a code red you are following n+2 and you use class 1 weapon while having class 2. The suspect has only class 1. Why don't you use class 2 to neutralize immediately? Why use Match of Force here?
-                                </p>
-                                <TextArea label="Your Answer" name="situation1" rows="4" onChange={handleChange} required />
-                            </div>
-                        </div>
-
-                        {/* AI Quality Analysis Section */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-blue-400 border-b border-gray-700 pb-2 flex items-center gap-2">
-                                <Sparkles className="w-5 h-5" />
-                                AI Quality Check
-                            </h3>
-                            <AIQualityHUD
-                                inputText={getAnalyzableText()}
-                                onAnalysisComplete={handleAnalysisComplete}
-                            />
-                        </div>
-
-                        {/* Validation Banner */}
                         <ValidationBanner />
-
-                        {/* Smart Submit Button */}
-                        <SmartSubmitButton color="bg-blue-600" />
+                        <SubmitButton color="bg-blue-600" />
                     </form>
                 </Card>
             </div>
         );
     }
 
-    // --- EMS APPLICATION FORM ---
+    // === EMS APPLICATION ===
     if (type === 'ems') {
         return (
             <div className="max-w-4xl mx-auto pt-10 animate-fade-in pb-20">
                 <Card>
-                    <div className="border-b border-red-500/30 pb-4 mb-6">
-                        <h2 className="text-3xl font-bold text-red-500">EMS Application</h2>
-                        <p className="text-gray-400 mt-2">Emergency Medical Services</p>
+                    <div className="border-b border-rose-500/30 pb-4 mb-6">
+                        <h2 className="text-3xl font-bold text-rose-400">EMS Application</h2>
+                        <p className="text-slate-400 mt-1">Emergency Medical Services</p>
                     </div>
 
-                    {success && (
-                        <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200 animate-fade-in">
-                            <strong>Success!</strong> Application submitted successfully. Redirecting...
-                        </div>
-                    )}
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 animate-fade-in">
-                            <strong>Error:</strong> {error}
-                        </div>
-                    )}
+                    {success && <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-300 text-sm">Application submitted successfully!</div>}
+                    {error && <div className="mb-4 p-3 bg-rose-500/20 border border-rose-500/30 rounded-lg text-rose-300 text-sm">{error}</div>}
 
-                    <form onSubmit={handleSubmit} className="space-y-8">
-                        <div className="grid md:grid-cols-2 gap-6">
-                            <Input label="Name (IRL)" name="irlName" onChange={handleChange} required />
-                            <Input label="Age (IRL)" name="irlAge" type="number" onChange={handleChange} required />
-                            <Input label="IC Name" name="icName" onChange={handleChange} required />
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <Input label="Name (IRL)" name="irlName" onChange={handleChange} />
+                            <Input label="Age (IRL)" name="irlAge" type="number" onChange={handleChange} />
+                            <Input label="IC Name" name="icName" onChange={handleChange} />
                         </div>
 
-                        {/* General */}
-                        <div className="space-y-4">
-                            <TextArea label="Introduce yourself and tell us why you applied for EMS?" name="emsIntro" onChange={handleChange} required />
-                            <TextArea label="What do you know about the role of EMS in the city?" name="emsRole" onChange={handleChange} required />
-                            <TextArea label="How would you describe the responsibilities of an EMS worker?" name="emsResp" onChange={handleChange} required />
-                            <TextArea label="Why should we choose you over other applicants?" name="emsChoose" onChange={handleChange} required />
+                        <AnalyzedTextArea label="Introduce yourself and tell us why you applied for EMS?" name="emsIntro" />
+                        <AnalyzedTextArea label="What do you know about the role of EMS?" name="emsRole" />
+                        <AnalyzedTextArea label="How would you describe EMS responsibilities?" name="emsResp" />
+
+                        <TextArea label="What's the first thing you'd do at an accident scene?" name="emsScene" onChange={handleChange} />
+                        <TextArea label="How do you prioritize multiple patients?" name="emsPriority" onChange={handleChange} />
+                        <TextArea label="What does CPR stand for?" name="emsCPR" onChange={handleChange} />
+
+                        {/* HoloSim at bottom */}
+                        <div className="pt-4 border-t border-slate-700">
+                            <h3 className="text-lg font-medium text-rose-400 mb-2">Patient Interaction Training</h3>
+                            <p className="text-slate-500 text-sm mb-4">Practice handling a difficult patient.</p>
+                            <HoloSimChat scenarioType="ems" onComplete={handleHoloSimComplete} />
                         </div>
 
-                        {/* Medical Knowledge */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-red-400 border-b border-gray-700 pb-2">Medical Knowledge / RP</h3>
-                            <TextArea label="What’s the first thing you would do when you arrive at the scene of an accident?" name="emsScene" onChange={handleChange} required />
-                            <TextArea label="If you see two unconscious patients at the same time, how will you prioritize them?" name="emsPriority" onChange={handleChange} required />
-                            <TextArea label="How do you handle a situation where a patient refuses medical help?" name="emsRefusal" onChange={handleChange} required />
-                            <TextArea label="What does CPR stand for, and when should it be used? (RP-friendly)" name="emsCPR" onChange={handleChange} required />
-                            <TextArea label="What basic medical roleplay commands/emotes would you use when reviving someone?" name="emsCommands" onChange={handleChange} required />
-                        </div>
-
-                        {/* Scenarios */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-red-400 border-b border-gray-700 pb-2">Scenarios</h3>
-                            <TextArea label="You get a call about a shooting, and police say the area isn’t fully secured. What would you do?" name="emsShooting" onChange={handleChange} required />
-                            <TextArea label="A player keeps trolling or refusing RP during treatment. How will you handle it?" name="emsTrolling" onChange={handleChange} required />
-                            <TextArea label="You are the only EMS on duty, and you get multiple 911 calls at the same time—what’s your plan?" name="emsLone" onChange={handleChange} required />
-                            <TextArea label="What will you do if a patient is roleplaying severe injuries but refuses to go to the hospital?" name="emsFakeInjury" onChange={handleChange} required />
-                            <TextArea label="If someone dies due to server rules (perma RP), how will you handle it professionally?" name="emsPerma" onChange={handleChange} required />
-                        </div>
-
-                        {/* Teamwork */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-red-400 border-b border-gray-700 pb-2">Teamwork & Communication</h3>
-                            <TextArea label="How would you coordinate with police officers at an accident scene?" name="emsCoord" onChange={handleChange} required />
-                            <TextArea label="How do you deal with a difficult or rude patient in RP?" name="emsRude" onChange={handleChange} required />
-                            <TextArea label="What’s more important to you as EMS: speed or accuracy in treatment, and why?" name="emsSpeed" onChange={handleChange} required />
-                        </div>
-
-                        {/* AI Quality Analysis Section */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-red-400 border-b border-gray-700 pb-2 flex items-center gap-2">
-                                <Sparkles className="w-5 h-5" />
-                                AI Quality Check
-                            </h3>
-                            <AIQualityHUD
-                                inputText={getAnalyzableText()}
-                                onAnalysisComplete={handleAnalysisComplete}
-                            />
-                        </div>
-
-                        {/* Validation Banner */}
                         <ValidationBanner />
-
-                        {/* Smart Submit Button */}
-                        <SmartSubmitButton color="bg-red-600" />
+                        <SubmitButton color="bg-rose-600" />
                     </form>
                 </Card>
             </div>
         );
     }
 
-    // --- STAFF APPLICATION FORM ---
+    // === STAFF APPLICATION ===
     if (type === 'staff') {
         return (
             <div className="max-w-4xl mx-auto pt-10 animate-fade-in pb-20">
                 <Card>
                     <div className="border-b border-purple-500/30 pb-4 mb-6">
-                        <h2 className="text-3xl font-bold text-purple-500">Staff Application</h2>
-                        <p className="text-gray-400 mt-2">Community Management & Enforcement</p>
+                        <h2 className="text-3xl font-bold text-purple-400">Staff Application</h2>
+                        <p className="text-slate-400 mt-1">Community Management</p>
                     </div>
 
-                    {success && (
-                        <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200 animate-fade-in">
-                            <strong>Success!</strong> Application submitted successfully. Redirecting...
-                        </div>
-                    )}
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 animate-fade-in">
-                            <strong>Error:</strong> {error}
-                        </div>
-                    )}
+                    {success && <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-300 text-sm">Application submitted successfully!</div>}
+                    {error && <div className="mb-4 p-3 bg-rose-500/20 border border-rose-500/30 rounded-lg text-rose-300 text-sm">{error}</div>}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="grid md:grid-cols-2 gap-6">
+                        <div className="grid md:grid-cols-2 gap-4">
                             <Input label="Discord Tag" name="discordTag" value={user.username} readOnly />
-                            <Input label="Age (Real Life)" name="age" type="number" onChange={handleChange} required />
-                            <Input label="Weekly Hours" name="hours" onChange={handleChange} required />
+                            <Input label="Age (IRL)" name="age" type="number" onChange={handleChange} />
+                            <Input label="Weekly Hours" name="hours" onChange={handleChange} />
                         </div>
 
-                        <TextArea label="Have you ever been staff in any RP server before? (If yes, list details)" name="experience" onChange={handleChange} required />
-                        <TextArea label="What are staff responsibilities in an RP community?" name="responsibilities" onChange={handleChange} required />
+                        <AnalyzedTextArea label="Have you been staff before? (List details)" name="experience" />
+                        <AnalyzedTextArea label="What are staff responsibilities?" name="responsibilities" />
+                        <AnalyzedTextArea label="Why staff and not just a player?" name="whyStaff" />
 
-                        <TextArea label="Define: FailRP, VDM, RDM, Powergaming, Metagaming." name="definitions" rows="5" onChange={handleChange} required />
+                        <TextArea label="Define: FailRP, VDM, RDM, Powergaming, Metagaming" name="definitions" rows={5} onChange={handleChange} />
+                        <TextArea label="2 players argue in OOC. What do you do?" name="scenarios" onChange={handleChange} />
+                        <TextArea label="Player accuses another without proof. What do you do?" name="accusation" onChange={handleChange} />
+                        <TextArea label="You see staff abusing powers. What's your response?" name="abuse" onChange={handleChange} />
 
-                        {/* Situational */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-purple-400 border-b border-gray-700 pb-2">Situational Questions</h3>
-                            <TextArea label="2 players argue in OOC chat. What do you do?" name="scenarios" onChange={handleChange} required />
-                            <TextArea label="Player accuses another of RDM without proof. What do you do?" name="accusation" onChange={handleChange} required />
-                            <TextArea label="You see staff abusing powers. What’s your response?" name="abuse" onChange={handleChange} required />
-                            <TextArea label="How do you handle stress with multiple reports?" name="stress" onChange={handleChange} required />
+                        {/* HoloSim at bottom */}
+                        <div className="pt-4 border-t border-slate-700">
+                            <h3 className="text-lg font-medium text-purple-400 mb-2">Conflict Resolution Training</h3>
+                            <p className="text-slate-500 text-sm mb-4">Handle an angry player making a report.</p>
+                            <HoloSimChat scenarioType="staff" onComplete={handleHoloSimComplete} />
                         </div>
 
-                        <div className="bg-gray-800 p-4 rounded">
-                            <label className="block text-purple-300 font-bold mb-2">Punishments</label>
-                            <p className="text-gray-400 text-sm mb-2">Please suggest punishments for the following:</p>
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input label="First-time VDM" name="punishVDM" onChange={handleChange} />
-                                <Input label="Repeated RDM" name="punishRDM" onChange={handleChange} />
-                                <Input label="Hacking/Mod Menu" name="punishHack" onChange={handleChange} />
-                                <Input label="Racism/Discrimination" name="punishRacism" onChange={handleChange} />
-                            </div>
-                        </div>
-
-                        <TextArea label="Why staff and not just a player?" name="whyStaff" onChange={handleChange} required />
-
-                        <div className="space-y-3 border-t border-gray-700 pt-4 bg-purple-900/10 p-4 rounded">
-                            <p className="text-gray-300 font-bold">Agreements</p>
-                            <label className="flex items-center gap-3 text-gray-300 cursor-pointer">
-                                <input type="checkbox" required className="w-5 h-5 accent-purple-500" />
+                        <div className="space-y-2 p-4 bg-purple-900/10 rounded-lg">
+                            <p className="text-slate-300 text-sm font-medium">Agreements</p>
+                            <label className="flex items-center gap-2 text-slate-400 text-sm">
+                                <input type="checkbox" required className="accent-purple-500" />
                                 I agree staff is responsibility, not clout.
                             </label>
-                            <label className="flex items-center gap-3 text-gray-300 cursor-pointer">
-                                <input type="checkbox" required className="w-5 h-5 accent-purple-500" />
+                            <label className="flex items-center gap-2 text-slate-400 text-sm">
+                                <input type="checkbox" required className="accent-purple-500" />
                                 I will stay unbiased & fair.
                             </label>
-                            <label className="flex items-center gap-3 text-gray-300 cursor-pointer">
-                                <input type="checkbox" required className="w-5 h-5 accent-purple-500" />
-                                I accept instant removal if abusing powers.
+                            <label className="flex items-center gap-2 text-slate-400 text-sm">
+                                <input type="checkbox" required className="accent-purple-500" />
+                                I accept removal if abusing powers.
                             </label>
                         </div>
 
-                        {/* AI Quality Analysis Section */}
-                        <div className="space-y-4">
-                            <h3 className="text-xl font-bold text-purple-400 border-b border-gray-700 pb-2 flex items-center gap-2">
-                                <Sparkles className="w-5 h-5" />
-                                AI Quality Check
-                            </h3>
-                            <AIQualityHUD
-                                inputText={getAnalyzableText()}
-                                onAnalysisComplete={handleAnalysisComplete}
-                            />
-                        </div>
-
-                        {/* Validation Banner */}
                         <ValidationBanner />
-
-                        {/* Smart Submit Button */}
-                        <SmartSubmitButton color="bg-purple-600" />
+                        <SubmitButton color="bg-purple-600" />
                     </form>
                 </Card>
             </div>
@@ -588,13 +394,14 @@ const DepartmentApp = ({ type, user }) => {
 const Input = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
-        <input {...props} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+        <input {...props} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
     </div>
 );
+
 const TextArea = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
-        <textarea {...props} rows={props.rows || 4} className="w-full bg-gray-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+        <textarea {...props} rows={props.rows || 4} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none" required />
     </div>
 );
 

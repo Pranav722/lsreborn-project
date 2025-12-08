@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, AlertTriangle, CheckCircle2, Loader2, ShieldAlert, Copy, Brain } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, ShieldAlert } from 'lucide-react';
 
 /**
- * AIQualityHUD - Real-time AI Analysis Display Component
+ * AIQualityHUD - Minimalist Status Bar for AI Analysis
  * 
- * Shows circular progress gauges for Uniqueness, Quality, and Authenticity (inverse of AI probability)
- * with debounced API calls to the Gemini-powered analysis endpoint.
- * 
+ * A sleek, futuristic mini-bar that displays Quality, Uniqueness, and Authenticity
+ * using thin horizontal progress bars. Designed to sit directly below textareas.
+ *
  * @param {string} inputText - The text to analyze
  * @param {function} onAnalysisComplete - Optional callback when analysis completes
  */
@@ -20,29 +20,26 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
 
     // Debounce API calls - wait 2 seconds after typing stops
     useEffect(() => {
-        // Clear any existing timer
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
         }
 
-        // Don't analyze if text is too short (less than 50 chars)
+        // Don't analyze if text is too short
         if (!inputText || inputText.trim().length < 50) {
             setAnalysis(null);
             setPlagiarism(null);
             setError(null);
+            setLoading(false);
             return;
         }
 
-        // Don't re-analyze if text hasn't changed significantly
         if (inputText === lastAnalyzedText) {
             return;
         }
 
-        // Set loading state immediately to show user we're waiting
         setLoading(true);
         setError(null);
 
-        // Debounce: Wait 2 seconds after typing stops
         debounceTimerRef.current = setTimeout(async () => {
             try {
                 const response = await fetch(`${import.meta.env.VITE_API_URL}/api/analysis/analyze-text`, {
@@ -65,7 +62,6 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
                 setLastAnalyzedText(inputText);
                 setError(null);
 
-                // Call optional callback
                 if (onAnalysisComplete) {
                     onAnalysisComplete(data);
                 }
@@ -77,7 +73,6 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
             }
         }, 2000);
 
-        // Cleanup timer on unmount or text change
         return () => {
             if (debounceTimerRef.current) {
                 clearTimeout(debounceTimerRef.current);
@@ -85,220 +80,127 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
         };
     }, [inputText, lastAnalyzedText, onAnalysisComplete]);
 
-    // Calculate Authenticity as inverse of AI probability
+    // Calculate authenticity (inverse of AI probability)
     const authenticity = analysis ? 100 - analysis.aiProbability : 0;
 
-    // Determine color based on score
-    const getScoreColor = (score, inverted = false) => {
-        const adjustedScore = inverted ? 100 - score : score;
-        if (adjustedScore >= 70) return { stroke: '#22c55e', text: 'text-green-400', bg: 'bg-green-500/20' };
-        if (adjustedScore >= 40) return { stroke: '#eab308', text: 'text-yellow-400', bg: 'bg-yellow-500/20' };
-        return { stroke: '#ef4444', text: 'text-red-400', bg: 'bg-red-500/20' };
+    // Get color based on score
+    const getBarColor = (score) => {
+        if (score >= 70) return 'bg-emerald-500';
+        if (score >= 40) return 'bg-amber-500';
+        return 'bg-rose-500';
     };
 
-    // Circular Progress Component
-    const CircularGauge = ({ value, label, icon: Icon, inverted = false }) => {
-        const radius = 45;
-        const circumference = 2 * Math.PI * radius;
-        const progress = (value / 100) * circumference;
-        const colors = getScoreColor(value, inverted);
-
-        return (
-            <div className="flex flex-col items-center group">
-                <div className="relative w-28 h-28 sm:w-32 sm:h-32">
-                    {/* Background circle */}
-                    <svg className="w-full h-full transform -rotate-90">
-                        <circle
-                            cx="50%"
-                            cy="50%"
-                            r={radius}
-                            stroke="rgba(255,255,255,0.1)"
-                            strokeWidth="8"
-                            fill="transparent"
-                        />
-                        {/* Progress circle with animation */}
-                        <circle
-                            cx="50%"
-                            cy="50%"
-                            r={radius}
-                            stroke={colors.stroke}
-                            strokeWidth="8"
-                            fill="transparent"
-                            strokeLinecap="round"
-                            strokeDasharray={circumference}
-                            strokeDashoffset={circumference - progress}
-                            className="transition-all duration-1000 ease-out"
-                            style={{
-                                filter: `drop-shadow(0 0 6px ${colors.stroke})`
-                            }}
-                        />
-                    </svg>
-
-                    {/* Center content */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <Icon className={`w-5 h-5 ${colors.text} mb-1 group-hover:scale-110 transition-transform`} />
-                        <span className={`text-2xl font-bold ${colors.text}`}>
-                            {value}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Label */}
-                <span className="mt-2 text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    {label}
-                </span>
-            </div>
-        );
+    const getTextColor = (score) => {
+        if (score >= 70) return 'text-emerald-400';
+        if (score >= 40) return 'text-amber-400';
+        return 'text-rose-400';
     };
 
-    // Don't render if no text input
+    // Minimal state when no text
     if (!inputText || inputText.trim().length < 50) {
         return (
-            <div className="bg-gray-900/50 border border-gray-700/50 rounded-xl p-4 text-center">
-                <div className="flex items-center justify-center gap-2 text-gray-500">
-                    <Brain className="w-5 h-5" />
-                    <span className="text-sm">Write at least 50 characters to enable AI analysis</span>
+            <div className="mt-2 px-3 py-2 bg-slate-900/60 rounded-lg border border-slate-700/50 opacity-60">
+                <div className="flex items-center gap-2 text-slate-500 text-xs">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+                    <span>AI Analysis • Write 50+ characters to scan</span>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 border border-cyan-500/20 rounded-xl p-6 backdrop-blur-sm">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+        <div className="mt-2 px-3 py-2.5 bg-slate-900/80 backdrop-blur-sm rounded-lg border border-slate-700/50">
+            {/* Header with status */}
+            <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-cyan-400" />
-                    <h3 className="text-lg font-semibold text-white">AI Quality Analysis</h3>
+                    {loading ? (
+                        <>
+                            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                            <span className="text-xs text-cyan-400">Scanning...</span>
+                        </>
+                    ) : error ? (
+                        <>
+                            <AlertCircle className="w-3 h-3 text-rose-400" />
+                            <span className="text-xs text-rose-400">Error</span>
+                        </>
+                    ) : analysis ? (
+                        <>
+                            <CheckCircle className="w-3 h-3 text-emerald-400" />
+                            <span className="text-xs text-slate-400">AI Analysis</span>
+                        </>
+                    ) : (
+                        <>
+                            <div className="w-2 h-2 rounded-full bg-slate-500"></div>
+                            <span className="text-xs text-slate-500">Ready</span>
+                        </>
+                    )}
                 </div>
-                {loading && (
-                    <div className="flex items-center gap-2 text-cyan-400">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-xs">Analyzing...</span>
+
+                {/* Plagiarism warning badge */}
+                {plagiarism?.isPlagiarized && (
+                    <div className="flex items-center gap-1 px-2 py-0.5 bg-rose-500/20 rounded text-rose-400 text-xs">
+                        <ShieldAlert className="w-3 h-3" />
+                        <span>Plagiarism Detected</span>
                     </div>
                 )}
             </div>
 
-            {/* Error Display */}
-            {error && (
-                <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-300">
-                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">{error}</span>
-                </div>
-            )}
-
-            {/* Gauges Grid */}
+            {/* Progress Bars */}
             {analysis ? (
-                <>
-                    <div className="flex justify-around items-center gap-4 mb-6">
-                        <CircularGauge
-                            value={analysis.uniqueness}
-                            label="Uniqueness"
-                            icon={Sparkles}
-                        />
-                        <CircularGauge
-                            value={analysis.quality}
-                            label="Quality"
-                            icon={CheckCircle2}
-                        />
-                        <CircularGauge
-                            value={authenticity}
-                            label="Authenticity"
-                            icon={Brain}
-                            inverted={true}
-                        />
+                <div className="space-y-2">
+                    {/* Quality Bar */}
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500 w-12">Quality</span>
+                        <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full ${getBarColor(analysis.quality)} transition-all duration-700 ease-out`}
+                                style={{ width: `${analysis.quality}%` }}
+                            />
+                        </div>
+                        <span className={`text-xs font-mono w-8 text-right ${getTextColor(analysis.quality)}`}>
+                            {analysis.quality}
+                        </span>
                     </div>
 
-                    {/* Plagiarism Warning */}
-                    {plagiarism?.isPlagiarized && (
-                        <div className="mb-4 p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
-                            <div className="flex items-start gap-3">
-                                <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="font-semibold text-red-300 mb-1">Plagiarism Detected</h4>
-                                    <p className="text-sm text-red-200/80">
-                                        This text has {Math.round(plagiarism.similarityScore * 100)}% similarity with server rules.
-                                    </p>
-                                    {plagiarism.matchedRules?.length > 0 && (
-                                        <div className="mt-2 text-xs text-red-200/60">
-                                            Matched: {plagiarism.matchedRules.map(r => r.ruleId).join(', ')}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                    {/* Uniqueness Bar */}
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500 w-12">Unique</span>
+                        <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full ${getBarColor(analysis.uniqueness)} transition-all duration-700 ease-out`}
+                                style={{ width: `${analysis.uniqueness}%` }}
+                            />
                         </div>
-                    )}
-
-                    {/* Detailed Feedback Box */}
-                    <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                Analysis Details
-                            </span>
-                            <button
-                                onClick={() => navigator.clipboard.writeText(JSON.stringify(analysis, null, 2))}
-                                className="text-gray-500 hover:text-cyan-400 transition-colors p-1"
-                                title="Copy JSON"
-                            >
-                                <Copy className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div className="flex justify-between items-center py-2 px-3 bg-gray-900/50 rounded">
-                                <span className="text-gray-400">AI Probability</span>
-                                <span className={`font-mono font-bold ${getScoreColor(analysis.aiProbability, true).text}`}>
-                                    {analysis.aiProbability}%
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 px-3 bg-gray-900/50 rounded">
-                                <span className="text-gray-400">Relevance</span>
-                                <span className={`font-mono font-bold ${getScoreColor(analysis.relevance).text}`}>
-                                    {analysis.relevance}%
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 px-3 bg-gray-900/50 rounded">
-                                <span className="text-gray-400">Quality</span>
-                                <span className={`font-mono font-bold ${getScoreColor(analysis.quality).text}`}>
-                                    {analysis.quality}%
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 px-3 bg-gray-900/50 rounded">
-                                <span className="text-gray-400">Uniqueness</span>
-                                <span className={`font-mono font-bold ${getScoreColor(analysis.uniqueness).text}`}>
-                                    {analysis.uniqueness}%
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Plagiarism Score */}
-                        {plagiarism && (
-                            <div className={`mt-3 flex justify-between items-center py-2 px-3 rounded ${plagiarism.isPlagiarized ? 'bg-red-900/30 border border-red-500/30' : 'bg-green-900/20 border border-green-500/20'}`}>
-                                <span className="text-gray-400">Rule Similarity</span>
-                                <span className={`font-mono font-bold ${plagiarism.isPlagiarized ? 'text-red-400' : 'text-green-400'}`}>
-                                    {Math.round(plagiarism.similarityScore * 100)}%
-                                </span>
-                            </div>
-                        )}
+                        <span className={`text-xs font-mono w-8 text-right ${getTextColor(analysis.uniqueness)}`}>
+                            {analysis.uniqueness}
+                        </span>
                     </div>
-                </>
-            ) : (
-                /* Loading State */
-                <div className="flex flex-col items-center justify-center py-8">
-                    <div className="relative w-24 h-24 mb-4">
-                        <div className="absolute inset-0 rounded-full border-4 border-gray-700"></div>
-                        <div className="absolute inset-0 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin"></div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <Brain className="w-8 h-8 text-cyan-400" />
+
+                    {/* Authenticity (Real) Bar */}
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs text-slate-500 w-12">Real</span>
+                        <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full ${getBarColor(authenticity)} transition-all duration-700 ease-out`}
+                                style={{ width: `${authenticity}%` }}
+                            />
                         </div>
+                        <span className={`text-xs font-mono w-8 text-right ${getTextColor(authenticity)}`}>
+                            {authenticity}
+                        </span>
                     </div>
-                    <p className="text-gray-400 text-sm">
-                        {loading ? 'Analyzing your text...' : 'Waiting for input...'}
-                    </p>
-                    <p className="text-gray-500 text-xs mt-1">
-                        Analysis begins 2 seconds after you stop typing
-                    </p>
                 </div>
+            ) : loading ? (
+                <div className="flex items-center gap-2 py-1">
+                    <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full w-1/3 bg-cyan-500/50 rounded-full animate-pulse"></div>
+                    </div>
+                </div>
+            ) : null}
+
+            {/* Error message */}
+            {error && (
+                <p className="text-xs text-rose-400 mt-1">{error}</p>
             )}
         </div>
     );
