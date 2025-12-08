@@ -144,37 +144,37 @@ const WhitelistForm = ({ user }) => {
                 <div className="grid md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">IRL Name</label>
-                        <input name="irlName" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
+                        <input name="irlName" onChange={handleChange} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 placeholder-slate-500" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">IRL Age</label>
-                        <input name="irlAge" type="number" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
+                        <input name="irlAge" type="number" onChange={handleChange} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 placeholder-slate-500" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">Character Name</label>
-                        <input name="characterName" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
+                        <input name="characterName" onChange={handleChange} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 placeholder-slate-500" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">Character Age</label>
-                        <input name="characterAge" type="number" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
+                        <input name="characterAge" type="number" onChange={handleChange} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 placeholder-slate-500" required />
                     </div>
                 </div>
 
                 {/* Backstory with inline AI analysis */}
-                <div>
+                <div className="relative">
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory (Min 200 words)</label>
-                    <textarea name="backstory" rows="8" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500 resize-none" required />
+                    <textarea name="backstory" rows="8" onChange={handleChange} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 resize-none placeholder-slate-500" required />
                     <AIQualityHUD inputText={formData.backstory || ''} onAnalysisComplete={handleAnalysisComplete} />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Where did you find us?</label>
-                    <input name="foundUs" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
+                    <input name="foundUs" onChange={handleChange} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 placeholder-slate-500" required />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Previous RP Experience</label>
-                    <textarea name="experience" rows="3" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500 resize-none" required />
+                    <textarea name="experience" rows="3" onChange={handleChange} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 resize-none placeholder-slate-500" required />
                 </div>
 
                 {/* Smart Submit Button */}

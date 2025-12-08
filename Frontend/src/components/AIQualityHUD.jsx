@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertCircle, CheckCircle, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { AlertCircle, CheckCircle, ShieldAlert, AlertTriangle, RefreshCw } from 'lucide-react';
 
 /**
  * AIQualityHUD - Minimalist Status Bar for AI Analysis
@@ -196,8 +196,23 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
             {/* AI Service Unavailable Message - Does NOT block submission */}
             {aiUnavailable && !loading && (
                 <div className="py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded text-amber-300 text-xs">
-                    <p className="font-medium">AI Service Unavailable</p>
-                    <p className="text-amber-400/80 mt-0.5">Manual Review Required • You may still submit</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-medium">AI Service Unavailable</p>
+                            <p className="text-amber-400/80 mt-0.5">Manual Review Required • You may still submit</p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setAiUnavailable(false);
+                                setLastAnalyzedText(''); // Force re-analysis
+                                setLoading(true);
+                            }}
+                            className="px-2 py-1 bg-amber-500/20 border border-amber-500/30 rounded hover:bg-amber-500/30 transition-colors flex items-center gap-1"
+                        >
+                            <RefreshCw className="w-3 h-3" />
+                            Retry
+                        </button>
+                    </div>
                 </div>
             )}
 

@@ -234,15 +234,15 @@ const DepartmentApp = ({ type, user }) => {
         );
     };
 
-    // TextArea with inline AI analysis - Fixed visibility
+    // TextArea with inline AI analysis - Fixed visibility with opaque bg and visible caret
     const AnalyzedTextArea = ({ label, name, ...props }) => (
-        <div>
+        <div className="relative">
             <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
             <textarea
                 name={name}
                 onChange={handleChange}
                 rows={props.rows || 4}
-                className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500 resize-none"
+                className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 resize-none placeholder-slate-500"
                 required
                 {...props}
             />
@@ -404,18 +404,18 @@ const DepartmentApp = ({ type, user }) => {
     return null;
 };
 
-// Helper Components - Fixed textarea visibility with high contrast colors
+// Helper Components - Fixed with opaque bg-slate-900, text-white, and visible caret
 const Input = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
-        <input {...props} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
+        <input {...props} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 placeholder-slate-500" required />
     </div>
 );
 
 const TextArea = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
-        <textarea {...props} rows={props.rows || 4} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500 resize-none" required />
+        <textarea {...props} rows={props.rows || 4} className="w-full bg-slate-900 text-white border border-slate-700 p-3 rounded-lg focus:outline-none focus:border-cyan-500 caret-cyan-500 relative z-10 resize-none placeholder-slate-500" required />
     </div>
 );
 
