@@ -199,7 +199,7 @@ router.post('/analyze-text', isAuthenticated, async (req, res) => {
         }
 
         const model = ai.getGenerativeModel({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.0-flash-lite',
             generationConfig: {
                 temperature: 0.3, // Lower temperature for more consistent analysis
                 topP: 0.8,
