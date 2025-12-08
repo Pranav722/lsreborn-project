@@ -332,4 +332,53 @@ router.post('/analyze-text', isAuthenticated, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/analysis/debug-models
+ * Lists available models from Gemini API for debugging
+ */
+router.get('/debug-models', async (req, res) => {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        return res.json({ error: 'GEMINI_API_KEY not configured' });
+    }
+
+    try {
+        // Make direct API call to list models
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return res.json({
+                error: true,
+                status: response.status,
+                message: data.error?.message || 'Failed to list models',
+                details: data
+            });
+        }
+
+        // Extract model names
+        const models = data.models?.map(m => ({
+            name: m.name,
+            displayName: m.displayName,
+            supportedMethods: m.supportedGenerationMethods
+        })) || [];
+
+        return res.json({
+            success: true,
+            apiKeyPrefix: apiKey.substring(0, 10) + '...',
+            modelCount: models.length,
+            models: models
+        });
+    } catch (err) {
+        return res.json({
+            error: true,
+            message: err.message
+        });
+    }
+});
+
 module.exports = router;
