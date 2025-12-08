@@ -285,39 +285,46 @@ router.post('/analyze-text', isAuthenticated, async (req, res) => {
 
     } catch (error) {
         console.error(`[ANALYSIS][${requestId}] Gemini API Error:`, error.message);
-        console.error(`[ANALYSIS][${requestId}] Full error:`, error);
+        console.error(`[ANALYSIS][${requestId}] Full error object:`, JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
 
         // Handle specific error types
         if (error.message?.includes('QUOTA_EXCEEDED') || error.message?.includes('429')) {
             return res.status(429).json({
+                success: false,
+                error: true,
                 message: 'AI service is temporarily busy. Please try again in a few moments.',
-                error: 'RATE_LIMITED'
+                errorCode: 'RATE_LIMITED'
             });
         }
 
         if (error.message?.includes('API_KEY_INVALID') || error.message?.includes('401')) {
             return res.status(500).json({
+                success: false,
+                error: true,
                 message: 'AI service authentication failed.',
-                error: 'AUTH_FAILED'
+                errorCode: 'AUTH_FAILED'
             });
         }
 
         if (error.message?.includes('SAFETY') || error.message?.includes('blocked')) {
             return res.status(400).json({
+                success: false,
+                error: true,
                 message: 'The text could not be analyzed due to content restrictions.',
-                error: 'CONTENT_BLOCKED'
+                errorCode: 'CONTENT_BLOCKED'
             });
         }
 
-        // Return default values instead of crashing
-        console.log(`[ANALYSIS][${requestId}] Returning default analysis due to error`);
-        return res.json({
-            success: true,
+        // Return error response so frontend knows to stop scanning
+        console.log(`[ANALYSIS][${requestId}] Returning error response`);
+        return res.status(500).json({
+            success: false,
+            error: true,
+            message: error.message || 'AI analysis failed',
+            errorCode: 'ANALYSIS_FAILED',
             analysis: DEFAULT_ANALYSIS,
             plagiarism: DEFAULT_PLAGIARISM,
-            analyzedAt: new Date().toISOString(),
-            warning: 'Analysis encountered an error - using default values',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            analyzedAt: new Date().toISOString()
         });
     }
 });

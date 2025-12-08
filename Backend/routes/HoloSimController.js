@@ -278,10 +278,12 @@ router.post('/start', isAuthenticated, async (req, res) => {
             }
         });
 
-        // Start a new chat session
+        // Start a new chat session with properly formatted systemInstruction
         const chat = model.startChat({
             history: [],
-            systemInstruction: scenarioConfig.systemInstruction
+            systemInstruction: {
+                parts: [{ text: scenarioConfig.systemInstruction }]
+            }
         });
 
         // Get initial NPC message

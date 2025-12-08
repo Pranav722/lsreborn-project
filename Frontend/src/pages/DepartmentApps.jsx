@@ -16,6 +16,7 @@ const DepartmentApp = ({ type, user }) => {
     const [isPlagiarized, setIsPlagiarized] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [holoSimScore, setHoloSimScore] = useState(null);
+    const [aiUnavailable, setAiUnavailable] = useState(false);
 
     // Get the primary text field for AI analysis based on form type
     const getAnalyzableText = () => {
@@ -31,7 +32,13 @@ const DepartmentApp = ({ type, user }) => {
 
     // AI Analysis callback handler
     const handleAnalysisComplete = (data) => {
-        setAiAnalysis(data.analysis);
+        if (data.aiUnavailable) {
+            setAiUnavailable(true);
+            setAiAnalysis(null);
+        } else {
+            setAiAnalysis(data.analysis);
+            setAiUnavailable(false);
+        }
         setIsPlagiarized(data.plagiarism?.isPlagiarized || false);
         setIsAnalyzing(false);
     };
@@ -42,17 +49,21 @@ const DepartmentApp = ({ type, user }) => {
     };
 
     // Validation logic for submit button
+    // IMPORTANT: Do NOT block submission if AI is unavailable
     const isSubmitDisabled = () => {
         // HoloSim required for PD only
         if (type === 'pd' && (holoSimScore === null || holoSimScore < 50)) {
             return true;
         }
-        if (aiAnalysis && aiAnalysis.quality < 60) {
+        // Only block if AI analysis exists AND quality is too low
+        // If AI is unavailable, allow submission (flagged for manual review)
+        if (aiAnalysis && aiAnalysis.quality < 60 && !aiUnavailable) {
             return true;
         }
         if (isPlagiarized) {
             return true;
         }
+        // Don't block while still analyzing
         if (isAnalyzing) {
             return true;
         }
@@ -70,11 +81,14 @@ const DepartmentApp = ({ type, user }) => {
         if (isPlagiarized) {
             return { type: 'error', message: 'Plagiarism detected. Please write original content.' };
         }
-        if (aiAnalysis && aiAnalysis.quality < 60) {
+        if (aiAnalysis && aiAnalysis.quality < 60 && !aiUnavailable) {
             return { type: 'error', message: `Quality score too low (${aiAnalysis.quality}/100). Minimum required: 60.` };
         }
         if (isAnalyzing) {
             return { type: 'info', message: 'Analyzing your application...' };
+        }
+        if (aiUnavailable) {
+            return { type: 'warning', message: 'AI Service unavailable. You may still submit for manual review.' };
         }
         if (aiAnalysis && aiAnalysis.quality >= 60 && !isPlagiarized) {
             return { type: 'success', message: 'All checks passed! You may submit.' };
@@ -220,7 +234,7 @@ const DepartmentApp = ({ type, user }) => {
         );
     };
 
-    // TextArea with inline AI analysis
+    // TextArea with inline AI analysis - Fixed visibility
     const AnalyzedTextArea = ({ label, name, ...props }) => (
         <div>
             <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
@@ -228,7 +242,7 @@ const DepartmentApp = ({ type, user }) => {
                 name={name}
                 onChange={handleChange}
                 rows={props.rows || 4}
-                className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none"
+                className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500 resize-none"
                 required
                 {...props}
             />
@@ -390,18 +404,18 @@ const DepartmentApp = ({ type, user }) => {
     return null;
 };
 
-// Helper Components
+// Helper Components - Fixed textarea visibility with high contrast colors
 const Input = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
-        <input {...props} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+        <input {...props} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
     </div>
 );
 
 const TextArea = ({ label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-cyan-300 mb-1">{label}</label>
-        <textarea {...props} rows={props.rows || 4} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none" required />
+        <textarea {...props} rows={props.rows || 4} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500 resize-none" required />
     </div>
 );
 

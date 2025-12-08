@@ -29,22 +29,30 @@ const WhitelistForm = ({ user }) => {
     const [aiAnalysis, setAiAnalysis] = useState(null);
     const [isPlagiarized, setIsPlagiarized] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [aiUnavailable, setAiUnavailable] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
         if (aiAnalysis) setIsAnalyzing(true);
     };
 
-    // AI Analysis callback
+    // AI Analysis callback - handles AI service failures
     const handleAnalysisComplete = (data) => {
-        setAiAnalysis(data.analysis);
+        if (data.aiUnavailable) {
+            setAiUnavailable(true);
+            setAiAnalysis(null);
+        } else {
+            setAiAnalysis(data.analysis);
+            setAiUnavailable(false);
+        }
         setIsPlagiarized(data.plagiarism?.isPlagiarized || false);
         setIsAnalyzing(false);
     };
 
-    // Validation check
+    // Validation check - Do NOT block if AI is unavailable
     const isSubmitDisabled = () => {
-        if (aiAnalysis && aiAnalysis.quality < 60) return true;
+        // Only block if AI gave us a score AND it's too low
+        if (aiAnalysis && aiAnalysis.quality < 60 && !aiUnavailable) return true;
         if (isPlagiarized) return true;
         if (isAnalyzing) return true;
         return false;
@@ -136,37 +144,37 @@ const WhitelistForm = ({ user }) => {
                 <div className="grid md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">IRL Name</label>
-                        <input name="irlName" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                        <input name="irlName" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">IRL Age</label>
-                        <input name="irlAge" type="number" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                        <input name="irlAge" type="number" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">Character Name</label>
-                        <input name="characterName" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                        <input name="characterName" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-cyan-300 mb-1">Character Age</label>
-                        <input name="characterAge" type="number" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                        <input name="characterAge" type="number" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
                     </div>
                 </div>
 
                 {/* Backstory with inline AI analysis */}
                 <div>
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Character Backstory (Min 200 words)</label>
-                    <textarea name="backstory" rows="8" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none" required />
+                    <textarea name="backstory" rows="8" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500 resize-none" required />
                     <AIQualityHUD inputText={formData.backstory || ''} onAnalysisComplete={handleAnalysisComplete} />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Where did you find us?</label>
-                    <input name="foundUs" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" required />
+                    <input name="foundUs" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500" required />
                 </div>
 
                 <div>
                     <label className="block text-sm font-medium text-cyan-300 mb-1">Previous RP Experience</label>
-                    <textarea name="experience" rows="3" onChange={handleChange} className="w-full bg-slate-900/70 border border-cyan-500/30 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none" required />
+                    <textarea name="experience" rows="3" onChange={handleChange} className="w-full bg-slate-800 text-slate-100 border border-slate-600 rounded-lg px-4 py-2 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 focus:outline-none placeholder-slate-500 resize-none" required />
                 </div>
 
                 {/* Smart Submit Button */}

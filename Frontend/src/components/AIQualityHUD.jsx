@@ -1,20 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, AlertCircle, CheckCircle, ShieldAlert } from 'lucide-react';
+import { AlertCircle, CheckCircle, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 /**
  * AIQualityHUD - Minimalist Status Bar for AI Analysis
  * 
- * A sleek, futuristic mini-bar that displays Quality, Uniqueness, and Authenticity
- * using thin horizontal progress bars. Designed to sit directly below textareas.
- *
- * @param {string} inputText - The text to analyze
- * @param {function} onAnalysisComplete - Optional callback when analysis completes
+ * Handles AI service failures gracefully - never blocks submission.
  */
 const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
     const [analysis, setAnalysis] = useState(null);
     const [plagiarism, setPlagiarism] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [aiUnavailable, setAiUnavailable] = useState(false);
     const [lastAnalyzedText, setLastAnalyzedText] = useState('');
     const debounceTimerRef = useRef(null);
 
@@ -30,6 +27,7 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
             setPlagiarism(null);
             setError(null);
             setLoading(false);
+            setAiUnavailable(false);
             return;
         }
 
@@ -39,10 +37,14 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
 
         setLoading(true);
         setError(null);
+        setAiUnavailable(false);
 
         debounceTimerRef.current = setTimeout(async () => {
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/analysis/analyze-text`, {
+                const apiUrl = `${import.meta.env.VITE_API_URL}/api/analysis/analyze-text`;
+                console.log('[AIQualityHUD] Fetching:', apiUrl);
+
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -52,23 +54,64 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
                 });
 
                 const data = await response.json();
+                console.log('[AIQualityHUD] Response:', data);
 
-                if (!response.ok) {
-                    throw new Error(data.message || 'Analysis failed');
+                // Check if backend returned an error flag
+                if (data.error === true || !response.ok) {
+                    console.error('[AIQualityHUD] Backend error:', data.message);
+                    setAiUnavailable(true);
+                    setError(data.message || 'Analysis failed');
+                    // Still call onAnalysisComplete with null so parent knows we're done
+                    if (onAnalysisComplete) {
+                        onAnalysisComplete({
+                            analysis: null,
+                            plagiarism: null,
+                            aiUnavailable: true
+                        });
+                    }
+                    return;
+                }
+
+                // Check for zeroed-out scores (service error fallback)
+                if (data.analysis &&
+                    data.analysis.quality === 0 &&
+                    data.analysis.aiProbability === 0 &&
+                    data.analysis.uniqueness === 0) {
+                    console.warn('[AIQualityHUD] All scores are 0 - treating as service error');
+                    setAiUnavailable(true);
+                    if (onAnalysisComplete) {
+                        onAnalysisComplete({
+                            analysis: null,
+                            plagiarism: null,
+                            aiUnavailable: true
+                        });
+                    }
+                    return;
                 }
 
                 setAnalysis(data.analysis);
                 setPlagiarism(data.plagiarism);
                 setLastAnalyzedText(inputText);
                 setError(null);
+                setAiUnavailable(false);
 
                 if (onAnalysisComplete) {
                     onAnalysisComplete(data);
                 }
             } catch (err) {
-                console.error('Analysis error:', err);
+                console.error('[AIQualityHUD] Fetch error:', err);
+                setAiUnavailable(true);
                 setError(err.message);
+                // Notify parent that AI is unavailable
+                if (onAnalysisComplete) {
+                    onAnalysisComplete({
+                        analysis: null,
+                        plagiarism: null,
+                        aiUnavailable: true
+                    });
+                }
             } finally {
+                // ALWAYS stop loading regardless of success/error
                 setLoading(false);
             }
         }, 2000);
@@ -118,6 +161,11 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
                             <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
                             <span className="text-xs text-cyan-400">Scanning...</span>
                         </>
+                    ) : aiUnavailable ? (
+                        <>
+                            <AlertTriangle className="w-3 h-3 text-amber-400" />
+                            <span className="text-xs text-amber-400">AI Unavailable</span>
+                        </>
                     ) : error ? (
                         <>
                             <AlertCircle className="w-3 h-3 text-rose-400" />
@@ -145,8 +193,16 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
                 )}
             </div>
 
-            {/* Progress Bars */}
-            {analysis ? (
+            {/* AI Service Unavailable Message - Does NOT block submission */}
+            {aiUnavailable && !loading && (
+                <div className="py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded text-amber-300 text-xs">
+                    <p className="font-medium">AI Service Unavailable</p>
+                    <p className="text-amber-400/80 mt-0.5">Manual Review Required • You may still submit</p>
+                </div>
+            )}
+
+            {/* Progress Bars - Only show if we have valid analysis */}
+            {analysis && !aiUnavailable ? (
                 <div className="space-y-2">
                     {/* Quality Bar */}
                     <div className="flex items-center gap-3">
@@ -197,11 +253,6 @@ const AIQualityHUD = ({ inputText, onAnalysisComplete }) => {
                     </div>
                 </div>
             ) : null}
-
-            {/* Error message */}
-            {error && (
-                <p className="text-xs text-rose-400 mt-1">{error}</p>
-            )}
         </div>
     );
 };

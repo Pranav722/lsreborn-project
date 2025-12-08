@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Terminal, Send, RotateCcw, Lock, Trophy, Loader2, AlertCircle, User, Bot, Radio } from 'lucide-react';
+import { Terminal, Send, RotateCcw, Lock, Trophy, Loader2, AlertCircle, User, Bot, Radio, RefreshCw } from 'lucide-react';
 
 /**
  * HoloSimChat - Tactical Roleplay Simulation Terminal
  * 
- * A high-tech tactical display for practicing RP skills.
- * Matches slate-900/950 theme with cyan/blue accents.
+ * Features:
+ * - Retry button on connection failure
+ * - 3-attempt fallback with bypass score
+ * - Visible input text (fixed)
  */
 const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
     const [messages, setMessages] = useState([]);
@@ -18,9 +20,13 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
     const [grade, setGrade] = useState(null);
     const [error, setError] = useState(null);
     const [scenarioName, setScenarioName] = useState('');
+    const [attemptCount, setAttemptCount] = useState(0);
+    const [bypassed, setBypassed] = useState(false);
 
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
+
+    const MAX_ATTEMPTS = 3;
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -34,18 +40,36 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
         }
     }, [sessionActive, isComplete, messages]);
 
+    // Bypass the simulation after max attempts
+    const bypassSimulation = () => {
+        console.warn('[HoloSim] BYPASS: Max attempts reached. Auto-filling score.');
+        const bypassGrade = {
+            score: 100,
+            improvisation: 100,
+            feedback: 'Simulation service unavailable - Bypassed for manual review',
+            bypassed: true
+        };
+        setGrade(bypassGrade);
+        setIsComplete(true);
+        setBypassed(true);
+        setError(null);
+
+        if (onComplete) {
+            onComplete(bypassGrade);
+        }
+    };
+
     // Start a new simulation
     const startSimulation = async () => {
         setIsLoading(true);
         setError(null);
-        setMessages([]);
-        setGrade(null);
-        setIsComplete(false);
+
+        const newAttemptCount = attemptCount + 1;
+        setAttemptCount(newAttemptCount);
 
         const apiUrl = `${import.meta.env.VITE_API_URL}/api/holosim/start`;
-        console.log('[HoloSim] Starting simulation...');
+        console.log(`[HoloSim] Starting simulation (attempt ${newAttemptCount}/${MAX_ATTEMPTS})...`);
         console.log('[HoloSim] API URL:', apiUrl);
-        console.log('[HoloSim] Scenario Type:', scenarioType);
         console.log('[HoloSim] Auth Token:', localStorage.getItem('authToken') ? 'Present' : 'MISSING!');
 
         try {
@@ -67,6 +91,8 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
                 throw new Error(data.message || `HTTP ${response.status}: Failed to start simulation`);
             }
 
+            // Success - reset attempt counter
+            setAttemptCount(0);
             setScenarioName(data.scenarioName || 'Roleplay Simulation');
             setMessages([
                 {
@@ -79,13 +105,14 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
             setTurnCount(data.turnCount);
 
         } catch (err) {
-            console.error('[HoloSim] START ERROR:', err);
-            console.error('[HoloSim] Error Details:', {
-                message: err.message,
-                url: apiUrl,
-                token: localStorage.getItem('authToken') ? 'Present' : 'MISSING'
-            });
-            setError(err.message);
+            console.error(`[HoloSim] START ERROR (attempt ${newAttemptCount}):`, err);
+
+            // Check if we've hit max attempts
+            if (newAttemptCount >= MAX_ATTEMPTS) {
+                bypassSimulation();
+            } else {
+                setError(`Connection failed (${newAttemptCount}/${MAX_ATTEMPTS}). ${err.message}`);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -136,7 +163,7 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
             }
 
         } catch (err) {
-            console.error('Message error:', err);
+            console.error('[HoloSim] Message error:', err);
             setError(err.message);
         } finally {
             setIsLoading(false);
@@ -153,7 +180,7 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
                 }
             });
         } catch (err) {
-            console.error('Reset error:', err);
+            console.error('[HoloSim] Reset error:', err);
         }
 
         setMessages([]);
@@ -162,6 +189,8 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
         setIsComplete(false);
         setGrade(null);
         setError(null);
+        setAttemptCount(0);
+        setBypassed(false);
     };
 
     // Handle Enter key
@@ -196,6 +225,9 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
                     <Radio className="w-4 h-4 text-cyan-400" />
                     <span className="text-cyan-400 text-sm font-medium tracking-wide">HOLO-SIM</span>
                     <span className="text-slate-500 text-xs">v2.0</span>
+                    {bypassed && (
+                        <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">BYPASSED</span>
+                    )}
                 </div>
                 <div className="flex items-center gap-4">
                     {sessionActive && (
@@ -214,7 +246,7 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
 
             {/* Terminal Body */}
             <div className="h-64 overflow-y-auto p-4 bg-slate-950">
-                {!sessionActive ? (
+                {!sessionActive && !bypassed ? (
                     // Start Screen
                     <div className="h-full flex flex-col items-center justify-center text-center">
                         <div className="mb-4">
@@ -224,53 +256,84 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
                                 Practice your de-escalation and communication skills in a simulated scenario.
                             </p>
                         </div>
-                        <button
-                            onClick={startSimulation}
-                            disabled={isLoading}
-                            className="px-5 py-2 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-lg hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all duration-200 flex items-center gap-2 text-sm disabled:opacity-50"
-                        >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Initializing...
-                                </>
-                            ) : (
-                                <>
-                                    <Radio className="w-4 h-4" />
-                                    Start Simulation
-                                </>
-                            )}
-                        </button>
+
+                        {/* Error with Retry Button */}
+                        {error && (
+                            <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg max-w-xs">
+                                <div className="flex items-center gap-2 text-rose-400 text-xs mb-2">
+                                    <AlertCircle className="w-4 h-4" />
+                                    <span>{error}</span>
+                                </div>
+                                <button
+                                    onClick={startSimulation}
+                                    disabled={isLoading}
+                                    className="w-full px-3 py-1.5 bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded text-xs hover:bg-rose-500/30 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                    Retry ({attemptCount}/{MAX_ATTEMPTS})
+                                </button>
+                            </div>
+                        )}
+
+                        {!error && (
+                            <button
+                                onClick={startSimulation}
+                                disabled={isLoading}
+                                className="px-5 py-2 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 rounded-lg hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all duration-200 flex items-center gap-2 text-sm disabled:opacity-50"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        Initializing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Radio className="w-4 h-4" />
+                                        Start Simulation
+                                    </>
+                                )}
+                            </button>
+                        )}
                     </div>
                 ) : (
-                    // Chat Messages
+                    // Chat Messages or Bypass State
                     <div className="space-y-3 font-mono text-sm">
-                        {messages.map((msg, idx) => (
-                            <div key={idx} className={`${msg.type === 'system' ? 'text-slate-500 text-xs' :
-                                msg.type === 'user' ? 'text-cyan-300' : 'text-slate-300'
-                                }`}>
-                                {msg.type === 'system' ? (
-                                    <pre className="whitespace-pre-wrap leading-relaxed">{msg.content}</pre>
-                                ) : (
-                                    <div className="flex items-start gap-2">
-                                        {msg.type === 'user' ? (
-                                            <User className="w-4 h-4 mt-0.5 flex-shrink-0 text-cyan-500" />
-                                        ) : (
-                                            <Bot className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-500" />
-                                        )}
-                                        <div>
-                                            <span className={`text-xs ${msg.type === 'user' ? 'text-cyan-600' : 'text-slate-600'}`}>
-                                                {msg.type === 'user' ? '[YOU]' : '[NPC]'}
-                                            </span>
-                                            <p className="leading-relaxed">{msg.content}</p>
-                                        </div>
-                                    </div>
-                                )}
+                        {bypassed && !sessionActive ? (
+                            // Bypass message
+                            <div className="text-center py-8">
+                                <AlertCircle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
+                                <h4 className="text-amber-300 font-medium mb-1">Simulation Unavailable</h4>
+                                <p className="text-slate-500 text-xs mb-3">Service is temporarily down. Score has been auto-filled.</p>
+                                <p className="text-amber-400 text-xs">Your application will be flagged for manual review.</p>
                             </div>
-                        ))}
+                        ) : (
+                            messages.map((msg, idx) => (
+                                <div key={idx} className={`${msg.type === 'system' ? 'text-slate-500 text-xs' :
+                                    msg.type === 'user' ? 'text-cyan-300' : 'text-slate-300'
+                                    }`}>
+                                    {msg.type === 'system' ? (
+                                        <pre className="whitespace-pre-wrap leading-relaxed">{msg.content}</pre>
+                                    ) : (
+                                        <div className="flex items-start gap-2">
+                                            {msg.type === 'user' ? (
+                                                <User className="w-4 h-4 mt-0.5 flex-shrink-0 text-cyan-500" />
+                                            ) : (
+                                                <Bot className="w-4 h-4 mt-0.5 flex-shrink-0 text-slate-500" />
+                                            )}
+                                            <div>
+                                                <span className={`text-xs ${msg.type === 'user' ? 'text-cyan-600' : 'text-slate-600'}`}>
+                                                    {msg.type === 'user' ? '[YOU]' : '[NPC]'}
+                                                </span>
+                                                <p className="leading-relaxed">{msg.content}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
 
                         {/* Loading indicator */}
-                        {isLoading && (
+                        {isLoading && sessionActive && (
                             <div className="flex items-center gap-2 text-slate-500">
                                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></div>
                                 <span className="text-xs">Processing...</span>
@@ -282,7 +345,9 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
                             <div className="mt-4 p-4 border border-slate-700/50 bg-slate-900/50 rounded-lg">
                                 <div className="flex items-center gap-2 mb-3">
                                     <Trophy className="w-4 h-4 text-amber-400" />
-                                    <span className="text-slate-400 text-xs uppercase tracking-wider">Performance Grade</span>
+                                    <span className="text-slate-400 text-xs uppercase tracking-wider">
+                                        {bypassed ? 'Bypass Score' : 'Performance Grade'}
+                                    </span>
                                 </div>
 
                                 {/* Score */}
@@ -313,17 +378,9 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
                 )}
             </div>
 
-            {/* Error Display */}
-            {error && (
-                <div className="px-4 py-2 bg-rose-500/10 border-t border-rose-500/20 flex items-center gap-2 text-rose-400 text-xs">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>{error}</span>
-                </div>
-            )}
-
-            {/* Input Area */}
-            {sessionActive && (
-                <div className="border-t border-slate-700/50 p-3 bg-slate-900/50">
+            {/* Input Area - Fixed text visibility */}
+            {sessionActive && !bypassed && (
+                <div className="border-t border-slate-700/50 p-3 bg-slate-900">
                     {isComplete ? (
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-slate-500 text-xs">
@@ -349,13 +406,13 @@ const HoloSimChat = ({ scenarioType = 'pd', onComplete }) => {
                                 onKeyPress={handleKeyPress}
                                 placeholder="Type your response..."
                                 disabled={isLoading}
-                                className="flex-1 bg-transparent text-slate-300 placeholder-slate-600 text-sm focus:outline-none"
+                                className="flex-1 bg-slate-800 text-white placeholder-slate-500 text-sm px-3 py-1.5 rounded border border-slate-700 focus:border-cyan-500 focus:outline-none"
                                 autoComplete="off"
                             />
                             <button
                                 onClick={sendMessage}
                                 disabled={isLoading || !inputValue.trim()}
-                                className="p-1.5 text-cyan-500 hover:text-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                className="p-2 bg-cyan-500/20 text-cyan-400 rounded hover:bg-cyan-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             >
                                 <Send className="w-4 h-4" />
                             </button>
