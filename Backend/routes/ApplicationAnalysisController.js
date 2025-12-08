@@ -12,10 +12,13 @@ const { checkPlagiarism } = require('../VectorStore');
 require('dotenv').config();
 
 // Initialize Gemini AI Client (lazy initialization to avoid startup crashes)
+// Force API version v1 instead of v1beta which returns 404 in some regions
 let genAI = null;
 function getGenAI() {
     if (!genAI && process.env.GEMINI_API_KEY) {
-        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, {
+            apiVersion: 'v1'
+        });
     }
     return genAI;
 }
@@ -196,7 +199,7 @@ router.post('/analyze-text', isAuthenticated, async (req, res) => {
         }
 
         const model = ai.getGenerativeModel({
-            model: 'gemini-pro',
+            model: 'gemini-1.5-flash-001',
             generationConfig: {
                 temperature: 0.3, // Lower temperature for more consistent analysis
                 topP: 0.8,

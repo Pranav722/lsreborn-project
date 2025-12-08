@@ -13,10 +13,13 @@ const { isAuthenticated } = require('../middleware/auth');
 require('dotenv').config();
 
 // Lazy Gemini AI Client initialization
+// Force API version v1 instead of v1beta which returns 404 in some regions
 let genAI = null;
 function getGenAI() {
     if (!genAI && process.env.GEMINI_API_KEY) {
-        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY, {
+            apiVersion: 'v1'
+        });
     }
     return genAI;
 }
@@ -270,7 +273,7 @@ router.post('/start', isAuthenticated, async (req, res) => {
 
         // Initialize the model with system instruction
         const model = ai.getGenerativeModel({
-            model: 'gemini-pro',
+            model: 'gemini-1.5-flash-001',
             generationConfig: {
                 temperature: 0.9, // Higher for more creative responses
                 topP: 0.95,
