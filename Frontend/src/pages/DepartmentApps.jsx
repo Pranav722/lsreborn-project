@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
+import AIQualityHUD from '../components/AIQualityHUD';
+import HoloSimChat from '../components/HoloSimChat';
+import { Loader2, AlertTriangle, CheckCircle2, ShieldAlert, Brain, Sparkles } from 'lucide-react';
 
 const DepartmentApp = ({ type, user }) => {
     const [formData, setFormData] = useState({});
@@ -8,6 +11,80 @@ const DepartmentApp = ({ type, user }) => {
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState(null);
     const [appStatus, setAppStatus] = useState(null); // 'pending', 'approved', 'rejected', or null
+
+    // AI Validation State
+    const [aiAnalysis, setAiAnalysis] = useState(null);
+    const [isPlagiarized, setIsPlagiarized] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [holoSimScore, setHoloSimScore] = useState(null);
+
+    // Get the primary text field for AI analysis based on form type
+    const getAnalyzableText = () => {
+        if (type === 'pd') {
+            return `${formData.backstory || ''} ${formData.whyJoinPD || ''} ${formData.matchOfForce || ''}`;
+        } else if (type === 'ems') {
+            return `${formData.emsIntro || ''} ${formData.emsRole || ''} ${formData.emsResp || ''}`;
+        } else if (type === 'staff') {
+            return `${formData.experience || ''} ${formData.responsibilities || ''} ${formData.whyStaff || ''}`;
+        }
+        return '';
+    };
+
+    // AI Analysis callback handler
+    const handleAnalysisComplete = (data) => {
+        setAiAnalysis(data.analysis);
+        setIsPlagiarized(data.plagiarism?.isPlagiarized || false);
+        setIsAnalyzing(false);
+    };
+
+    // HoloSim completion callback
+    const handleHoloSimComplete = (grade) => {
+        setHoloSimScore(grade?.score || 0);
+    };
+
+    // Validation logic for submit button
+    const isSubmitDisabled = () => {
+        // Check HoloSim score for PD applications
+        if (type === 'pd' && (holoSimScore === null || holoSimScore < 50)) {
+            return true;
+        }
+        // Check AI quality score
+        if (aiAnalysis && aiAnalysis.quality < 60) {
+            return true;
+        }
+        // Check plagiarism
+        if (isPlagiarized) {
+            return true;
+        }
+        // Check if still analyzing
+        if (isAnalyzing) {
+            return true;
+        }
+        return false;
+    };
+
+    // Get validation status message
+    const getValidationMessage = () => {
+        if (type === 'pd' && holoSimScore === null) {
+            return { type: 'warning', message: 'Complete the HoloSim training to unlock submission.' };
+        }
+        if (type === 'pd' && holoSimScore < 50) {
+            return { type: 'error', message: `HoloSim score too low (${holoSimScore}/100). Minimum required: 50.` };
+        }
+        if (isPlagiarized) {
+            return { type: 'error', message: 'Plagiarism detected. Please write original content.' };
+        }
+        if (aiAnalysis && aiAnalysis.quality < 60) {
+            return { type: 'error', message: `Quality score too low (${aiAnalysis.quality}/100). Minimum required: 60.` };
+        }
+        if (isAnalyzing) {
+            return { type: 'info', message: 'Analyzing your application...' };
+        }
+        if (aiAnalysis && aiAnalysis.quality >= 60 && !isPlagiarized) {
+            return { type: 'success', message: 'All checks passed! You may submit your application.' };
+        }
+        return null;
+    };
 
     useEffect(() => {
         const checkStatus = async () => {
@@ -47,12 +124,28 @@ const DepartmentApp = ({ type, user }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Final validation check
+        if (isSubmitDisabled()) {
+            setError('Please complete all AI validation requirements before submitting.');
+            return;
+        }
+
         setLoading(true);
         setError(null);
         setSuccess(false);
 
         // Prepare payload based on type to match backend expectation
         let payload = { ...formData, discordId: user.username };
+
+        // Add AI validation scores to payload
+        payload.aiValidation = {
+            qualityScore: aiAnalysis?.quality || 0,
+            uniquenessScore: aiAnalysis?.uniqueness || 0,
+            aiProbability: aiAnalysis?.aiProbability || 0,
+            holoSimScore: holoSimScore || 0,
+            isPlagiarized: isPlagiarized
+        };
 
         // Consolidating specific fields into the generic DB columns
         if (type === 'pd') {
@@ -112,7 +205,81 @@ const DepartmentApp = ({ type, user }) => {
         setLoading(false);
     };
 
-    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+        // Reset analysis when content changes significantly
+        if (aiAnalysis) {
+            setIsAnalyzing(true);
+        }
+    };
+
+    // Validation Status Banner Component
+    const ValidationBanner = () => {
+        const status = getValidationMessage();
+        if (!status) return null;
+
+        const styles = {
+            warning: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-200',
+            error: 'bg-red-500/20 border-red-500/50 text-red-200',
+            info: 'bg-blue-500/20 border-blue-500/50 text-blue-200',
+            success: 'bg-green-500/20 border-green-500/50 text-green-200'
+        };
+
+        const icons = {
+            warning: <AlertTriangle className="w-5 h-5" />,
+            error: <ShieldAlert className="w-5 h-5" />,
+            info: <Loader2 className="w-5 h-5 animate-spin" />,
+            success: <CheckCircle2 className="w-5 h-5" />
+        };
+
+        return (
+            <div className={`mb-6 p-4 border rounded-lg flex items-center gap-3 ${styles[status.type]}`}>
+                {icons[status.type]}
+                <span>{status.message}</span>
+            </div>
+        );
+    };
+
+    // Smart Submit Button with scanning animation
+    const SmartSubmitButton = ({ color }) => {
+        const disabled = isSubmitDisabled() || loading;
+
+        return (
+            <button
+                type="submit"
+                disabled={disabled}
+                className={`w-full py-3 px-6 rounded-lg font-bold text-white transition-all duration-300 flex items-center justify-center gap-2 ${disabled
+                    ? 'bg-gray-600 cursor-not-allowed opacity-60'
+                    : `${color} hover:opacity-90 shadow-lg`
+                    }`}
+            >
+                {loading ? (
+                    <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Submitting...
+                    </>
+                ) : isAnalyzing ? (
+                    <>
+                        <Brain className="w-5 h-5 animate-pulse" />
+                        <span className="relative">
+                            Scanning
+                            <span className="animate-pulse">...</span>
+                        </span>
+                    </>
+                ) : disabled ? (
+                    <>
+                        <ShieldAlert className="w-5 h-5" />
+                        Complete Validation First
+                    </>
+                ) : (
+                    <>
+                        <Sparkles className="w-5 h-5" />
+                        Submit Application
+                    </>
+                )}
+            </button>
+        );
+    };
 
     // --- PD APPLICATION FORM ---
     if (type === 'pd') {
@@ -149,6 +316,25 @@ const DepartmentApp = ({ type, user }) => {
                             <p>• Must commit ~14 hours/week.</p>
                             <p>• Must follow Server Rules & Guidelines.</p>
                         </div>
+                    </div>
+
+                    {/* HoloSim Training Section */}
+                    <div className="mb-8">
+                        <h3 className="text-xl font-bold text-blue-400 mb-4 flex items-center gap-2">
+                            <Brain className="w-5 h-5" />
+                            De-escalation Training (HoloSim)
+                        </h3>
+                        <p className="text-gray-400 text-sm mb-4">
+                            Complete this simulated traffic stop to demonstrate your de-escalation skills.
+                            You need a minimum score of 50 to proceed.
+                        </p>
+                        <HoloSimChat onComplete={handleHoloSimComplete} />
+                        {holoSimScore !== null && (
+                            <div className={`mt-4 p-3 rounded-lg flex items-center gap-2 ${holoSimScore >= 50 ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                                <CheckCircle2 className="w-5 h-5" />
+                                <span>HoloSim Score: <strong>{holoSimScore}/100</strong> {holoSimScore >= 50 ? '✓ Passed' : '✗ Try Again'}</span>
+                            </div>
+                        )}
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-8">
@@ -191,7 +377,23 @@ const DepartmentApp = ({ type, user }) => {
                             </div>
                         </div>
 
-                        <AnimatedButton type="submit" className="w-full bg-blue-600">{loading ? "Submitting..." : "Submit Application"}</AnimatedButton>
+                        {/* AI Quality Analysis Section */}
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-bold text-blue-400 border-b border-gray-700 pb-2 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5" />
+                                AI Quality Check
+                            </h3>
+                            <AIQualityHUD
+                                inputText={getAnalyzableText()}
+                                onAnalysisComplete={handleAnalysisComplete}
+                            />
+                        </div>
+
+                        {/* Validation Banner */}
+                        <ValidationBanner />
+
+                        {/* Smart Submit Button */}
+                        <SmartSubmitButton color="bg-blue-600" />
                     </form>
                 </Card>
             </div>
@@ -262,7 +464,23 @@ const DepartmentApp = ({ type, user }) => {
                             <TextArea label="What’s more important to you as EMS: speed or accuracy in treatment, and why?" name="emsSpeed" onChange={handleChange} required />
                         </div>
 
-                        <AnimatedButton type="submit" className="w-full bg-red-600">{loading ? "Submitting..." : "Submit Application"}</AnimatedButton>
+                        {/* AI Quality Analysis Section */}
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-bold text-red-400 border-b border-gray-700 pb-2 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5" />
+                                AI Quality Check
+                            </h3>
+                            <AIQualityHUD
+                                inputText={getAnalyzableText()}
+                                onAnalysisComplete={handleAnalysisComplete}
+                            />
+                        </div>
+
+                        {/* Validation Banner */}
+                        <ValidationBanner />
+
+                        {/* Smart Submit Button */}
+                        <SmartSubmitButton color="bg-red-600" />
                     </form>
                 </Card>
             </div>
@@ -340,7 +558,23 @@ const DepartmentApp = ({ type, user }) => {
                             </label>
                         </div>
 
-                        <AnimatedButton type="submit" className="w-full bg-purple-600">{loading ? "Submitting..." : "Submit Application"}</AnimatedButton>
+                        {/* AI Quality Analysis Section */}
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-bold text-purple-400 border-b border-gray-700 pb-2 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5" />
+                                AI Quality Check
+                            </h3>
+                            <AIQualityHUD
+                                inputText={getAnalyzableText()}
+                                onAnalysisComplete={handleAnalysisComplete}
+                            />
+                        </div>
+
+                        {/* Validation Banner */}
+                        <ValidationBanner />
+
+                        {/* Smart Submit Button */}
+                        <SmartSubmitButton color="bg-purple-600" />
                     </form>
                 </Card>
             </div>

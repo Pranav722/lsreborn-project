@@ -28,6 +28,8 @@ app.use('/api/management', require('./routes/management')); // New Management Da
 app.use('/api/queue', require('./routes/queue'));
 app.use('/api/status', require('./routes/status'));
 app.use('/api/applications', require('./routes/applications')); // Written Applications
+app.use('/api/analysis', require('./routes/ApplicationAnalysisController')); // AI Application Analysis
+app.use('/api/holosim', require('./routes/HoloSimController')); // HoloSim RP Chat
 
 // --- Root and DB Test Routes ---
 app.get('/', (req, res) => {
