@@ -93,18 +93,18 @@ const HomePage = ({ setPage, onApplyClick }) => {
             desc: 'The Ghost Mayor of the city who is mostly overlooking everything.',
             image: '/Media/Jay-Avatar.png'
         },
-        {
-            name: 'Riginex',
-            role: 'LSReborn Partner',
-            desc: 'The undercover chill and Rich guy in server with a Huge AURA. In short: chalta firta EDM Pack.',
-            image: '/Media/Riginex-Avatar.png'
-        },
-        {
-            name: 'Itaachi',
-            role: 'Management',
-            desc: 'The OG Mafia Uncle and Perfect Vehicle Handler. Short: Chalta firta Vehicle Resource of server.',
-            image: '/Media/Itaachi-Avatar.png'
-        },
+        // {
+        //     name: 'Riginex',
+        //     role: 'LSReborn Partner',
+        //     desc: 'The undercover chill and Rich guy in server with a Huge AURA. In short: chalta firta EDM Pack.',
+        //     image: '/Media/Riginex-Avatar.png'
+        // },
+        // {
+        //     name: 'Itaachi',
+        //     role: 'Management',
+        //     desc: 'The OG Mafia Uncle and Perfect Vehicle Handler. Short: Chalta firta Vehicle Resource of server.',
+        //     image: '/Media/Itaachi-Avatar.png'
+        // },
         {
             name: 'Rexci',
             role: 'Management',
@@ -114,7 +114,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
 
         // Hidden by default (Click 'View Full Roster' to see)
         { name: 'Luffy', role: 'PD Management & Staff', desc: 'The non RR guy who never fights and the website guy of LSR', hidden: true, image: '/Media/Luffy-Avatar.png' },
-        { name: 'Tushar Gupta', role: 'PD Management & Staff', desc: 'Aspataal Premium Member. Always in the thick of the action.', hidden: true, image: '/Media/Tushar-Avatar.png' },
+        // { name: 'Tushar Gupta', role: 'PD Management & Staff', desc: 'Aspataal Premium Member. Always in the thick of the action.', hidden: true, image: '/Media/Tushar-Avatar.png' },
         { name: 'Danny', role: 'EMS Management & Staff', desc: 'Fastest response in the server', hidden: true, image: '/Media/Danny-Avatar.png' },
         { name: 'Cheeku', role: 'Staff', desc: 'Most Peaceful guy, never ever abuses', hidden: true, image: '/Media/Draken-Avatar.png' },
         { name: 'Wangu', role: 'Core team', desc: 'Richest grinder even more available than support bots', hidden: true, image: '/Media/Wangu-Avatar.png' },
