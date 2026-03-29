@@ -22,7 +22,7 @@ app.use(cookieParser());
 
 
 // --- API Routes ---
-app.use('/auth', require('./routes/auth'));
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/forms', require('./routes/forms')); // New Forms & Quiz Route
 app.use('/api/management', require('./routes/management')); // New Management Dashboard
 app.use('/api/queue', require('./routes/queue'));

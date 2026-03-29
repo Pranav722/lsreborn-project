@@ -39,7 +39,7 @@ async function getGuildMember(userId) {
 router.get('/discord', (req, res) => {
     const params = new URLSearchParams({
         client_id: process.env.DISCORD_CLIENT_ID,
-        redirect_uri: `${process.env.BACKEND_URL}/auth/discord/callback`,
+        redirect_uri: `${process.env.BACKEND_URL}/api/auth/discord/callback`,
         response_type: 'code',
         scope: 'identify' 
     });
@@ -58,7 +58,7 @@ router.get('/discord/callback', async (req, res) => {
                 client_secret: process.env.DISCORD_CLIENT_SECRET,
                 code,
                 grant_type: 'authorization_code',
-                redirect_uri: `${process.env.BACKEND_URL}/auth/discord/callback`,
+                redirect_uri: `${process.env.BACKEND_URL}/api/auth/discord/callback`,
             }),
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         });
