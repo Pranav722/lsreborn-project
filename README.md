@@ -9,6 +9,7 @@
 ## 🌐 Live Platform
 
 🔗 https://lsreborn.in
+🔗 [Alternate](https://lsreborn-project.netlify.app)
 
 ---
 
