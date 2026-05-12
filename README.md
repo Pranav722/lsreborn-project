@@ -65,7 +65,7 @@ The platform follows a modular full-stack architecture:
 
 ## Frontend
 - React.js
-- CSS / TailwindCSS (remove if not used)
+- CSS / TailwindCSS
 
 ## Backend
 - Node.js
@@ -84,8 +84,7 @@ The platform follows a modular full-stack architecture:
 
 ## Deployment & Infrastructure
 - VPS Hosting
-- Linux Server Management
-- PM2 / Nginx (remove if not used)
+- PM2 / Nginx
 
 ---
 
@@ -126,14 +125,10 @@ This significantly improved operational efficiency for the RP server ecosystem.
 
 # 📸 Screenshots
 
-> Add high-quality screenshots here
+<img width="1919" height="929" alt="Screenshot 2026-05-12 151508" src="https://github.com/user-attachments/assets/804fa2cb-0ab8-4ca2-85d8-878cd824a892" /><img width="1913" height="927" alt="Screenshot 2026-05-12 151323" src="https://github.com/user-attachments/assets/3bda6286-c12f-4dbd-8909-78cb193469c6" />
+<img width="1919" height="913" alt="Screenshot 2026-05-12 151443" src="https://github.com/user-attachments/assets/32af6073-799d-4813-bc42-3963c51b6d89" />
 
-Suggested screenshots:
-- Homepage / Landing Page
-- Dashboard
-- Application Queue System
-- Discord Authentication Flow
-- Admin Panel
+
 
 ---
 
