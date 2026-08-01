@@ -137,22 +137,14 @@ const HomePage = ({ setPage, onApplyClick }) => {
                     </video>
                 </div>
 
-                <div className="relative z-20 text-center px-4 sm:px-6 w-full max-w-5xl mx-auto flex flex-col items-center">
-                    {/* Official Kaizen City Logo Banner Badge */}
-                    <div className="relative mb-6 group cursor-pointer">
-                        <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 rounded-3xl blur-xl opacity-40 group-hover:opacity-75 transition duration-500 animate-pulse"></div>
-                        <img 
-                            src="https://res.cloudinary.com/n8ql5bui/image/upload/v1785606470/KAIZEN_CITY_LOGO_lk0ycw.png" 
-                            alt="Kaizen City Official Logo" 
-                            className="relative w-44 sm:w-56 md:w-64 lg:w-72 h-auto object-contain drop-shadow-[0_0_35px_rgba(6,182,212,0.9)] transform group-hover:scale-105 transition-transform duration-500"
-                        />
-                    </div>
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs md:text-sm font-semibold tracking-widest uppercase mb-4 backdrop-blur-md shadow-lg shadow-cyan-500/10">
-                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                        BY LSREBORN
-                    </div>
-                    <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-black text-white tracking-tighter mb-4 md:mb-6 drop-shadow-2xl">
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500">KAIZEN</span> CITY
+                <div className="relative z-20 text-center px-4 sm:px-6 w-full max-w-6xl mx-auto flex flex-col items-center">
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black text-white tracking-tighter mb-6 drop-shadow-2xl leading-tight text-center">
+                        <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 uppercase">
+                            KAIZEN CITY
+                        </span>
+                        <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-300 uppercase">
+                            BY LSREBORN
+                        </span>
                     </h1>
                     <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 font-light tracking-wide mb-6 md:mb-10 max-w-2xl mx-auto px-2">
                         Redefining the standard of <span className="text-cyan-400 font-medium">Roleplay</span>. Your story in Kaizen City begins here.
