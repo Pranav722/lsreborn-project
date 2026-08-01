@@ -137,14 +137,17 @@ const HomePage = ({ setPage, onApplyClick }) => {
                     </video>
                 </div>
 
-                <div className="relative z-20 text-center px-4 sm:px-6 w-full max-w-6xl mx-auto flex flex-col items-center">
-                    <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-black text-white tracking-tighter mb-6 drop-shadow-2xl leading-tight text-center">
-                        <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 uppercase">
-                            KAIZEN CITY
-                        </span>
-                        <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-teal-300 uppercase">
-                            BY LSREBORN
-                        </span>
+                <div className="relative z-20 text-center px-4 sm:px-6 w-full max-w-5xl mx-auto flex flex-col items-center">
+                    <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white tracking-tighter mb-4 md:mb-6 drop-shadow-2xl text-center leading-tight">
+                        <div className="block">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">Kaizen</span> City
+                        </div>
+                        <div className="text-sm sm:text-base md:text-xl lg:text-2xl text-cyan-400/90 font-mono font-medium tracking-[0.3em] uppercase py-1 md:py-2">
+                            by
+                        </div>
+                        <div className="block">
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">LS</span>Reborn
+                        </div>
                     </h1>
                     <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 font-light tracking-wide mb-6 md:mb-10 max-w-2xl mx-auto px-2">
                         Redefining the standard of <span className="text-cyan-400 font-medium">Roleplay</span>. Your story in Kaizen City begins here.
