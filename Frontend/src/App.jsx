@@ -276,8 +276,8 @@ export default function App() {
               <div className="flex items-center justify-between h-16">
                 <div className="flex items-center">
                   <button onClick={() => setPage('home')} className="flex-shrink-0 text-white font-bold text-2xl flex items-center gap-3 tracking-wider group">
-                    <div className="relative w-10 h-10 rounded-full bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center overflow-hidden shadow-lg shadow-cyan-500/20 group-hover:border-cyan-400 transition-all duration-300">
-                      <img src="/dragon_logo.png" alt="KLR Dragon Logo" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] group-hover:scale-110 transition-transform duration-300" />
+                    <div className="relative w-11 h-11 rounded-full bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center overflow-hidden shadow-lg shadow-cyan-500/20 group-hover:border-cyan-400 transition-all duration-300">
+                      <img src="/kaizen_city_logo.png" alt="Kaizen City Official Logo" className="w-9 h-9 object-contain drop-shadow-[0_0_10px_rgba(6,182,212,0.8)] group-hover:scale-110 transition-transform duration-300" />
                     </div>
                     <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 tracking-wider">KLR</span>
                     <span className="text-xs text-gray-400 uppercase tracking-widest hidden sm:inline-block font-mono border-l border-gray-700 pl-2">Kaizen City</span>

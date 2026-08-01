@@ -137,7 +137,16 @@ const HomePage = ({ setPage, onApplyClick }) => {
                     </video>
                 </div>
 
-                <div className="relative z-20 text-center px-4 sm:px-6 w-full max-w-5xl mx-auto">
+                <div className="relative z-20 text-center px-4 sm:px-6 w-full max-w-5xl mx-auto flex flex-col items-center">
+                    {/* Official Kaizen City Logo Banner Badge */}
+                    <div className="relative mb-6 group cursor-pointer">
+                        <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 rounded-3xl blur-xl opacity-40 group-hover:opacity-75 transition duration-500 animate-pulse"></div>
+                        <img 
+                            src="https://res.cloudinary.com/n8ql5bui/image/upload/v1785606470/KAIZEN_CITY_LOGO_lk0ycw.png" 
+                            alt="Kaizen City Official Logo" 
+                            className="relative w-44 sm:w-56 md:w-64 lg:w-72 h-auto object-contain drop-shadow-[0_0_35px_rgba(6,182,212,0.9)] transform group-hover:scale-105 transition-transform duration-500"
+                        />
+                    </div>
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs md:text-sm font-semibold tracking-widest uppercase mb-4 backdrop-blur-md shadow-lg shadow-cyan-500/10">
                         <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
                         BY LSREBORN
