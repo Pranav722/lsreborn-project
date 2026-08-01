@@ -344,8 +344,8 @@ const PageContainer = ({ children, pageNum, title }) => (
         {/* Header */}
         <div className="flex justify-between items-center border-b border-white/5 pb-3 md:pb-4 mb-4 md:mb-6 shrink-0 z-10">
             <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-slate-700" />
-                LS REBORN
+                <div className="w-2 h-2 rounded-full bg-cyan-400" />
+                KAIZEN CITY BY LSREBORN
             </span>
             <span className="text-[10px] text-slate-600 font-mono">{pageNum}</span>
         </div>
@@ -399,7 +399,7 @@ const CoverPage = () => (
         <div className="w-32 h-32 mb-10 relative group">
             <div className="absolute inset-0 bg-cyan-500 blur-2xl opacity-20 group-hover:opacity-30 transition-opacity duration-500" />
             <div className="relative w-full h-full rounded-2xl border border-white/10 bg-[#18181b] flex items-center justify-center shadow-2xl transform transition-transform duration-500 group-hover:rotate-6">
-                <span className="text-5xl font-black text-white italic tracking-tighter">LS</span>
+                <img src="/dragon_logo.png" alt="Dragon Logo" className="w-20 h-20 object-contain drop-shadow-[0_0_12px_rgba(6,182,212,0.8)]" />
             </div>
         </div>
 
@@ -408,7 +408,7 @@ const CoverPage = () => (
 
         <p className="text-xs text-slate-400 font-mono max-w-[240px] leading-7 z-10">
             THE DEFINITIVE GUIDE TO CONDUCT,<br />LAW, AND SURVIVAL IN<br />
-            <span className="text-white font-bold">LOS SANTOS REBORN</span>.
+            <span className="text-white font-bold">KAIZEN CITY BY LSREBORN</span>.
         </p>
 
         <div className="mt-auto z-10 border border-white/10 px-4 py-1.5 rounded-full bg-white/5 backdrop-blur-md">

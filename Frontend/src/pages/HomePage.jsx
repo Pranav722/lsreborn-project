@@ -138,11 +138,15 @@ const HomePage = ({ setPage, onApplyClick }) => {
                 </div>
 
                 <div className="relative z-20 text-center px-4 sm:px-6 w-full max-w-5xl mx-auto">
-                    <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-8xl xl:text-9xl font-black text-white tracking-tighter mb-4 md:mb-6 drop-shadow-2xl">
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">LS</span>Reborn
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs md:text-sm font-semibold tracking-widest uppercase mb-4 backdrop-blur-md shadow-lg shadow-cyan-500/10">
+                        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                        BY LSREBORN
+                    </div>
+                    <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-black text-white tracking-tighter mb-4 md:mb-6 drop-shadow-2xl">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500">KAIZEN</span> CITY
                     </h1>
                     <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 font-light tracking-wide mb-6 md:mb-10 max-w-2xl mx-auto px-2">
-                        Redefining the standard of <span className="text-cyan-400 font-medium">Roleplay</span>. Your story begins here.
+                        Redefining the standard of <span className="text-cyan-400 font-medium">Roleplay</span>. Your story in Kaizen City begins here.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
                         <AnimatedButton onClick={onApplyClick} className="bg-cyan-500 shadow-lg shadow-cyan-500/20 px-8 sm:px-10 py-3 sm:py-4 text-base sm:text-lg w-full sm:w-auto">
@@ -173,7 +177,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
                             </div>
                             <div>
                                 <div className="flex items-center gap-3 mb-2">
-                                    <span className="text-gray-400 text-xs md:text-sm font-medium tracking-wider uppercase">Los Santos Status</span>
+                                    <span className="text-gray-400 text-xs md:text-sm font-medium tracking-wider uppercase">Kaizen City Status</span>
                                     {status.online && status.online !== 'fetching' && (
                                         <span className="relative flex h-3 w-3">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -201,9 +205,9 @@ const HomePage = ({ setPage, onApplyClick }) => {
 
                     <div className="md:col-span-8">
                         <div className="h-full flex flex-col justify-center space-y-6 p-2 md:p-4">
-                            <h2 className="text-3xl md:text-4xl font-bold text-white">Why <span className="text-cyan-400">LSReborn?</span></h2>
+                            <h2 className="text-3xl md:text-4xl font-bold text-white">Why <span className="text-cyan-400">Kaizen City?</span></h2>
                             <p className="text-gray-400 text-base md:text-lg leading-relaxed">
-                                We aren't just another server; we are a community-driven project aimed at providing the most immersive storytelling environment possible.
+                                We aren't just another server; we are a community-driven project aimed at providing the most immersive storytelling environment possible in Kaizen City by LSReborn.
                                 With custom scripts, balanced economy, and a dedicated staff team, we ensure fair play and endless opportunities for your character.
                             </p>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
@@ -238,7 +242,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
                         <div>
                             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 md:mb-6">Experience the <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Next Generation</span></h2>
                             <p className="text-gray-400 text-base md:text-lg leading-relaxed mb-6 md:mb-8">
-                                Step into a world that feels alive. From the bustling streets of Los Santos to the quiet deserts of Sandy Shores, every corner is filled with potential interactions.
+                                Step into a world that feels alive. From the bustling streets of Kaizen City to the quiet deserts of Sandy Shores, every corner is filled with potential interactions.
                                 Our V2 update brings improved performance, new heists, and a completely revamped gang system.
                             </p>
                         </div>
@@ -255,7 +259,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
                 <div className="pt-8 md:pt-16">
                     <div className="text-center mb-10 md:mb-16">
                         <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Meet The <span className="text-cyan-400">Legends</span></h2>
-                        <p className="text-gray-400 max-w-2xl mx-auto px-4 text-sm md:text-base">The minds and hearts behind LSReborn. Dedicated to providing the best roleplay experience.</p>
+                        <p className="text-gray-400 max-w-2xl mx-auto px-4 text-sm md:text-base">The minds and hearts behind Kaizen City by LSReborn. Dedicated to providing the best roleplay experience.</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">

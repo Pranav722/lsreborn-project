@@ -88,13 +88,13 @@ const NewsPage = () => {
 
     const newsData = [
         {
-            title: "Major Server Update v2.5: The LSR Winter Update",
+            title: "Major Server Update v2.5: The KLSR Winter Update",
             date: "December 05, 2025",
             content: "We're excited to announce our biggest update yet! This includes new custom vehicles, a revamped inventory system, and several new player-owned businesses. The Diamond Casino has also been opened for business with a high-tech security system.",
             image: "/Media/Update_1.png"
         },
         {
-            title: "Community Meeting: Future of LS Reborn",
+            title: "Community Meeting: Future of Kaizen City by LSReborn",
             date: "August 10, 2025",
             content: "Join us this Friday at 8 PM EST for our monthly community meeting. We'll be discussing the recent update, future plans for the gang territories, and taking your feedback on the new economy balance.",
             image: "/Media/Community_Meeting_1.gif"
@@ -110,9 +110,9 @@ const NewsPage = () => {
     return (
         <div className="animate-fade-in max-w-7xl mx-auto px-4 py-12">
             <div className="text-center mb-16">
-                <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-4">LS Reborn News</h1>
+                <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-4">Kaizen City News</h1>
                 <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                    Stay up to date with the latest developments, server updates, and community events in Los Santos.
+                    Stay up to date with the latest developments, server updates, and community events in Kaizen City.
                 </p>
             </div>
 

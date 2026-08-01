@@ -14,13 +14,16 @@ const Footer = ({ setPage }) => {
                     {/* Brand Block - Spans 4 cols */}
                     <div className="md:col-span-5 lg:col-span-4 space-y-6">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-cyan-500/10 rounded-lg">
-                                <ShieldCheck className="text-cyan-400 h-8 w-8"/>
+                            <div className="w-10 h-10 rounded-full bg-cyan-950/50 border border-cyan-500/30 flex items-center justify-center overflow-hidden shadow-lg shadow-cyan-500/20">
+                                <img src="/dragon_logo.png" alt="KLSR Dragon Logo" className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]" />
                             </div>
-                            <span className="text-2xl font-bold text-white tracking-tight">LSReborn</span>
+                            <div>
+                                <span className="text-xl font-bold text-white tracking-tight block">Kaizen City</span>
+                                <span className="text-xs text-cyan-400 font-mono tracking-widest uppercase">BY LSREBORN</span>
+                            </div>
                         </div>
                         <p className="text-gray-400 leading-relaxed">
-                            Forging narratives, building legacies. Join a community where every character has a story and every action leaves a mark.
+                            Forging narratives, building legacies. Join Kaizen City by LSReborn (KLSR) where every character has a story and every action leaves a mark.
                         </p>
                         
                         <div className="flex items-center gap-4 pt-2">
@@ -61,10 +64,10 @@ const Footer = ({ setPage }) => {
 
                 <div className="mt-16 pt-8 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-gray-600 text-sm">
-                        &copy; {new Date().getFullYear()} LSReborn Roleplay. All rights reserved.
+                        &copy; {new Date().getFullYear()} Kaizen City by LSReborn (KLSR). All rights reserved.
                     </p>
                     <p className="text-gray-700 text-xs font-medium">
-                        Crafted with ❤️ by LSReborn
+                        Crafted with ❤️ for Kaizen City by LSReborn
                     </p>
                 </div>
             </div>
