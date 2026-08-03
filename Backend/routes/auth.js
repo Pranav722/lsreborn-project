@@ -7,14 +7,14 @@ const db = require('../db');
 const DISCORD_API_URL = 'https://discord.com/api/v10';
 
 // --- SECURE CONFIGURATION: READ FROM ENV ---
-const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN; 
-const ACTIVE_GUILD_ID = process.env.ACTIVE_GUILD_ID || "1322660458888695818";
-const MASTER_ADMIN_ID = "444043711094194200"; 
+const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN; 
+const ACTIVE_GUILD_ID = process.env.ACTIVE_GUILD_ID || process.env.GUILD_ID || "1322660458888695818";
+const MASTER_ADMIN_ID = process.env.MASTER_ADMIN_ID || "444043711094194200"; 
 
 async function getGuildMember(userId) {
     try {
         if (!ACTIVE_BOT_TOKEN) {
-            console.error("[AUTH] Missing ACTIVE_BOT_TOKEN in environment variables.");
+            console.error("[AUTH] Missing ACTIVE_BOT_TOKEN / DISCORD_BOT_TOKEN in environment variables.");
             return null;
         }
 
@@ -25,9 +25,7 @@ async function getGuildMember(userId) {
         if (response.ok) {
             return await response.json();
         } else {
-            if (response.status !== 404) {
-                console.warn(`[AUTH] Guild check warning for ${userId}: ${response.status} ${response.statusText}`);
-            }
+            console.warn(`[AUTH] Guild member check failed for user ${userId}: status ${response.status} ${response.statusText}`);
             return null;
         }
     } catch (e) {
@@ -41,7 +39,7 @@ router.get('/discord', (req, res) => {
         client_id: process.env.DISCORD_CLIENT_ID,
         redirect_uri: `${process.env.BACKEND_URL}/api/auth/discord/callback`,
         response_type: 'code',
-        scope: 'identify' 
+        scope: 'identify guilds' 
     });
     res.redirect(`${DISCORD_API_URL}/oauth2/authorize?${params}`);
 });
@@ -69,15 +67,34 @@ router.get('/discord/callback', async (req, res) => {
             return res.redirect(`${process.env.FRONTEND_URL}?login=failed`);
         }
 
+        // 1. Fetch User Profile
         const userRes = await fetch(`${DISCORD_API_URL}/users/@me`, {
             headers: { Authorization: `Bearer ${tokenData.access_token}` },
         });
         const userProfile = await userRes.json();
 
+        // 2. Direct User Guild Check via OAuth Token (Fail-safe check)
+        let inGuildUserOAuth = false;
+        try {
+            const userGuildsRes = await fetch(`${DISCORD_API_URL}/users/@me/guilds`, {
+                headers: { Authorization: `Bearer ${tokenData.access_token}` },
+            });
+            if (userGuildsRes.ok) {
+                const guilds = await userGuildsRes.json();
+                inGuildUserOAuth = Array.isArray(guilds) && guilds.some(g => g.id === ACTIVE_GUILD_ID);
+            } else {
+                console.warn(`[AUTH] User guilds check returned status ${userGuildsRes.status}`);
+            }
+        } catch (gErr) {
+            console.warn("[AUTH] Error checking user guilds via OAuth token:", gErr);
+        }
+
+        // 3. Fetch Guild Member roles via Bot Token
         const memberData = await getGuildMember(userProfile.id);
-        
-        const inGuild = !!memberData;
+        const inGuildBot = !!memberData;
         const roles = memberData ? memberData.roles : [];
+
+        const inGuild = inGuildUserOAuth || inGuildBot || userProfile.id === MASTER_ADMIN_ID;
 
         let cooldownExpiry = null;
         if (inGuild) {
@@ -101,7 +118,7 @@ router.get('/discord/callback', async (req, res) => {
             username: userProfile.username,
             avatar: userProfile.avatar,
             roles,
-            inGuild: inGuild || userProfile.id === MASTER_ADMIN_ID,
+            inGuild,
             cooldownExpiry,
             isStaff, isAdmin, isPDLead, isEMSLead
         };
@@ -131,9 +148,8 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
             const [rows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
             req.user.cooldownExpiry = rows.length > 0 ? rows[0].cooldown_expiry : null;
         } catch(err) {}
-    } else {
-        req.user.inGuild = false;
     }
+    // Note: If memberData is null, do NOT set req.user.inGuild to false if it was already verified true!
 
     if (req.user.id === MASTER_ADMIN_ID) {
         req.user.isStaff = true;
