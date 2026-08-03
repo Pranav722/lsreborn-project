@@ -104,13 +104,20 @@ router.get('/discord/callback', async (req, res) => {
             } catch(dbErr) { console.error("DB Error:", dbErr); }
         }
 
-        let isStaff = roles.includes(process.env.STAFF_ROLE_ID);
-        let isAdmin = roles.includes(process.env.LSR_ADMIN_ROLE_ID);
-        let isPDLead = roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
-        let isEMSLead = roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
+        const WHITELISTED_ROLE_ID = process.env.WHITELISTED_ROLE_ID || "1322674155107127458";
+        const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID || "1330603132094386238";
+        const LSR_ADMIN_ROLE_ID = process.env.LSR_ADMIN_ROLE_ID || "1323071939476066344";
+        const PD_HIGH_COMMAND_ROLE_ID = process.env.PD_HIGH_COMMAND_ROLE_ID || "1333342119569522729";
+        const EMS_HIGH_COMMAND_ROLE_ID = process.env.EMS_HIGH_COMMAND_ROLE_ID || "1415224352986759231";
+
+        let isWhitelisted = roles.includes(WHITELISTED_ROLE_ID);
+        let isStaff = roles.includes(STAFF_ROLE_ID);
+        let isAdmin = roles.includes(LSR_ADMIN_ROLE_ID);
+        let isPDLead = roles.includes(PD_HIGH_COMMAND_ROLE_ID);
+        let isEMSLead = roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
 
         if (userProfile.id === MASTER_ADMIN_ID) {
-            isStaff = true; isAdmin = true; isPDLead = true; isEMSLead = true;
+            isWhitelisted = true; isStaff = true; isAdmin = true; isPDLead = true; isEMSLead = true;
         }
 
         const userPayload = {
@@ -120,7 +127,7 @@ router.get('/discord/callback', async (req, res) => {
             roles,
             inGuild,
             cooldownExpiry,
-            isStaff, isAdmin, isPDLead, isEMSLead
+            isWhitelisted, isStaff, isAdmin, isPDLead, isEMSLead
         };
 
         const token = jwt.sign({ user: userPayload }, process.env.JWT_SECRET, { expiresIn: '8h' });
@@ -135,14 +142,21 @@ router.get('/discord/callback', async (req, res) => {
 router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res) => {
     const memberData = await getGuildMember(req.user.id);
     
+    const WHITELISTED_ROLE_ID = process.env.WHITELISTED_ROLE_ID || "1322674155107127458";
+    const STAFF_ROLE_ID = process.env.STAFF_ROLE_ID || "1330603132094386238";
+    const LSR_ADMIN_ROLE_ID = process.env.LSR_ADMIN_ROLE_ID || "1323071939476066344";
+    const PD_HIGH_COMMAND_ROLE_ID = process.env.PD_HIGH_COMMAND_ROLE_ID || "1333342119569522729";
+    const EMS_HIGH_COMMAND_ROLE_ID = process.env.EMS_HIGH_COMMAND_ROLE_ID || "1415224352986759231";
+
     if (memberData) {
         req.user.roles = memberData.roles;
         req.user.inGuild = true;
         
-        req.user.isStaff = memberData.roles.includes(process.env.STAFF_ROLE_ID);
-        req.user.isAdmin = memberData.roles.includes(process.env.LSR_ADMIN_ROLE_ID);
-        req.user.isPDLead = memberData.roles.includes(process.env.PD_HIGH_COMMAND_ROLE_ID);
-        req.user.isEMSLead = memberData.roles.includes(process.env.EMS_HIGH_COMMAND_ROLE_ID);
+        req.user.isWhitelisted = memberData.roles.includes(WHITELISTED_ROLE_ID);
+        req.user.isStaff = memberData.roles.includes(STAFF_ROLE_ID);
+        req.user.isAdmin = memberData.roles.includes(LSR_ADMIN_ROLE_ID);
+        req.user.isPDLead = memberData.roles.includes(PD_HIGH_COMMAND_ROLE_ID);
+        req.user.isEMSLead = memberData.roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
         
         try {
             const [rows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
@@ -152,6 +166,7 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
     // Note: If memberData is null, do NOT set req.user.inGuild to false if it was already verified true!
 
     if (req.user.id === MASTER_ADMIN_ID) {
+        req.user.isWhitelisted = true;
         req.user.isStaff = true;
         req.user.isAdmin = true;
         req.user.isPDLead = true;

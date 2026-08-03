@@ -110,19 +110,19 @@ const QueuePage = ({ user, setPage }) => {
     }
 
     const userRoles = user?.roles || [];
-    const isStaffOrAdmin = userRoles.includes(import.meta.env.VITE_STAFF_ROLE_ID) || userRoles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID);
+    const isStaffOrAdmin = user?.isStaff || user?.isAdmin || userRoles.includes(import.meta.env.VITE_STAFF_ROLE_ID || "1330603132094386238") || userRoles.includes(import.meta.env.VITE_LSR_ADMIN_ROLE_ID || "1323071939476066344");
 
     const queueData = [
-        { type: 'staff', title: 'Staff', icon: ShieldCheck, desc: "For on-duty staff members.", role: import.meta.env.VITE_STAFF_ROLE_ID },
-        { type: 'police', title: 'PD', icon: Siren, desc: "For on-duty LSPD and BCSO officers.", role: import.meta.env.VITE_SALE_ROLE_ID },
-        { type: 'ems', title: 'EMS', icon: HeartPulse, desc: "For on-duty medical personnel.", role: import.meta.env.VITE_EMS_ROLE_ID },
-        { type: 'premium', title: 'Premium Priority', icon: Crown, desc: "Highest tier priority access.", role: import.meta.env.VITE_PREMIUM_ROLE_ID },
-        { type: 'prime', title: 'Prime Priority', icon: Crown, desc: "High tier priority access.", role: import.meta.env.VITE_PRIME_ROLE_ID },
-        { type: 'elite', title: 'Elite Priority', icon: Crown, desc: "Great priority access.", role: import.meta.env.VITE_ELITE_ROLE_ID },
-        { type: 'pro', title: 'Pro Priority', icon: Crown, desc: "Good priority access.", role: import.meta.env.VITE_PRO_ROLE_ID },
-        { type: 'starter', title: 'Starter Priority', icon: Crown, desc: "Basic priority access.", role: import.meta.env.VITE_STARTER_ROLE_ID },
-        { type: 'rookie', title: 'Rookie Priority', icon: Crown, desc: "Entry-level priority access.", role: import.meta.env.VITE_ROOKIE_ROLE_ID },
-        { type: 'normal', title: 'Normal', icon: Users, desc: "Standard queue for all civilians.", role: import.meta.env.VITE_WHITELISTED_ROLE_ID },
+        { type: 'staff', title: 'Staff', icon: ShieldCheck, desc: "For on-duty staff members.", role: import.meta.env.VITE_STAFF_ROLE_ID || "1330603132094386238" },
+        { type: 'police', title: 'PD', icon: Siren, desc: "For on-duty LSPD and BCSO officers.", role: import.meta.env.VITE_SALE_ROLE_ID || "1409962915091578920" },
+        { type: 'ems', title: 'EMS', icon: HeartPulse, desc: "For on-duty medical personnel.", role: import.meta.env.VITE_EMS_ROLE_ID || "1409963165751574618" },
+        { type: 'premium', title: 'Premium Priority', icon: Crown, desc: "Highest tier priority access.", role: import.meta.env.VITE_PREMIUM_ROLE_ID || "1372326874688131113" },
+        { type: 'prime', title: 'Prime Priority', icon: Crown, desc: "High tier priority access.", role: import.meta.env.VITE_PRIME_ROLE_ID || "1344707281044111380" },
+        { type: 'elite', title: 'Elite Priority', icon: Crown, desc: "Great priority access.", role: import.meta.env.VITE_ELITE_ROLE_ID || "1344707507372818503" },
+        { type: 'pro', title: 'Pro Priority', icon: Crown, desc: "Good priority access.", role: import.meta.env.VITE_PRO_ROLE_ID || "1344707708732964988" },
+        { type: 'starter', title: 'Starter Priority', icon: Crown, desc: "Basic priority access.", role: import.meta.env.VITE_STARTER_ROLE_ID || "1344708001113833523" },
+        { type: 'rookie', title: 'Rookie Priority', icon: Crown, desc: "Entry-level priority access.", role: import.meta.env.VITE_ROOKIE_ROLE_ID || "1344708223021617162" },
+        { type: 'normal', title: 'Normal', icon: Users, desc: "Standard queue for all civilians.", role: import.meta.env.VITE_WHITELISTED_ROLE_ID || "1322674155107127458" },
     ];
 
 

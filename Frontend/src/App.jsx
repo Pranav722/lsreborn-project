@@ -256,7 +256,7 @@ export default function App() {
   }
 
   const isStaffOrAdmin = user && (user.isStaff || user.isAdmin);
-  const hasWhitelistedRole = user && Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID);
+  const hasWhitelistedRole = user && (user.isWhitelisted || (Array.isArray(user.roles) && user.roles.includes(import.meta.env.VITE_WHITELISTED_ROLE_ID || "1322674155107127458")) || user.isAdmin || user.isStaff);
 
   // LOGIC FIX: Always show 'Apply' button. The ApplicationPage will handle role-based access.
   const showApplyButton = true;
