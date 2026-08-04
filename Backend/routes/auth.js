@@ -39,7 +39,7 @@ router.get('/discord', (req, res) => {
         client_id: process.env.DISCORD_CLIENT_ID,
         redirect_uri: `${process.env.BACKEND_URL}/api/auth/discord/callback`,
         response_type: 'code',
-        scope: 'identify guilds' 
+        scope: 'identify guilds guilds.members.read' 
     });
     res.redirect(`${DISCORD_API_URL}/oauth2/authorize?${params}`);
 });
@@ -73,28 +73,53 @@ router.get('/discord/callback', async (req, res) => {
         });
         const userProfile = await userRes.json();
 
-        // 2. Direct User Guild Check via OAuth Token (Fail-safe check)
-        let inGuildUserOAuth = false;
+        // 2. Direct User Member & Roles Check via User OAuth Token (Primary Fail-safe)
+        let rolesFromOAuth = [];
+        let inGuildOAuthMember = false;
         try {
-            const userGuildsRes = await fetch(`${DISCORD_API_URL}/users/@me/guilds`, {
+            const userMemberRes = await fetch(`${DISCORD_API_URL}/users/@me/guilds/${ACTIVE_GUILD_ID}/member`, {
                 headers: { Authorization: `Bearer ${tokenData.access_token}` },
             });
-            if (userGuildsRes.ok) {
-                const guilds = await userGuildsRes.json();
-                inGuildUserOAuth = Array.isArray(guilds) && guilds.some(g => g.id === ACTIVE_GUILD_ID);
+            if (userMemberRes.ok) {
+                const memberOAuthData = await userMemberRes.json();
+                if (memberOAuthData && Array.isArray(memberOAuthData.roles)) {
+                    rolesFromOAuth = memberOAuthData.roles;
+                    inGuildOAuthMember = true;
+                    console.log(`[AUTH] Successfully retrieved ${rolesFromOAuth.length} roles via OAuth token for ${userProfile.username}`);
+                }
             } else {
-                console.warn(`[AUTH] User guilds check returned status ${userGuildsRes.status}`);
+                console.warn(`[AUTH] OAuth member fetch returned status ${userMemberRes.status}`);
             }
-        } catch (gErr) {
-            console.warn("[AUTH] Error checking user guilds via OAuth token:", gErr);
+        } catch (mErr) {
+            console.warn("[AUTH] Error fetching member via OAuth token:", mErr);
         }
 
-        // 3. Fetch Guild Member roles via Bot Token
+        // 3. User Guild List Check via OAuth Token (Secondary Fail-safe for inGuild)
+        let inGuildUserOAuth = false;
+        if (!inGuildOAuthMember) {
+            try {
+                const userGuildsRes = await fetch(`${DISCORD_API_URL}/users/@me/guilds`, {
+                    headers: { Authorization: `Bearer ${tokenData.access_token}` },
+                });
+                if (userGuildsRes.ok) {
+                    const guilds = await userGuildsRes.json();
+                    inGuildUserOAuth = Array.isArray(guilds) && guilds.some(g => g.id === ACTIVE_GUILD_ID);
+                }
+            } catch (gErr) {
+                console.warn("[AUTH] Error checking user guilds via OAuth token:", gErr);
+            }
+        }
+
+        // 4. Bot Token Member Check (Tertiary Fallback)
         const memberData = await getGuildMember(userProfile.id);
         const inGuildBot = !!memberData;
-        const roles = memberData ? memberData.roles : [];
+        const rolesFromBot = memberData ? memberData.roles : [];
 
-        const inGuild = inGuildUserOAuth || inGuildBot || userProfile.id === MASTER_ADMIN_ID;
+        // Combine roles from OAuth and Bot
+        const rolesSet = new Set([...rolesFromOAuth, ...rolesFromBot]);
+        const roles = Array.from(rolesSet);
+
+        const inGuild = inGuildOAuthMember || inGuildUserOAuth || inGuildBot || userProfile.id === MASTER_ADMIN_ID;
 
         let cooldownExpiry = null;
         if (inGuild) {
@@ -115,6 +140,20 @@ router.get('/discord/callback', async (req, res) => {
         let isAdmin = roles.includes(LSR_ADMIN_ROLE_ID);
         let isPDLead = roles.includes(PD_HIGH_COMMAND_ROLE_ID);
         let isEMSLead = roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
+
+        // 5. Database Approved Application Check Fallback
+        if (!isWhitelisted && inGuild) {
+            try {
+                const [appRows] = await db.query(
+                    "SELECT id FROM applications WHERE discordId = ? AND status = 'approved'", 
+                    [userProfile.id]
+                );
+                if (appRows.length > 0) {
+                    isWhitelisted = true;
+                    console.log(`[AUTH] User ${userProfile.username} verified as Whitelisted via Approved DB Application.`);
+                }
+            } catch(dbErr) {}
+        }
 
         if (userProfile.id === MASTER_ADMIN_ID) {
             isWhitelisted = true; isStaff = true; isAdmin = true; isPDLead = true; isEMSLead = true;
@@ -148,22 +187,30 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
     const PD_HIGH_COMMAND_ROLE_ID = process.env.PD_HIGH_COMMAND_ROLE_ID || "1333342119569522729";
     const EMS_HIGH_COMMAND_ROLE_ID = process.env.EMS_HIGH_COMMAND_ROLE_ID || "1415224352986759231";
 
-    if (memberData) {
-        req.user.roles = memberData.roles;
+    if (memberData && Array.isArray(memberData.roles)) {
+        const combinedRoles = new Set([...(req.user.roles || []), ...memberData.roles]);
+        req.user.roles = Array.from(combinedRoles);
         req.user.inGuild = true;
         
-        req.user.isWhitelisted = memberData.roles.includes(WHITELISTED_ROLE_ID);
-        req.user.isStaff = memberData.roles.includes(STAFF_ROLE_ID);
-        req.user.isAdmin = memberData.roles.includes(LSR_ADMIN_ROLE_ID);
-        req.user.isPDLead = memberData.roles.includes(PD_HIGH_COMMAND_ROLE_ID);
-        req.user.isEMSLead = memberData.roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
-        
-        try {
-            const [rows] = await db.query('SELECT cooldown_expiry FROM discord_users WHERE discord_id = ?', [req.user.id]);
-            req.user.cooldownExpiry = rows.length > 0 ? rows[0].cooldown_expiry : null;
-        } catch(err) {}
+        req.user.isWhitelisted = req.user.isWhitelisted || req.user.roles.includes(WHITELISTED_ROLE_ID);
+        req.user.isStaff = req.user.isStaff || req.user.roles.includes(STAFF_ROLE_ID);
+        req.user.isAdmin = req.user.isAdmin || req.user.roles.includes(LSR_ADMIN_ROLE_ID);
+        req.user.isPDLead = req.user.isPDLead || req.user.roles.includes(PD_HIGH_COMMAND_ROLE_ID);
+        req.user.isEMSLead = req.user.isEMSLead || req.user.roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
     }
-    // Note: If memberData is null, do NOT set req.user.inGuild to false if it was already verified true!
+
+    // Database Approved Application Check Fallback
+    if (!req.user.isWhitelisted && req.user.inGuild) {
+        try {
+            const [appRows] = await db.query(
+                "SELECT id FROM applications WHERE discordId = ? AND status = 'approved'", 
+                [req.user.id]
+            );
+            if (appRows.length > 0) {
+                req.user.isWhitelisted = true;
+            }
+        } catch(dbErr) {}
+    }
 
     if (req.user.id === MASTER_ADMIN_ID) {
         req.user.isWhitelisted = true;
