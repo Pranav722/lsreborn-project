@@ -359,7 +359,7 @@ const CatalogManagement = ({ user }) => {
 
             {/* Add / Edit Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
                     <div className="bg-gray-900 border border-cyan-500/30 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between border-b border-gray-800 pb-4">
                             <h3 className="text-xl font-bold text-white flex items-center gap-2">

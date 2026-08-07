@@ -250,10 +250,16 @@ const StorePage = () => {
                 </div>
             )}
 
-            {/* Interactive Item Detail Modal - Dual Layer Uncropped Display */}
+            {/* Interactive Item Detail Modal - High Z-Index Over Top of Everything */}
             {selectedItem && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-                    <div className="bg-gray-900 border border-cyan-500/30 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+                <div 
+                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto"
+                    onClick={() => setSelectedItem(null)}
+                >
+                    <div 
+                        className="bg-gray-900 border border-cyan-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto relative z-[100000] my-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {/* Modal Header */}
                         <div className="flex items-start justify-between gap-4 border-b border-gray-800 pb-3">
                             <div>
