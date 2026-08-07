@@ -5,6 +5,8 @@ import AnimatedButton from '../../components/AnimatedButton';
 
 const CATEGORY_OPTIONS = ['Vehicles', 'VIP Perks', 'Currency', 'Businesses', 'Weapons & Gear', 'Custom Perks', 'General'];
 
+const getAuthToken = () => localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+
 const CatalogManagement = ({ user }) => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);

@@ -20,6 +20,7 @@ import StaffDashboard from './pages/staff/StaffDashboard';
 import QuizPage from './pages/QuizPage';
 import DepartmentApp from './pages/DepartmentApps';
 import JobManagement from './pages/staff/JobManagement';
+import StorePage from './pages/StorePage';
 
 // --- ERROR BOUNDARY ---
 class ErrorBoundary extends React.Component {
@@ -213,6 +214,7 @@ export default function App() {
       'apply-staff': <DepartmentApp type="staff" user={user} />,
       rules: <RulesPage />,
       news: <NewsPage />,
+      store: <StorePage />,
       queue: <QueuePage user={user} setPage={setPage} />,
       dashboard: <StaffDashboard user={user} setPage={setPage} onLogout={handleLogout} />,
       'job-dashboard': <JobManagement user={user} />
