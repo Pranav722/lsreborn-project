@@ -107,17 +107,21 @@ const StorePage = () => {
                         Explore exclusive in-game perks, import vehicles, custom business licenses, and priority privileges priced in <strong className="text-amber-400">LSR Coins (🪙)</strong> and <strong className="text-emerald-400">Indian Rupees (₹ INR)</strong>.
                     </p>
 
-                    {/* Dual Currency Info Pills */}
+                    {/* Dual Currency Info Pills & Conversion Rate */}
                     <div className="pt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400">
-                        <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-lg border border-gray-800 text-gray-300">
+                        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-950/80 to-emerald-950/80 px-3.5 py-1 rounded-xl border border-amber-500/40 text-amber-300 font-bold shadow-lg">
+                            <Coins size={15} className="text-amber-400" />
+                            <span>Official Rate: <strong className="text-white">1 LSR Coin = ₹5 INR</strong></span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-xl border border-gray-800 text-gray-300">
                             <Coins size={14} className="text-amber-400" />
                             <span>LSR Coins (🪙)</span>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-lg border border-gray-800 text-gray-300">
+                        <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-xl border border-gray-800 text-gray-300">
                             <IndianRupee size={14} className="text-emerald-400" />
                             <span>Indian Rupee (₹ INR)</span>
                         </div>
-                        <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-lg border border-gray-800 text-gray-300">
+                        <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-xl border border-gray-800 text-gray-300">
                             <CheckCircle2 size={14} className="text-cyan-400" />
                             <span>Instant In-Game Delivery</span>
                         </div>
