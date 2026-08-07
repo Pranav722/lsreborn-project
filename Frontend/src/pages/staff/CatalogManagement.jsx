@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { ShoppingBag, Plus, Trash2, Edit3, Image as ImageIcon, Coins, Search, Tag, Check, AlertCircle, X, Upload, Loader2 } from 'lucide-react';
 import Card from '../../components/Card';
 import AnimatedButton from '../../components/AnimatedButton';
@@ -33,6 +34,18 @@ const CatalogManagement = ({ user }) => {
 
     // Delete confirmation state
     const [deletingId, setDeletingId] = useState(null);
+
+    // Body scroll lock effect when modal is open
+    useEffect(() => {
+        if (isModalOpen || deletingId) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isModalOpen, deletingId]);
 
     const apiUrl = import.meta.env.VITE_API_URL || 'https://lsreborn-backend.onrender.com';
 
@@ -357,10 +370,16 @@ const CatalogManagement = ({ user }) => {
                 </div>
             )}
 
-            {/* Add / Edit Modal */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
-                    <div className="bg-gray-900 border border-cyan-500/30 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            {/* Add / Edit Modal - Rendered to document.body */}
+            {isModalOpen && ReactDOM.createPortal(
+                <div 
+                    className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto"
+                    onClick={() => setIsModalOpen(false)}
+                >
+                    <div 
+                        className="bg-gray-900 border border-cyan-500/30 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto relative z-[1000000] my-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="flex items-center justify-between border-b border-gray-800 pb-4">
                             <h3 className="text-xl font-bold text-white flex items-center gap-2">
                                 <ShoppingBag className="text-cyan-400" size={22} />
@@ -518,13 +537,20 @@ const CatalogManagement = ({ user }) => {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {/* Delete Confirmation Modal */}
-            {deletingId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-                    <div className="bg-gray-900 border border-rose-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            {/* Delete Confirmation Modal - Rendered to document.body */}
+            {deletingId && ReactDOM.createPortal(
+                <div 
+                    className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto"
+                    onClick={() => setDeletingId(null)}
+                >
+                    <div 
+                        className="bg-gray-900 border border-rose-500/30 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 relative z-[1000000] my-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="flex items-center gap-3 text-rose-400">
                             <AlertCircle size={28} />
                             <h3 className="text-lg font-bold text-white">Confirm Item Deletion</h3>
@@ -547,7 +573,8 @@ const CatalogManagement = ({ user }) => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

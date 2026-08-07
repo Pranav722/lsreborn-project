@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { ShoppingBag, Search, Tag, Coins, Info, Sparkles, CheckCircle2, X, ExternalLink, HelpCircle, RefreshCw, MessageSquare } from 'lucide-react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
@@ -13,7 +14,19 @@ const StorePage = () => {
     const [selectedItem, setSelectedItem] = useState(null);
 
     const apiUrl = import.meta.env.VITE_API_URL || 'https://lsreborn-backend.onrender.com';
-    const discordInvite = import.meta.env.VITE_DISCORD_INVITE || 'https://discord.gg/x4jVEH6H6m';
+    const discordInvite = import.meta.env.VITE_DISCORD_INVITE || 'https://discord.gg/5C8xvCC66x';
+
+    // Disable background page scrolling when modal is open
+    useEffect(() => {
+        if (selectedItem) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [selectedItem]);
 
     const fetchItems = async () => {
         setLoading(true);
@@ -34,7 +47,7 @@ const StorePage = () => {
         fetchItems();
     }, []);
 
-    // If database has catalog items, use them! If database is empty, fallback to starter catalog items
+    // Fallback starter items if database is empty
     const displayItems = items.length > 0 ? items : [
         {
             id: 'default-1',
@@ -250,14 +263,14 @@ const StorePage = () => {
                 </div>
             )}
 
-            {/* Interactive Item Detail Modal - High Z-Index Over Top of Everything */}
-            {selectedItem && (
+            {/* REACT PORTAL: Interactive Item Detail Modal Rendered Directly to document.body */}
+            {selectedItem && ReactDOM.createPortal(
                 <div 
-                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto"
+                    className="fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto"
                     onClick={() => setSelectedItem(null)}
                 >
                     <div 
-                        className="bg-gray-900 border border-cyan-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto relative z-[100000] my-auto"
+                        className="bg-gray-900 border border-cyan-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto relative z-[1000000] my-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Modal Header */}
@@ -326,7 +339,8 @@ const StorePage = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

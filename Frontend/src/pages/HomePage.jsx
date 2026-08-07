@@ -156,7 +156,7 @@ const HomePage = ({ setPage, onApplyClick }) => {
                         <AnimatedButton onClick={onApplyClick} className="bg-cyan-500 shadow-lg shadow-cyan-500/20 px-8 sm:px-10 py-3 sm:py-4 text-base sm:text-lg w-full sm:w-auto">
                             Start Your Journey
                         </AnimatedButton>
-                        <a href="https://discord.gg/x4jVEH6H6m" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                        <a href="https://discord.gg/5C8xvCC66x" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
                             <button className="w-full sm:w-auto px-8 sm:px-10 py-3 sm:py-4 rounded-lg font-bold text-white border border-white/20 active:bg-white/20 transition-all duration-300 backdrop-blur-sm">
                                 Join Community
                             </button>
