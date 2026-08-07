@@ -120,6 +120,7 @@ const CatalogManagement = ({ user }) => {
         let finalImageUrl = formData.image_url;
 
         try {
+            const token = getAuthToken();
             // Step 1: If a local file was selected, upload directly to Cloudinary via backend API
             if (selectedFile && imagePreview) {
                 setUploadingStatus('Uploading image to Cloudinary...');
@@ -127,8 +128,9 @@ const CatalogManagement = ({ user }) => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${token}`
                     },
+                    credentials: 'include',
                     body: JSON.stringify({ image: imagePreview })
                 });
 
@@ -156,8 +158,9 @@ const CatalogManagement = ({ user }) => {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 },
+                credentials: 'include',
                 body: JSON.stringify(payload)
             });
 
@@ -181,11 +184,13 @@ const CatalogManagement = ({ user }) => {
 
     const handleDelete = async (id) => {
         try {
+            const token = getAuthToken();
             const res = await fetch(`${apiUrl}/api/catalog/${id}`, {
                 method: 'DELETE',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include'
             });
 
             if (res.ok) {

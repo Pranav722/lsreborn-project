@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Search, Tag, Coins, Info, Sparkles, CheckCircle2, X, ExternalLink, HelpCircle } from 'lucide-react';
+import { ShoppingBag, Search, Tag, Coins, Info, Sparkles, CheckCircle2, X, ExternalLink, HelpCircle, RefreshCw, MessageSquare } from 'lucide-react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
 
@@ -15,26 +15,26 @@ const StorePage = () => {
     const apiUrl = import.meta.env.VITE_API_URL || 'https://lsreborn-backend.onrender.com';
     const discordInvite = import.meta.env.VITE_DISCORD_INVITE || 'https://discord.gg/8xPJ2p7qUQ';
 
-    useEffect(() => {
-        const fetchItems = async () => {
-            setLoading(true);
-            try {
-                const res = await fetch(`${apiUrl}/api/catalog?t=${Date.now()}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setItems(Array.isArray(data) ? data : []);
-                }
-            } catch (err) {
-                console.error("Error fetching store catalogue:", err);
-            } finally {
-                setLoading(false);
+    const fetchItems = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${apiUrl}/api/catalog?t=${Date.now()}`);
+            if (res.ok) {
+                const data = await res.json();
+                setItems(Array.isArray(data) ? data : []);
             }
-        };
+        } catch (err) {
+            console.error("Error fetching store catalogue:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchItems();
     }, []);
 
-    // Initial fallback items if DB has no items yet
+    // If database has catalog items, use them! If database is empty, fallback to starter catalog items
     const displayItems = items.length > 0 ? items : [
         {
             id: 'default-1',
@@ -68,6 +68,11 @@ const StorePage = () => {
         const matchesCat = selectedCategory === 'All' || item.category === selectedCategory;
         return matchesSearch && matchesCat;
     });
+
+    const resetFilters = () => {
+        setSearchTerm('');
+        setSelectedCategory('All');
+    };
 
     return (
         <div className="space-y-8 animate-fade-in pb-12">
@@ -134,18 +139,53 @@ const StorePage = () => {
                 </div>
             </div>
 
-            {/* Items Grid */}
+            {/* Items Grid & Rich Empty UI/UX States */}
             {loading ? (
                 <div className="text-center py-20 text-gray-400 space-y-3">
                     <div className="animate-spin w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full mx-auto" />
-                    <p className="text-sm font-medium">Loading Catalogue Items...</p>
+                    <p className="text-sm font-medium">Loading Kaizen City Catalogue...</p>
                 </div>
             ) : filteredItems.length === 0 ? (
-                <div className="text-center py-20 bg-gray-900/40 rounded-3xl border border-gray-800 space-y-4">
-                    <ShoppingBag className="w-12 h-12 text-gray-600 mx-auto" />
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-300">No Catalogue Items Found</h3>
-                        <p className="text-sm text-gray-500 mt-1">Try selecting a different category or clearing your search query.</p>
+                <div className="relative overflow-hidden rounded-3xl bg-gray-900/60 border border-cyan-500/20 backdrop-blur-xl p-12 text-center shadow-2xl space-y-6">
+                    <div className="w-20 h-20 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center mx-auto text-cyan-400 shadow-inner">
+                        <ShoppingBag size={38} className="animate-pulse" />
+                    </div>
+                    
+                    <div className="max-w-md mx-auto space-y-2">
+                        <h3 className="text-2xl font-black text-white tracking-wide">
+                            {searchTerm || selectedCategory !== 'All' ? 'No Matching Items Found' : 'Catalogue Under Setup'}
+                        </h3>
+                        <p className="text-sm text-gray-400 leading-relaxed">
+                            {searchTerm || selectedCategory !== 'All' 
+                                ? `No items in category "${selectedCategory}" matched your search term "${searchTerm}".`
+                                : 'The Kaizen City staff team is currently configuring new import vehicles, VIP perks, and business items.'
+                            }
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                        {(searchTerm || selectedCategory !== 'All') ? (
+                            <button
+                                onClick={resetFilters}
+                                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-gray-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-cyan-500/20"
+                            >
+                                Reset Search & Filters
+                            </button>
+                        ) : (
+                            <button
+                                onClick={fetchItems}
+                                className="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-gray-950 rounded-xl text-xs font-bold transition-all shadow-lg shadow-cyan-500/20 flex items-center gap-2"
+                            >
+                                <RefreshCw size={14} />
+                                Refresh Catalogue
+                            </button>
+                        )}
+                        <a href={discordInvite} target="_blank" rel="noopener noreferrer">
+                            <button className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-cyan-300 rounded-xl text-xs font-semibold transition-all border border-gray-700 flex items-center gap-2">
+                                <MessageSquare size={14} />
+                                Contact Staff on Discord
+                            </button>
+                        </a>
                     </div>
                 </div>
             ) : (
