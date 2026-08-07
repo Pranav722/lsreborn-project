@@ -253,19 +253,22 @@ router.post('/submit/whitelist', isAuthenticated, async (req, res) => {
     const passed = score >= 12;
     const total = 15;
 
-    // LOG TO DISCORD
-    const logChannel = process.env.LOG_CHANNEL_ID; // Ensure this ENV is set
+    // LOG & NOTIFY DISCORD
+    const targetChannelId = process.env.TARGET_CHANNEL_ID || process.env.LOG_CHANNEL_ID || "1411033400541708339";
     const embed = {
-        title: passed ? "✅ Whitelist Quiz Passed" : "❌ Whitelist Quiz Failed",
-        color: passed ? 0x00ff00 : 0xff0000,
+        title: passed ? "🎉 Whitelist Quiz Passed - User Auto-Whitelisted" : "❌ Whitelist Quiz Failed",
+        description: passed 
+            ? `Congratulations <@${req.user.id}>! You scored **${score}/${total}** on the Whitelist Quiz and have been automatically granted Citizenship in **Kaizen City by LSReborn**!`
+            : `User <@${req.user.id}> attempted the Whitelist Quiz and scored **${score}/${total}**. A 24-hour cooldown has been applied.`,
+        color: passed ? 0x00FF00 : 0xFF0000,
         fields: [
-            { name: "User", value: `<@${req.user.id}> (${req.user.username})`, inline: true },
+            { name: "Applicant", value: `<@${req.user.id}> (${req.user.username})`, inline: true },
             { name: "Score", value: `${score}/${total}`, inline: true },
-            { name: "Result", value: passed ? "Auto-Whitelisted" : "Cooldown Applied" }
+            { name: "Result", value: passed ? "Approved / Auto-Whitelisted" : "Failed (Cooldown)", inline: true }
         ],
         timestamp: new Date().toISOString()
     };
-    await sendDiscordMessage(logChannel, null, embed);
+    await sendDiscordMessage(targetChannelId, null, embed);
 
     if (passed) {
         await addDiscordRole(req.user.id, WHITELISTED_ROLE_ID);
