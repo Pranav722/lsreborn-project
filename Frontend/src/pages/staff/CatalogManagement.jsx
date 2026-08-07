@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Plus, Trash2, Edit3, Image as ImageIcon, Coins, Search, Tag, Check, AlertCircle, X, ExternalLink } from 'lucide-react';
+import { ShoppingBag, Plus, Trash2, Edit3, Image as ImageIcon, Coins, Search, Tag, Check, AlertCircle, X, Upload, Loader2 } from 'lucide-react';
 import Card from '../../components/Card';
 import AnimatedButton from '../../components/AnimatedButton';
 
@@ -18,11 +18,16 @@ const CatalogManagement = ({ user }) => {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        price_coins: 100,
+        price_coins: 500,
         image_url: '',
         category: 'Vehicles'
     });
+
+    // Image upload state
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [uploadingStatus, setUploadingStatus] = useState('');
 
     // Delete confirmation state
     const [deletingId, setDeletingId] = useState(null);
@@ -57,6 +62,8 @@ const CatalogManagement = ({ user }) => {
             image_url: '',
             category: 'Vehicles'
         });
+        setSelectedFile(null);
+        setImagePreview('');
         setIsModalOpen(true);
     };
 
@@ -69,24 +76,81 @@ const CatalogManagement = ({ user }) => {
             image_url: item.image_url || '',
             category: item.category || 'General'
         });
+        setSelectedFile(null);
+        setImagePreview(item.image_url || '');
         setIsModalOpen(true);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            setMessage({ type: 'error', text: 'Please select a valid image file (PNG, JPG, WEBP).' });
+            return;
+        }
+
+        if (file.size > 8 * 1024 * 1024) {
+            setMessage({ type: 'error', text: 'Image size must be under 8MB.' });
+            return;
+        }
+
+        setSelectedFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.name.trim() || !formData.image_url.trim()) {
-            setMessage({ type: 'error', text: 'Item Name and Image URL are required!' });
+        if (!formData.name.trim()) {
+            setMessage({ type: 'error', text: 'Item Name is required!' });
+            return;
+        }
+
+        if (!selectedFile && !formData.image_url.trim() && !imagePreview) {
+            setMessage({ type: 'error', text: 'Please select an image file or paste an image URL!' });
             return;
         }
 
         setSubmitting(true);
         setMessage(null);
+        let finalImageUrl = formData.image_url;
 
         try {
+            // Step 1: If a local file was selected, upload directly to Cloudinary via backend API
+            if (selectedFile && imagePreview) {
+                setUploadingStatus('Uploading image to Cloudinary...');
+                const uploadRes = await fetch(`${apiUrl}/api/catalog/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ image: imagePreview })
+                });
+
+                const uploadData = await uploadRes.json();
+                if (uploadRes.ok && uploadData.url) {
+                    finalImageUrl = uploadData.url;
+                } else {
+                    throw new Error(uploadData.message || 'Cloudinary upload failed.');
+                }
+            }
+
+            // Step 2: Save Item to Catalogue Database
+            setUploadingStatus('Saving item to Catalogue...');
             const url = editingItem 
                 ? `${apiUrl}/api/catalog/${editingItem.id}`
                 : `${apiUrl}/api/catalog`;
             const method = editingItem ? 'PUT' : 'POST';
+
+            const payload = {
+                ...formData,
+                image_url: finalImageUrl
+            };
 
             const res = await fetch(url, {
                 method,
@@ -94,13 +158,13 @@ const CatalogManagement = ({ user }) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             const data = await res.json();
 
             if (res.ok) {
-                setMessage({ type: 'success', text: editingItem ? 'Item updated successfully!' : 'New item added to Catalogue!' });
+                setMessage({ type: 'success', text: editingItem ? 'Item updated successfully!' : 'New item added to Catalogue and saved to Cloudinary!' });
                 setIsModalOpen(false);
                 fetchCatalog();
             } else {
@@ -108,9 +172,10 @@ const CatalogManagement = ({ user }) => {
             }
         } catch (err) {
             console.error("Error saving item:", err);
-            setMessage({ type: 'error', text: 'Server error saving catalogue item.' });
+            setMessage({ type: 'error', text: err.message || 'Server error saving catalogue item.' });
         } finally {
             setSubmitting(false);
+            setUploadingStatus('');
         }
     };
 
@@ -342,33 +407,58 @@ const CatalogManagement = ({ user }) => {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
-                                    Photo URL (Cloudinary URL) <span className="text-rose-400">*</span>
+                            {/* Direct Photo Upload / URL Option */}
+                            <div className="space-y-3 p-4 bg-gray-950 rounded-xl border border-gray-800">
+                                <label className="block text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                                    Item Photo Upload <span className="text-rose-400">*</span>
                                 </label>
+                                
+                                {/* Upload Button */}
+                                <div>
+                                    <label className="flex items-center justify-center gap-2 p-3 bg-gray-900 hover:bg-gray-800 border border-dashed border-cyan-500/40 rounded-xl cursor-pointer text-xs font-semibold text-gray-300 hover:text-white transition-colors">
+                                        <Upload size={16} className="text-cyan-400" />
+                                        <span>Choose Photo File from Computer</span>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleFileChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                    <p className="text-[11px] text-gray-500 mt-1 text-center">
+                                        Selecting a file will automatically upload it to Cloudinary.
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2 my-2">
+                                    <div className="flex-1 h-px bg-gray-800" />
+                                    <span className="text-[10px] text-gray-500 uppercase font-bold">OR PASTE URL</span>
+                                    <div className="flex-1 h-px bg-gray-800" />
+                                </div>
+
+                                {/* URL Input */}
                                 <div className="relative">
                                     <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                                     <input
                                         type="url"
-                                        required
-                                        placeholder="https://res.cloudinary.com/.../your_image.png"
+                                        placeholder="https://res.cloudinary.com/.../image.png"
                                         value={formData.image_url}
-                                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                                        className="w-full bg-gray-950 border border-gray-800 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60"
+                                        onChange={(e) => {
+                                            setFormData({ ...formData, image_url: e.target.value });
+                                            if (!selectedFile) setImagePreview(e.target.value);
+                                        }}
+                                        className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/60"
                                     />
                                 </div>
-                                <p className="text-[11px] text-gray-500 mt-1">
-                                    Paste a direct Cloudinary or image link.
-                                </p>
                             </div>
 
                             {/* Live Image Preview */}
-                            {formData.image_url && (
+                            {(imagePreview || formData.image_url) && (
                                 <div className="p-3 bg-gray-950 rounded-xl border border-gray-800 space-y-2">
-                                    <span className="text-xs font-semibold text-gray-400 block">Live Photo Preview:</span>
+                                    <span className="text-xs font-semibold text-gray-400 block">Photo Preview:</span>
                                     <div className="h-36 w-full rounded-lg overflow-hidden bg-gray-900 border border-cyan-500/20">
                                         <img 
-                                            src={formData.image_url} 
+                                            src={imagePreview || formData.image_url} 
                                             alt="Preview"
                                             className="w-full h-full object-cover"
                                             onError={(e) => { e.target.src = 'https://res.cloudinary.com/n8ql5bui/image/upload/v1785606470/KAIZEN_CITY_LOGO_lk0ycw.png'; }}
@@ -390,6 +480,13 @@ const CatalogManagement = ({ user }) => {
                                 />
                             </div>
 
+                            {uploadingStatus && (
+                                <div className="p-3 bg-cyan-950/40 border border-cyan-500/30 rounded-xl flex items-center gap-2 text-cyan-300 text-xs font-semibold animate-pulse">
+                                    <Loader2 size={16} className="animate-spin" />
+                                    <span>{uploadingStatus}</span>
+                                </div>
+                            )}
+
                             <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-800">
                                 <button
                                     type="button"
@@ -403,7 +500,7 @@ const CatalogManagement = ({ user }) => {
                                     disabled={submitting}
                                     className="bg-cyan-500 hover:bg-cyan-400 px-6 py-2 text-sm font-semibold shadow-lg shadow-cyan-500/20"
                                 >
-                                    {submitting ? 'Saving...' : editingItem ? 'Update Item' : 'Add Item'}
+                                    {submitting ? 'Uploading & Saving...' : editingItem ? 'Update Item' : 'Add Item'}
                                 </AnimatedButton>
                             </div>
                         </form>

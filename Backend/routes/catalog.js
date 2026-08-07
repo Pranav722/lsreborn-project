@@ -32,6 +32,67 @@ const initializeCatalogTable = async () => {
 
 initializeCatalogTable();
 
+const fetch = require('node-fetch');
+const crypto = require('crypto');
+
+// POST upload image directly to Cloudinary API (Admin only)
+router.post('/upload', isAuthenticated, isAdmin, async (req, res) => {
+    const { image, upload_preset } = req.body;
+    if (!image) {
+        return res.status(400).json({ message: "Image data is required." });
+    }
+
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "n8ql5bui";
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    const preset = upload_preset || process.env.CLOUDINARY_UPLOAD_PRESET;
+
+    try {
+        const formData = new URLSearchParams();
+        formData.append('file', image);
+
+        if (preset) {
+            formData.append('upload_preset', preset);
+        } else if (apiKey && apiSecret) {
+            const timestamp = Math.floor(Date.now() / 1000);
+            const strToSign = `timestamp=${timestamp}${apiSecret}`;
+            const signature = crypto.createHash('sha1').update(strToSign).digest('hex');
+
+            formData.append('api_key', apiKey);
+            formData.append('timestamp', timestamp.toString());
+            formData.append('signature', signature);
+        } else {
+            console.warn("[CLOUDINARY] Missing CLOUDINARY_API_KEY & CLOUDINARY_API_SECRET. Please add Cloudinary credentials in Render environment variables!");
+            formData.append('upload_preset', 'ml_default');
+        }
+
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const cloudData = await cloudRes.json();
+
+        if (cloudRes.ok && cloudData.secure_url) {
+            console.log(`[CLOUDINARY] Image successfully uploaded to Cloudinary: ${cloudData.secure_url}`);
+            return res.json({
+                success: true,
+                url: cloudData.secure_url,
+                public_id: cloudData.public_id
+            });
+        } else {
+            console.error("[CLOUDINARY] Upload Error Response:", cloudData);
+            return res.status(cloudRes.status || 500).json({
+                message: cloudData.error ? cloudData.error.message : "Cloudinary upload failed. Check your Cloudinary API keys on Render.",
+                details: cloudData
+            });
+        }
+    } catch (err) {
+        console.error("[CLOUDINARY] Server Error during Cloudinary upload:", err);
+        res.status(500).json({ message: "Server error uploading image to Cloudinary." });
+    }
+});
+
 // GET all catalog items (Public / Authenticated)
 router.get('/', async (req, res) => {
     try {
