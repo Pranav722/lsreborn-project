@@ -5,23 +5,54 @@ const fetch = require('node-fetch');
 require('dotenv').config();
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
-const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN;
+const getBotToken = () => (process.env.ACTIVE_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || "").trim().replace(/^["']|["']$/g, '');
 
 // --- DISCORD UTILS ---
+async function addDiscordRole(userId, roleId) {
+    const token = getBotToken();
+    if (!token || !userId || !roleId) return;
+    const guildId = process.env.ACTIVE_GUILD_ID || process.env.GUILD_ID || "1322660458888695818";
+    try {
+        const res = await fetch(`${DISCORD_API_URL}/guilds/${guildId}/members/${userId}/roles/${roleId}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bot ${token}` }
+        });
+        if (res.status === 401) {
+            console.error(`[CRITICAL DISCORD BOT ERROR] ACTIVE_BOT_TOKEN returned 401 Unauthorized for user ${userId}. The bot token configured in Render environment is invalid or revoked! Please reset bot token in Discord Developer Portal and update ACTIVE_BOT_TOKEN in Render.`);
+        } else if (!res.ok) {
+            const errText = await res.text();
+            console.warn(`[APPLICATIONS] addDiscordRole status ${res.status}: ${errText}`);
+        } else {
+            console.log(`[APPLICATIONS] Successfully added Whitelisted role (${roleId}) to user ${userId}`);
+        }
+    } catch(e) {
+        console.error("[APPLICATIONS] Error in addDiscordRole:", e);
+    }
+}
+
 async function sendDiscordMessage(channelId, content, embed = null) {
-    if (!channelId || !ACTIVE_BOT_TOKEN) return;
+    const token = getBotToken();
+    if (!channelId || !token) return;
     try {
         const body = { content };
         if (embed) body.embeds = [embed];
 
-        await fetch(`${DISCORD_API_URL}/channels/${channelId}/messages`, {
+        const res = await fetch(`${DISCORD_API_URL}/channels/${channelId}/messages`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bot ${ACTIVE_BOT_TOKEN}`,
+                'Authorization': `Bot ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(body)
         });
+        if (res.status === 401) {
+            console.error(`[CRITICAL DISCORD BOT ERROR] ACTIVE_BOT_TOKEN returned 401 Unauthorized when sending message to channel ${channelId}. Please update ACTIVE_BOT_TOKEN in Render.`);
+        } else if (!res.ok) {
+            const errText = await res.text();
+            console.warn(`[APPLICATIONS] sendDiscordMessage status ${res.status}: ${errText}`);
+        } else {
+            console.log(`[APPLICATIONS] Successfully sent Discord embed notification to channel ${channelId}`);
+        }
     } catch (e) {
         console.error("Discord Msg Error:", e);
     }
@@ -116,13 +147,52 @@ router.put('/:id', isAuthenticated, isStaff, async (req, res) => {
     const { id } = req.params;
     const { status, reason } = req.body;
     try {
-        const query = 'UPDATE applications SET status = ?, reason = ?, notified = 0 WHERE id = ?';
-        const [result] = await db.query(query, [status, reason || null, id]);
-
-        if (result.affectedRows === 0) {
+        const [rows] = await db.query('SELECT * FROM applications WHERE id = ?', [id]);
+        if (rows.length === 0) {
             return res.status(404).json({ message: 'Application not found' });
         }
-        res.json({ message: 'Application status updated successfully' });
+        const app = rows[0];
+
+        await db.query('UPDATE applications SET status = ?, reason = ?, notified = 1 WHERE id = ?', [status, reason || null, id]);
+
+        const discordId = app.discordId;
+        const targetChannelId = process.env.TARGET_CHANNEL_ID || process.env.LOG_CHANNEL_ID || "1411033400541708339";
+        const WHITELISTED_ROLE_ID = process.env.WHITELISTED_ROLE_ID || "1322674155107127458";
+
+        if (status === 'approved') {
+            // 1. Grant Discord Whitelisted Role directly
+            await addDiscordRole(discordId, WHITELISTED_ROLE_ID);
+
+            // 2. Post Approval Embed to Discord Channel directly
+            const embed = {
+                title: "🎉 Application Approved",
+                description: `Congratulations <@${discordId}>, your application for **Kaizen City by LSReborn** has been approved! Welcome to the server!`,
+                color: 0x00FF00,
+                fields: [
+                    { name: "Applicant", value: `<@${discordId}>`, inline: true },
+                    { name: "Character", value: app.characterName || 'N/A', inline: true },
+                    { name: "Status", value: "Approved", inline: true }
+                ],
+                timestamp: new Date().toISOString()
+            };
+            await sendDiscordMessage(targetChannelId, null, embed);
+
+        } else if (status === 'rejected') {
+            // Post Rejection Embed to Discord Channel directly
+            const embed = {
+                title: "🚫 Application Rejected",
+                description: `Hello <@${discordId}>, your application was reviewed and rejected.`,
+                color: 0xFF0000,
+                fields: [
+                    { name: "Applicant", value: `<@${discordId}>`, inline: true },
+                    { name: "Reason", value: reason || "Does not meet guidelines", inline: false }
+                ],
+                timestamp: new Date().toISOString()
+            };
+            await sendDiscordMessage(targetChannelId, null, embed);
+        }
+
+        res.json({ success: true, message: `Application ${status} successfully and Discord updated!` });
     } catch (err) {
         console.error("Error updating application:", err);
         res.status(500).json({ message: 'Server Error' });

@@ -5,7 +5,7 @@ const { isAuthenticated } = require('../middleware/auth');
 require('dotenv').config();
 
 const DISCORD_API_URL = 'https://discord.com/api/v10';
-const ACTIVE_BOT_TOKEN = process.env.ACTIVE_BOT_TOKEN;
+const getBotToken = () => (process.env.ACTIVE_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || "").trim().replace(/^["']|["']$/g, '');
 const ACTIVE_GUILD_ID = process.env.ACTIVE_GUILD_ID || "1322660458888695818";
 const WHITELISTED_ROLE_ID = process.env.WHITELISTED_ROLE_ID || "1322674155107127458";
 
@@ -31,15 +31,18 @@ const QUIZ_POOL = [
 
 async function addDiscordRole(userId, roleId) {
     try {
-        if (!ACTIVE_BOT_TOKEN) {
+        const token = getBotToken();
+        if (!token) {
             console.warn("[FORMS] Missing ACTIVE_BOT_TOKEN env var, skipped addDiscordRole");
             return;
         }
         const res = await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${userId}/roles/${roleId}`, {
             method: 'PUT',
-            headers: { 'Authorization': `Bot ${ACTIVE_BOT_TOKEN}` }
+            headers: { 'Authorization': `Bot ${token}` }
         });
-        if (!res.ok) {
+        if (res.status === 401) {
+            console.error(`[CRITICAL DISCORD BOT ERROR] ACTIVE_BOT_TOKEN returned 401 Unauthorized for user ${userId}. The bot token configured in Render environment is invalid or revoked! Please reset bot token in Discord Developer Portal and update ACTIVE_BOT_TOKEN in Render.`);
+        } else if (!res.ok) {
             const errBody = await res.text();
             console.warn(`[FORMS] addDiscordRole failed for user ${userId} with status ${res.status}: ${errBody}`);
         } else {
