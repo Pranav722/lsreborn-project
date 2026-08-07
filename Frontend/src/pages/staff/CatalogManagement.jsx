@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { ShoppingBag, Plus, Trash2, Edit3, Image as ImageIcon, Coins, Search, Tag, Check, AlertCircle, X, Upload, Loader2 } from 'lucide-react';
+import { ShoppingBag, Plus, Trash2, Edit3, Image as ImageIcon, Coins, Search, Tag, Check, AlertCircle, X, Upload, Loader2, IndianRupee } from 'lucide-react';
 import Card from '../../components/Card';
 import AnimatedButton from '../../components/AnimatedButton';
 
@@ -18,10 +18,12 @@ const CatalogManagement = ({ user }) => {
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
+    const [modalError, setModalError] = useState(null);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
         price_coins: 500,
+        currency: 'LSR_COINS',
         image_url: '',
         category: 'Vehicles'
     });
@@ -56,9 +58,12 @@ const CatalogManagement = ({ user }) => {
             if (res.ok) {
                 const data = await res.json();
                 setItems(Array.isArray(data) ? data : []);
+            } else {
+                setMessage({ type: 'error', text: 'Failed to fetch catalogue items.' });
             }
-        } catch (e) {
-            console.error("Error fetching catalog:", e);
+        } catch (err) {
+            console.error("Error fetching catalog:", err);
+            setMessage({ type: 'error', text: 'Error connecting to backend server.' });
         } finally {
             setLoading(false);
         }
@@ -74,11 +79,13 @@ const CatalogManagement = ({ user }) => {
             name: '',
             description: '',
             price_coins: 500,
+            currency: 'LSR_COINS',
             image_url: '',
             category: 'Vehicles'
         });
         setSelectedFile(null);
         setImagePreview('');
+        setModalError(null);
         setIsModalOpen(true);
     };
 
@@ -88,11 +95,13 @@ const CatalogManagement = ({ user }) => {
             name: item.name || '',
             description: item.description || '',
             price_coins: item.price_coins || 0,
+            currency: item.currency || 'LSR_COINS',
             image_url: item.image_url || '',
             category: item.category || 'General'
         });
         setSelectedFile(null);
         setImagePreview(item.image_url || '');
+        setModalError(null);
         setIsModalOpen(true);
     };
 
@@ -101,15 +110,16 @@ const CatalogManagement = ({ user }) => {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            setMessage({ type: 'error', text: 'Please select a valid image file (PNG, JPG, WEBP).' });
+            setModalError('Please select a valid image file (PNG, JPG, WEBP).');
             return;
         }
 
         if (file.size > 8 * 1024 * 1024) {
-            setMessage({ type: 'error', text: 'Image size must be under 8MB.' });
+            setModalError('Image size must be under 8MB.');
             return;
         }
 
+        setModalError(null);
         setSelectedFile(file);
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -120,23 +130,24 @@ const CatalogManagement = ({ user }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setModalError(null);
+
         if (!formData.name.trim()) {
-            setMessage({ type: 'error', text: 'Item Name is required!' });
+            setModalError('Item Name is required!');
             return;
         }
 
         if (!selectedFile && !formData.image_url.trim() && !imagePreview) {
-            setMessage({ type: 'error', text: 'Please select an image file or paste an image URL!' });
+            setModalError('Please select an image file or paste an image URL!');
             return;
         }
 
         setSubmitting(true);
-        setMessage(null);
         let finalImageUrl = formData.image_url;
 
         try {
             const token = getAuthToken();
-            // Step 1: If a local file was selected, upload directly to Cloudinary via backend API
+            // Step 1: Upload image to Cloudinary if local file chosen
             if (selectedFile && imagePreview) {
                 setUploadingStatus('Uploading image to Cloudinary...');
                 const uploadRes = await fetch(`${apiUrl}/api/catalog/upload`, {
@@ -157,7 +168,7 @@ const CatalogManagement = ({ user }) => {
                 }
             }
 
-            // Step 2: Save Item to Catalogue Database
+            // Step 2: Save item to catalog database
             setUploadingStatus('Saving item to Catalogue...');
             const url = editingItem 
                 ? `${apiUrl}/api/catalog/${editingItem.id}`
@@ -182,15 +193,18 @@ const CatalogManagement = ({ user }) => {
             const data = await res.json();
 
             if (res.ok) {
-                setMessage({ type: 'success', text: editingItem ? 'Item updated successfully!' : 'New item added to Catalogue and saved to Cloudinary!' });
+                setMessage({
+                    type: 'success',
+                    text: editingItem ? 'Item updated successfully!' : 'New catalogue item added successfully!'
+                });
                 setIsModalOpen(false);
                 fetchCatalog();
             } else {
-                setMessage({ type: 'error', text: data.message || 'Action failed.' });
+                setModalError(data.message || 'Failed to save item.');
             }
         } catch (err) {
-            console.error("Error saving item:", err);
-            setMessage({ type: 'error', text: err.message || 'Server error saving catalogue item.' });
+            console.error("Submit Error:", err);
+            setModalError(err.message || 'Server connection error.');
         } finally {
             setSubmitting(false);
             setUploadingStatus('');
@@ -207,23 +221,22 @@ const CatalogManagement = ({ user }) => {
                 },
                 credentials: 'include'
             });
-
             if (res.ok) {
-                setMessage({ type: 'success', text: 'Item deleted from Catalogue!' });
-                setItems(prev => prev.filter(i => i.id !== id));
+                setMessage({ type: 'success', text: 'Item deleted from catalogue.' });
                 setDeletingId(null);
+                fetchCatalog();
             } else {
                 const data = await res.json();
                 setMessage({ type: 'error', text: data.message || 'Failed to delete item.' });
             }
         } catch (err) {
-            console.error("Delete Error:", err);
-            setMessage({ type: 'error', text: 'Server error deleting item.' });
+            console.error("Delete error:", err);
+            setMessage({ type: 'error', text: 'Error connecting to backend server.' });
         }
     };
 
     const filteredItems = items.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                               (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesCat = selectedCategory === 'All' || item.category === selectedCategory;
         return matchesSearch && matchesCat;
@@ -231,10 +244,10 @@ const CatalogManagement = ({ user }) => {
 
     return (
         <div className="space-y-6">
-            {/* Header & Controls */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-900/60 p-6 rounded-2xl border border-cyan-500/20 backdrop-blur-xl">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gray-900/60 p-6 rounded-2xl border border-gray-800 backdrop-blur-md">
                 <div>
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <h2 className="text-2xl font-black text-white flex items-center gap-2 tracking-tight">
                         <ShoppingBag className="text-cyan-400" size={26} />
                         Catalogue & Shop Management
                     </h2>
@@ -251,7 +264,7 @@ const CatalogManagement = ({ user }) => {
                 </AnimatedButton>
             </div>
 
-            {/* Notification Banner */}
+            {/* Dashboard Main Notification Banner (Only for page level actions) */}
             {message && (
                 <div className={`p-4 rounded-xl flex items-center justify-between border ${message.type === 'success' ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' : 'bg-rose-950/40 border-rose-500/40 text-rose-300'}`}>
                     <div className="flex items-center gap-3">
@@ -327,39 +340,48 @@ const CatalogManagement = ({ user }) => {
                                         <Tag size={12} />
                                         {item.category || 'General'}
                                     </div>
-                                    <div className="absolute top-2.5 right-2.5 z-20 bg-cyan-950/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-amber-300 border border-amber-400/40 flex items-center gap-1 shadow-lg">
-                                        <Coins size={14} className="text-amber-400" />
-                                        {Number(item.price_coins).toLocaleString()} LSR Coins
+
+                                    {/* Dual Currency Price Badge */}
+                                    <div className={`absolute top-2.5 right-2.5 z-20 bg-gray-950/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1 shadow-lg ${
+                                        item.currency === 'INR' 
+                                            ? 'text-emerald-300 border-emerald-500/40' 
+                                            : 'text-amber-300 border-amber-400/40'
+                                    }`}>
+                                        {item.currency === 'INR' ? (
+                                            <>
+                                                <IndianRupee size={13} className="text-emerald-400" />
+                                                <span>₹{Number(item.price_coins).toLocaleString()} INR</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Coins size={14} className="text-amber-400" />
+                                                <span>{Number(item.price_coins).toLocaleString()} LSR Coins</span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Content */}
                                 <div className="p-5 space-y-2">
-                                    <h3 className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">
+                                    <h3 className="text-lg font-bold text-white group-hover:text-cyan-300 transition-colors line-clamp-1">
                                         {item.name}
                                     </h3>
-                                    {item.description ? (
-                                        <p className="text-sm text-gray-400 line-clamp-3 leading-relaxed">
-                                            {item.description}
-                                        </p>
-                                    ) : (
-                                        <p className="text-xs text-gray-600 italic">No description provided.</p>
-                                    )}
+                                    <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">
+                                        {item.description || 'No description provided.'}
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Actions */}
-                            <div className="p-5 pt-0 flex items-center justify-between gap-3 border-t border-gray-800/60 mt-3 pt-3">
+                            <div className="p-5 pt-0 flex items-center gap-3">
                                 <button
                                     onClick={() => openEditModal(item)}
-                                    className="flex-1 py-2 px-3 bg-gray-800 hover:bg-gray-700 text-cyan-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-gray-700"
+                                    className="flex-1 py-2 px-3 bg-gray-800 hover:bg-gray-700 text-cyan-300 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-gray-700"
                                 >
                                     <Edit3 size={14} />
                                     Edit Item
                                 </button>
                                 <button
                                     onClick={() => setDeletingId(item.id)}
-                                    className="py-2 px-3 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-rose-800/50"
+                                    className="py-2 px-3 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-rose-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-rose-800/40"
                                 >
                                     <Trash2 size={14} />
                                     Delete
@@ -370,7 +392,7 @@ const CatalogManagement = ({ user }) => {
                 </div>
             )}
 
-            {/* Add / Edit Modal - Rendered to document.body */}
+            {/* REACT PORTAL: Add / Edit Modal Rendered Directly to document.body */}
             {isModalOpen && ReactDOM.createPortal(
                 <div 
                     className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto"
@@ -390,6 +412,19 @@ const CatalogManagement = ({ user }) => {
                             </button>
                         </div>
 
+                        {/* Modal-scoped Error Banner */}
+                        {modalError && (
+                            <div className="p-3.5 bg-rose-950/60 border border-rose-500/50 rounded-xl flex items-center justify-between text-rose-300 text-xs font-semibold animate-shake">
+                                <div className="flex items-center gap-2.5">
+                                    <AlertCircle size={16} className="text-rose-400 flex-shrink-0" />
+                                    <span>{modalError}</span>
+                                </div>
+                                <button onClick={() => setModalError(null)} className="text-rose-400 hover:text-white">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
@@ -398,20 +433,39 @@ const CatalogManagement = ({ user }) => {
                                 <input
                                     type="text"
                                     required
-                                    placeholder="e.g. Pegassi Zorrusso (Custom Car)"
+                                    placeholder="e.g. Pegassi Zorrusso (Custom Import Car)"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60"
                                 />
                             </div>
 
+                            {/* Dual Currency & Price Selection */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
-                                        Price (LSR Coins) <span className="text-rose-400">*</span>
+                                        Currency <span className="text-rose-400">*</span>
+                                    </label>
+                                    <select
+                                        value={formData.currency}
+                                        onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                                        className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60 cursor-pointer"
+                                    >
+                                        <option value="LSR_COINS">LSR Coins (🪙)</option>
+                                        <option value="INR">Indian Rupee (₹ INR)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                                        {formData.currency === 'INR' ? 'Price (₹ INR)' : 'Price (LSR Coins)'} <span className="text-rose-400">*</span>
                                     </label>
                                     <div className="relative">
-                                        <Coins className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400" size={16} />
+                                        {formData.currency === 'INR' ? (
+                                            <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400" size={16} />
+                                        ) : (
+                                            <Coins className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400" size={16} />
+                                        )}
                                         <input
                                             type="number"
                                             min="0"
@@ -423,20 +477,21 @@ const CatalogManagement = ({ user }) => {
                                         />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
-                                        Category
-                                    </label>
-                                    <select
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60 cursor-pointer"
-                                    >
-                                        {CATEGORY_OPTIONS.map(cat => (
-                                            <option key={cat} value={cat}>{cat}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                                    Category
+                                </label>
+                                <select
+                                    value={formData.category}
+                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500/60 cursor-pointer"
+                                >
+                                    {CATEGORY_OPTIONS.map(cat => (
+                                        <option key={cat} value={cat}>{cat}</option>
+                                    ))}
+                                </select>
                             </div>
 
                             {/* Direct Photo Upload / URL Option */}

@@ -19,11 +19,18 @@ const initializeCatalogTable = async () => {
                 name VARCHAR(255) NOT NULL,
                 description TEXT,
                 price_coins INT NOT NULL DEFAULT 0,
+                currency VARCHAR(20) DEFAULT 'LSR_COINS',
                 image_url VARCHAR(500) NOT NULL,
                 category VARCHAR(50) DEFAULT 'General',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        // Safely add currency column if missing on pre-existing table
+        try {
+            await db.query(`ALTER TABLE catalog_items ADD COLUMN currency VARCHAR(20) DEFAULT 'LSR_COINS'`);
+        } catch (colErr) {
+            // Column already exists
+        }
         console.log("[CATALOG] Table catalog_items initialized successfully.");
     } catch (e) {
         console.error("[CATALOG] Table Init Error:", e);
@@ -109,18 +116,19 @@ router.get('/', async (req, res) => {
 
 // POST add new catalog item (Admin only)
 router.post('/', isAuthenticated, isAdmin, async (req, res) => {
-    const { name, description, price_coins, image_url, category } = req.body;
+    const { name, description, price_coins, currency, image_url, category } = req.body;
 
     if (!name || !image_url || price_coins === undefined) {
-        return res.status(400).json({ message: "Item name, image URL, and price in LSR Coins are required." });
+        return res.status(400).json({ message: "Item name, image URL, and price are required." });
     }
 
     try {
         const itemCategory = category && category.trim() !== '' ? category.trim() : 'General';
+        const itemCurrency = (currency && (currency === 'INR' || currency === 'LSR_COINS')) ? currency : 'LSR_COINS';
         const parsedPrice = parseInt(price_coins, 10) || 0;
 
-        const query = 'INSERT INTO catalog_items (name, description, price_coins, image_url, category) VALUES (?, ?, ?, ?, ?)';
-        const [result] = await db.query(query, [name.trim(), description ? description.trim() : '', parsedPrice, image_url.trim(), itemCategory]);
+        const query = 'INSERT INTO catalog_items (name, description, price_coins, currency, image_url, category) VALUES (?, ?, ?, ?, ?, ?)';
+        const [result] = await db.query(query, [name.trim(), description ? description.trim() : '', parsedPrice, itemCurrency, image_url.trim(), itemCategory]);
 
         res.status(201).json({
             success: true,
@@ -130,6 +138,7 @@ router.post('/', isAuthenticated, isAdmin, async (req, res) => {
                 name: name.trim(),
                 description: description ? description.trim() : '',
                 price_coins: parsedPrice,
+                currency: itemCurrency,
                 image_url: image_url.trim(),
                 category: itemCategory
             }
@@ -143,18 +152,19 @@ router.post('/', isAuthenticated, isAdmin, async (req, res) => {
 // PUT update catalog item (Admin only)
 router.put('/:id', isAuthenticated, isAdmin, async (req, res) => {
     const { id } = req.params;
-    const { name, description, price_coins, image_url, category } = req.body;
+    const { name, description, price_coins, currency, image_url, category } = req.body;
 
     if (!name || !image_url || price_coins === undefined) {
-        return res.status(400).json({ message: "Item name, image URL, and price in LSR Coins are required." });
+        return res.status(400).json({ message: "Item name, image URL, and price are required." });
     }
 
     try {
         const itemCategory = category && category.trim() !== '' ? category.trim() : 'General';
+        const itemCurrency = (currency && (currency === 'INR' || currency === 'LSR_COINS')) ? currency : 'LSR_COINS';
         const parsedPrice = parseInt(price_coins, 10) || 0;
 
-        const query = 'UPDATE catalog_items SET name = ?, description = ?, price_coins = ?, image_url = ?, category = ? WHERE id = ?';
-        const [result] = await db.query(query, [name.trim(), description ? description.trim() : '', parsedPrice, image_url.trim(), itemCategory, id]);
+        const query = 'UPDATE catalog_items SET name = ?, description = ?, price_coins = ?, currency = ?, image_url = ?, category = ? WHERE id = ?';
+        const [result] = await db.query(query, [name.trim(), description ? description.trim() : '', parsedPrice, itemCurrency, image_url.trim(), itemCategory, id]);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: "Catalog item not found" });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { ShoppingBag, Search, Tag, Coins, Info, Sparkles, CheckCircle2, X, ExternalLink, HelpCircle, RefreshCw, MessageSquare } from 'lucide-react';
+import { ShoppingBag, Search, Tag, Coins, Info, Sparkles, CheckCircle2, X, ExternalLink, HelpCircle, RefreshCw, MessageSquare, IndianRupee } from 'lucide-react';
 import Card from '../components/Card';
 import AnimatedButton from '../components/AnimatedButton';
 
@@ -54,6 +54,7 @@ const StorePage = () => {
             name: 'VIP Bronze Perk Package (30 Days)',
             category: 'VIP Perks',
             price_coins: 500,
+            currency: 'LSR_COINS',
             image_url: 'https://res.cloudinary.com/n8ql5bui/image/upload/v1785606470/KAIZEN_CITY_LOGO_lk0ycw.png',
             description: 'Includes priority queue access (Rookie tier), custom Discord role, 2x daily paycheck multiplier, and exclusive VIP garage spawn.'
         },
@@ -62,6 +63,7 @@ const StorePage = () => {
             name: 'Custom Import Vehicle Slot',
             category: 'Vehicles',
             price_coins: 1500,
+            currency: 'LSR_COINS',
             image_url: 'https://res.cloudinary.com/n8ql5bui/image/upload/v1785606470/KAIZEN_CITY_LOGO_lk0ycw.png',
             description: 'Custom personal import car slot with custom plate, 1-of-1 handling tuning, and custom garage storage in Los Santos.'
         },
@@ -70,6 +72,7 @@ const StorePage = () => {
             name: 'Kaizen City Player Business License',
             category: 'Businesses',
             price_coins: 3000,
+            currency: 'INR',
             image_url: 'https://res.cloudinary.com/n8ql5bui/image/upload/v1785606470/KAIZEN_CITY_LOGO_lk0ycw.png',
             description: 'Official registration license to establish a player-owned business (nightclub, mechanic shop, food store) with custom blip and management menu.'
         }
@@ -101,14 +104,18 @@ const StorePage = () => {
                         Official Server <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 bg-clip-text text-transparent">Catalogue</span>
                     </h1>
                     <p className="text-gray-300 text-xs sm:text-sm leading-relaxed">
-                        Explore exclusive in-game perks, import vehicles, custom business licenses, and priority privileges priced in <strong className="text-amber-400">LSR Coins (🪙)</strong>.
+                        Explore exclusive in-game perks, import vehicles, custom business licenses, and priority privileges priced in <strong className="text-amber-400">LSR Coins (🪙)</strong> and <strong className="text-emerald-400">Indian Rupees (₹ INR)</strong>.
                     </p>
 
-                    {/* LSR Coins Info Pills */}
+                    {/* Dual Currency Info Pills */}
                     <div className="pt-1 flex flex-wrap items-center gap-3 text-xs text-gray-400">
                         <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-lg border border-gray-800 text-gray-300">
                             <Coins size={14} className="text-amber-400" />
-                            <span>Currency: <strong>LSR Coins (🪙)</strong></span>
+                            <span>LSR Coins (🪙)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-lg border border-gray-800 text-gray-300">
+                            <IndianRupee size={14} className="text-emerald-400" />
+                            <span>Indian Rupee (₹ INR)</span>
                         </div>
                         <div className="flex items-center gap-1.5 bg-gray-900/90 px-3 py-1 rounded-lg border border-gray-800 text-gray-300">
                             <CheckCircle2 size={14} className="text-cyan-400" />
@@ -233,10 +240,23 @@ const StorePage = () => {
                                         {item.category || 'General'}
                                     </div>
 
-                                    {/* Price Badge */}
-                                    <div className="absolute bottom-2.5 right-2.5 z-20 bg-cyan-950/90 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-black text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shadow-xl">
-                                        <Coins size={14} className="text-amber-400" />
-                                        <span>{Number(item.price_coins).toLocaleString()} LSR Coins</span>
+                                    {/* Dual Currency Price Badge */}
+                                    <div className={`absolute bottom-2.5 right-2.5 z-20 bg-gray-950/90 backdrop-blur-md px-3 py-1 rounded-xl text-xs font-black border flex items-center gap-1.5 shadow-xl ${
+                                        item.currency === 'INR' 
+                                            ? 'text-emerald-300 border-emerald-500/40' 
+                                            : 'text-amber-300 border-amber-500/40'
+                                    }`}>
+                                        {item.currency === 'INR' ? (
+                                            <>
+                                                <IndianRupee size={14} className="text-emerald-400" />
+                                                <span>₹{Number(item.price_coins).toLocaleString()} INR</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Coins size={14} className="text-amber-400" />
+                                                <span>{Number(item.price_coins).toLocaleString()} LSR Coins</span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
 
@@ -266,11 +286,11 @@ const StorePage = () => {
             {/* REACT PORTAL: Interactive Item Detail Modal Rendered Directly to document.body */}
             {selectedItem && ReactDOM.createPortal(
                 <div 
-                    className="fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto"
+                    className="fixed inset-0 z-[999999] flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in"
                     onClick={() => setSelectedItem(null)}
                 >
                     <div 
-                        className="bg-gray-900 border border-cyan-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto relative z-[1000000] my-auto"
+                        className="bg-gray-900 border border-cyan-500/40 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 max-h-[85vh] overflow-y-auto relative z-[1000000]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Modal Header */}
@@ -306,9 +326,22 @@ const StorePage = () => {
                                 className="relative z-10 max-h-full max-w-full object-contain rounded-lg drop-shadow-2xl"
                                 onError={(e) => { e.target.src = 'https://res.cloudinary.com/n8ql5bui/image/upload/v1785606470/KAIZEN_CITY_LOGO_lk0ycw.png'; }}
                             />
-                            <div className="absolute bottom-3 right-3 z-20 bg-gray-950/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-xs font-black text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shadow-xl">
-                                <Coins size={16} className="text-amber-400" />
-                                <span>{Number(selectedItem.price_coins).toLocaleString()} LSR Coins</span>
+                            <div className={`absolute bottom-3 right-3 z-20 bg-gray-950/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl text-xs font-black border flex items-center gap-1.5 shadow-xl ${
+                                selectedItem.currency === 'INR' 
+                                    ? 'text-emerald-300 border-emerald-500/40' 
+                                    : 'text-amber-300 border-amber-500/40'
+                            }`}>
+                                {selectedItem.currency === 'INR' ? (
+                                    <>
+                                        <IndianRupee size={16} className="text-emerald-400" />
+                                        <span>₹{Number(selectedItem.price_coins).toLocaleString()} INR</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Coins size={16} className="text-amber-400" />
+                                        <span>{Number(selectedItem.price_coins).toLocaleString()} LSR Coins</span>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -327,7 +360,7 @@ const StorePage = () => {
                                 How to Purchase & Redeem In-Game
                             </div>
                             <p className="text-xs text-gray-300 leading-relaxed">
-                                To redeem this item with your <strong>LSR Coins</strong>, open a support ticket in our official Discord server or contact server management with item ID: <code className="text-cyan-400 font-mono">#{selectedItem.id}</code>.
+                                To redeem this item with {selectedItem.currency === 'INR' ? <strong>INR (₹)</strong> : <strong>LSR Coins</strong>}, open a support ticket in our official Discord server or contact server management with item ID: <code className="text-cyan-400 font-mono">#{selectedItem.id}</code>.
                             </p>
                             <div className="pt-1">
                                 <a href={discordInvite} target="_blank" rel="noopener noreferrer">

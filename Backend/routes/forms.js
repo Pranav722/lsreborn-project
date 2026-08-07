@@ -147,7 +147,8 @@ initializeTables();
 
 // --- DISCORD UTILS ---
 async function sendDiscordMessage(channelId, content, embed = null) {
-    if (!channelId || !ACTIVE_BOT_TOKEN) return;
+    const token = getBotToken();
+    if (!channelId || !token) return;
     try {
         const body = { content };
         if (embed) body.embeds = [embed];
@@ -155,7 +156,7 @@ async function sendDiscordMessage(channelId, content, embed = null) {
         await fetch(`${DISCORD_API_URL}/channels/${channelId}/messages`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bot ${ACTIVE_BOT_TOKEN}`,
+                'Authorization': `Bot ${token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(body)
