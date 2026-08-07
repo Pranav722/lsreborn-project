@@ -46,16 +46,19 @@ router.post('/upload', isAuthenticated, isAdmin, async (req, res) => {
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
     const preset = upload_preset || process.env.CLOUDINARY_UPLOAD_PRESET;
+    const folder = process.env.CLOUDINARY_FOLDER || "LSR";
 
     try {
         const formData = new URLSearchParams();
         formData.append('file', image);
+        formData.append('folder', folder);
 
         if (preset) {
             formData.append('upload_preset', preset);
         } else if (apiKey && apiSecret) {
             const timestamp = Math.floor(Date.now() / 1000);
-            const strToSign = `timestamp=${timestamp}${apiSecret}`;
+            // Cloudinary signature requires parameters in alphabetical order: folder, timestamp
+            const strToSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
             const signature = crypto.createHash('sha1').update(strToSign).digest('hex');
 
             formData.append('api_key', apiKey);
