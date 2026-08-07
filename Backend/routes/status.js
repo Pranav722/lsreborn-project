@@ -2,20 +2,40 @@ const router = require('express').Router();
 const fetch = require('node-fetch');
 
 // Make sure this is the correct, direct URL to your JSON file
-const SERVER_STATUS_JSON_URL = 'http://104.234.180.52:20059/players.json'; // Replace with your actual URL
+const SERVER_STATUS_JSON_URL = process.env.FIVEM_SERVER_URL || 'http://15.235.128.114:32120/players.json';
+const DYNAMIC_JSON_URL = process.env.FIVEM_DYNAMIC_URL || 'http://15.235.128.114:32120/dynamic.json';
 
 router.get('/', async (req, res) => {
     try {
-        const response = await fetch(SERVER_STATUS_JSON_URL);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(SERVER_STATUS_JSON_URL, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
             throw new Error(`Failed to fetch status file: ${response.statusText}`);
         }
         const data = await response.json();
-
-        // Adjust these lines to match your JSON file's structure
         const playerCount = Array.isArray(data) ? data.length : (data.players ? data.players.length : 0);
-        const maxPlayers = data.sv_maxclients || data.maxPlayers || 128; // Look for common keys, default to 128
-        
+
+        let maxPlayers = 128;
+        try {
+            const dynamicController = new AbortController();
+            const dynTimeoutId = setTimeout(() => dynamicController.abort(), 3000);
+            const dynRes = await fetch(DYNAMIC_JSON_URL, { signal: dynamicController.signal });
+            clearTimeout(dynTimeoutId);
+
+            if (dynRes.ok) {
+                const dynData = await dynRes.json();
+                if (dynData.sv_maxclients) {
+                    maxPlayers = parseInt(dynData.sv_maxclients, 10) || 128;
+                }
+            }
+        } catch(dErr) {
+            // Non-critical if dynamic.json fails
+        }
+
         res.json({
             online: true,
             players: playerCount,
