@@ -296,19 +296,25 @@ const CatalogManagement = ({ user }) => {
                     {filteredItems.map(item => (
                         <div key={item.id} className="bg-gray-900/80 border border-gray-800 hover:border-cyan-500/40 rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 shadow-xl group">
                             <div>
-                                {/* Image Box */}
-                                <div className="relative h-48 w-full overflow-hidden bg-gray-950">
+                                {/* Image Box - Dual Layer Uncropped Display */}
+                                <div className="relative h-48 w-full overflow-hidden bg-gray-950 flex items-center justify-center p-2 border-b border-gray-800/80 group">
                                     <img 
                                         src={item.image_url} 
                                         alt={item.name}
-                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                        className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-35 scale-125 transition-transform duration-700 group-hover:scale-150 pointer-events-none"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                    <img 
+                                        src={item.image_url} 
+                                        alt={item.name}
+                                        className="relative z-10 max-h-full max-w-full object-contain rounded-lg drop-shadow-2xl transition-transform duration-500 group-hover:scale-105"
                                         onError={(e) => { e.target.src = 'https://res.cloudinary.com/n8ql5bui/image/upload/v1785606470/KAIZEN_CITY_LOGO_lk0ycw.png'; }}
                                     />
-                                    <div className="absolute top-3 left-3 bg-gray-900/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-semibold text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5">
+                                    <div className="absolute top-2.5 left-2.5 z-20 bg-gray-950/90 backdrop-blur-md px-2.5 py-1 rounded-full text-xs font-semibold text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5 shadow-lg">
                                         <Tag size={12} />
                                         {item.category || 'General'}
                                     </div>
-                                    <div className="absolute top-3 right-3 bg-cyan-950/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-cyan-300 border border-cyan-400/40 flex items-center gap-1 shadow-lg">
+                                    <div className="absolute top-2.5 right-2.5 z-20 bg-cyan-950/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-amber-300 border border-amber-400/40 flex items-center gap-1 shadow-lg">
                                         <Coins size={14} className="text-amber-400" />
                                         {Number(item.price_coins).toLocaleString()} LSR Coins
                                     </div>

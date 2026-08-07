@@ -197,7 +197,7 @@ export default function App() {
           <Card className="text-center max-w-lg mx-auto">
             <h2 className="text-2xl font-bold text-cyan-400 mb-4">Join Our Discord Server</h2>
             <p className="text-gray-300 mb-6">To access this and other features, you need to be a member of our Discord server. Click the button below to join!</p>
-            <a href="https://discord.gg/8xPJ2p7qUQ" target="_blank" rel="noopener noreferrer">
+            <a href="https://discord.gg/x4jVEH6H6m" target="_blank" rel="noopener noreferrer">
               <AnimatedButton className="bg-blue-600">Join Discord</AnimatedButton>
             </a>
           </Card>
