@@ -51,7 +51,7 @@ const Footer = ({ setPage }) => {
                             <h4 className="text-white font-semibold tracking-wider uppercase text-xs">Resources</h4>
                             <FooterLink onClick={() => setPage('apply')}>Application</FooterLink>
                             <FooterLink onClick={() => setPage('queue')}>Queue</FooterLink>
-                            <a href="https://ls-reborn-store.tebex.io/" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-cyan-400 transition-colors text-sm">Store</a>
+                            <FooterLink onClick={() => setPage('store')}>Store Catalogue</FooterLink>
                         </div>
                         <div className="flex flex-col space-y-4">
                             <h4 className="text-white font-semibold tracking-wider uppercase text-xs">Support</h4>

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ShieldCheck, FileText, Settings, LogOut as LogOutIcon, BookUser, Briefcase } from 'lucide-react';
+import { ShieldCheck, FileText, Settings, LogOut as LogOutIcon, BookUser, Briefcase, ShoppingBag } from 'lucide-react';
 import AppManagement from './AppManagement';
 import SettingsPanel from './SettingsPanel';
 import AuditLogs from './AuditLogs';
 import JobManagement from './JobManagement';
+import CatalogManagement from './CatalogManagement';
 
 const StaffDashboard = ({ user, setPage, onLogout }) => {
     const [dashboardPage, setDashboardPage] = useState('apps');
@@ -25,6 +26,7 @@ const StaffDashboard = ({ user, setPage, onLogout }) => {
         switch (dashboardPage) {
             case 'apps': return <AppManagement user={user} />;
             case 'jobs': return <JobManagement user={user} />;
+            case 'catalog': return isAdmin ? <CatalogManagement user={user} /> : <AccessDenied />;
             case 'settings': return isAdmin ? <SettingsPanel user={user} /> : <AccessDenied />;
             case 'logs': return isAdmin ? <AuditLogs user={user} /> : <AccessDenied />;
             default: return <AppManagement user={user} />;
@@ -48,6 +50,7 @@ const StaffDashboard = ({ user, setPage, onLogout }) => {
                 <nav className="space-y-2">
                     <NavItem icon={FileText} label="Citizenship Apps" pageName="apps" />
                     {(isAdmin || user.isPDLead || user.isEMSLead) && <NavItem icon={Briefcase} label="Departments" pageName="jobs" />}
+                    {isAdmin && <NavItem icon={ShoppingBag} label="Catalogue" pageName="catalog" />}
                     {isAdmin && <NavItem icon={Settings} label="Settings" pageName="settings" />}
                     {isAdmin && <NavItem icon={BookUser} label="Audit Logs" pageName="logs" />}
                 </nav>
