@@ -271,30 +271,45 @@ router.post('/start', isAuthenticated, async (req, res) => {
             throw new Error('Failed to initialize Gemini AI client');
         }
 
-        // Initialize the model with system instruction
-        const model = ai.getGenerativeModel({
-            model: 'gemini-2.0-flash-lite',
-            generationConfig: {
-                temperature: 0.9, // Higher for more creative responses
-                topP: 0.95,
-                maxOutputTokens: 150, // Keep responses short
+        const MODEL_CANDIDATES = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+        let chat = null;
+        let npcMessage = "";
+        let selectedModel = "";
+
+        for (const modelName of MODEL_CANDIDATES) {
+            try {
+                const model = ai.getGenerativeModel({
+                    model: modelName,
+                    generationConfig: {
+                        temperature: 0.9,
+                        topP: 0.95,
+                        maxOutputTokens: 150,
+                    }
+                });
+
+                const testChat = model.startChat({
+                    history: [],
+                    systemInstruction: {
+                        parts: [{ text: scenarioConfig.systemInstruction }]
+                    }
+                });
+
+                console.log(`[HOLOSIM][${requestId}] Trying model ${modelName}...`);
+                const result = await testChat.sendMessage(scenarioConfig.initialPrompt);
+                npcMessage = result.response.text();
+                chat = testChat;
+                selectedModel = modelName;
+                break;
+            } catch (mErr) {
+                console.warn(`[HOLOSIM][${requestId}] Model ${modelName} error: ${mErr.message}`);
             }
-        });
+        }
 
-        // Start a new chat session with properly formatted systemInstruction
-        const chat = model.startChat({
-            history: [],
-            systemInstruction: {
-                parts: [{ text: scenarioConfig.systemInstruction }]
-            }
-        });
+        if (!chat || !npcMessage) {
+            npcMessage = "Hey there, officer. What's the problem? Why'd you pull me over?";
+        }
 
-        // Get initial NPC message
-        console.log(`[HOLOSIM][${requestId}] Generating initial NPC message...`);
-        const result = await chat.sendMessage(scenarioConfig.initialPrompt);
-        const npcMessage = result.response.text();
-
-        console.log(`[HOLOSIM][${requestId}] NPC: ${npcMessage.substring(0, 100)}...`);
+        console.log(`[HOLOSIM][${requestId}] NPC (${selectedModel || 'fallback'}): ${npcMessage.substring(0, 100)}...`);
 
         // Store session data
         chatSessions.set(userId, {
@@ -324,7 +339,6 @@ router.post('/start', isAuthenticated, async (req, res) => {
 
     } catch (error) {
         console.error(`[HOLOSIM][${requestId}] Start Error:`, error.message);
-        console.error(`[HOLOSIM][${requestId}] Full error:`, error);
         res.status(500).json({
             success: false,
             message: 'Failed to start simulation. Please try again.',

@@ -31,11 +31,20 @@ const QUIZ_POOL = [
 
 async function addDiscordRole(userId, roleId) {
     try {
-        if (!ACTIVE_BOT_TOKEN) return console.error("Missing ACTIVE_BOT_TOKEN env var");
-        await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${userId}/roles/${roleId}`, {
+        if (!ACTIVE_BOT_TOKEN) {
+            console.warn("[FORMS] Missing ACTIVE_BOT_TOKEN env var, skipped addDiscordRole");
+            return;
+        }
+        const res = await fetch(`${DISCORD_API_URL}/guilds/${ACTIVE_GUILD_ID}/members/${userId}/roles/${roleId}`, {
             method: 'PUT',
             headers: { 'Authorization': `Bot ${ACTIVE_BOT_TOKEN}` }
         });
+        if (!res.ok) {
+            const errBody = await res.text();
+            console.warn(`[FORMS] addDiscordRole failed for user ${userId} with status ${res.status}: ${errBody}`);
+        } else {
+            console.log(`[FORMS] Successfully granted role ${roleId} to user ${userId}`);
+        }
     } catch (e) {
         console.error("Failed to add role:", e);
     }
@@ -229,9 +238,8 @@ router.post('/submit/whitelist', isAuthenticated, async (req, res) => {
         return res.status(403).json({ message: "Whitelist applications are currently closed." });
     }
 
-    const { roles } = req.user;
-    const hasAccess = roles.includes(process.env.PREMIUM_APPLICANT_ROLE_ID) || roles.includes(process.env.APPLICATION_ROLE_ID) || isAdmin;
-    if (!hasAccess) return res.status(403).json({ message: "Missing Application Pass." });
+    const inGuild = req.user.inGuild || isAdmin;
+    if (!inGuild) return res.status(403).json({ message: "You must be a member of our Discord server to submit the quiz." });
 
     let score = 0;
     answers.forEach(ans => {

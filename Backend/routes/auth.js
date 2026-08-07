@@ -141,20 +141,6 @@ router.get('/discord/callback', async (req, res) => {
         let isPDLead = roles.includes(PD_HIGH_COMMAND_ROLE_ID);
         let isEMSLead = roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
 
-        // 5. Database Approved Application Check Fallback
-        if (!isWhitelisted && inGuild) {
-            try {
-                const [appRows] = await db.query(
-                    "SELECT id FROM applications WHERE discordId = ? AND status = 'approved'", 
-                    [userProfile.id]
-                );
-                if (appRows.length > 0) {
-                    isWhitelisted = true;
-                    console.log(`[AUTH] User ${userProfile.username} verified as Whitelisted via Approved DB Application.`);
-                }
-            } catch(dbErr) {}
-        }
-
         if (userProfile.id === MASTER_ADMIN_ID) {
             isWhitelisted = true; isStaff = true; isAdmin = true; isPDLead = true; isEMSLead = true;
         }
@@ -188,28 +174,21 @@ router.get('/me', require('../middleware/auth').isAuthenticated, async (req, res
     const EMS_HIGH_COMMAND_ROLE_ID = process.env.EMS_HIGH_COMMAND_ROLE_ID || "1415224352986759231";
 
     if (memberData && Array.isArray(memberData.roles)) {
-        const combinedRoles = new Set([...(req.user.roles || []), ...memberData.roles]);
-        req.user.roles = Array.from(combinedRoles);
+        req.user.roles = memberData.roles;
         req.user.inGuild = true;
         
-        req.user.isWhitelisted = req.user.isWhitelisted || req.user.roles.includes(WHITELISTED_ROLE_ID);
-        req.user.isStaff = req.user.isStaff || req.user.roles.includes(STAFF_ROLE_ID);
-        req.user.isAdmin = req.user.isAdmin || req.user.roles.includes(LSR_ADMIN_ROLE_ID);
-        req.user.isPDLead = req.user.isPDLead || req.user.roles.includes(PD_HIGH_COMMAND_ROLE_ID);
-        req.user.isEMSLead = req.user.isEMSLead || req.user.roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
-    }
-
-    // Database Approved Application Check Fallback
-    if (!req.user.isWhitelisted && req.user.inGuild) {
-        try {
-            const [appRows] = await db.query(
-                "SELECT id FROM applications WHERE discordId = ? AND status = 'approved'", 
-                [req.user.id]
-            );
-            if (appRows.length > 0) {
-                req.user.isWhitelisted = true;
-            }
-        } catch(dbErr) {}
+        req.user.isWhitelisted = memberData.roles.includes(WHITELISTED_ROLE_ID);
+        req.user.isStaff = memberData.roles.includes(STAFF_ROLE_ID);
+        req.user.isAdmin = memberData.roles.includes(LSR_ADMIN_ROLE_ID);
+        req.user.isPDLead = memberData.roles.includes(PD_HIGH_COMMAND_ROLE_ID);
+        req.user.isEMSLead = memberData.roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
+    } else {
+        const roles = req.user.roles || [];
+        req.user.isWhitelisted = roles.includes(WHITELISTED_ROLE_ID);
+        req.user.isStaff = roles.includes(STAFF_ROLE_ID);
+        req.user.isAdmin = roles.includes(LSR_ADMIN_ROLE_ID);
+        req.user.isPDLead = roles.includes(PD_HIGH_COMMAND_ROLE_ID);
+        req.user.isEMSLead = roles.includes(EMS_HIGH_COMMAND_ROLE_ID);
     }
 
     if (req.user.id === MASTER_ADMIN_ID) {
