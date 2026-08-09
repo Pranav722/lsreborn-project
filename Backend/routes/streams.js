@@ -29,7 +29,7 @@ const initStreamsTable = async () => {
 };
 initStreamsTable();
 
-// Cache in memory for 20 seconds
+// Cache in memory for 15 seconds
 let streamCache = {
     timestamp: 0,
     data: []
@@ -39,8 +39,8 @@ let streamCache = {
 router.get('/', async (req, res) => {
     const now = Date.now();
 
-    // Return cache if less than 20 seconds old
-    if (streamCache.data && (now - streamCache.timestamp) < 20000) {
+    // Cache check (15 seconds)
+    if (streamCache.data && (now - streamCache.timestamp) < 15000) {
         return res.json({
             success: true,
             cached: true,
@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
         let streams = [];
         const seenIds = new Set();
 
-        // Step 1: Check manual pinned streams from database first
+        // 1. Fetch manually pinned streams from DB first
         try {
             const [dbRows] = await db.query('SELECT * FROM active_streams ORDER BY id DESC');
             for (const row of dbRows) {
@@ -68,15 +68,21 @@ router.get('/', async (req, res) => {
             console.error("[STREAMS DB] Error fetching pinned streams:", dbErr);
         }
 
-        // Step 2: Fetch via official YouTube Data API v3 if key available
+        // 2. Official YouTube Data API v3 (if key provided in .env)
         if (apiKey) {
             const apiStreams = await fetchYouTubeApiLive(apiKey, seenIds);
             streams = streams.concat(apiStreams);
         }
 
-        // Step 3: Scraping fallback across multiple queries (#lsr, #lsreborn, lsr live, lsreborn live)
-        const scrapedStreams = await scrapeRealYouTubeLive(seenIds);
-        streams = streams.concat(scrapedStreams);
+        // 3. Piped / Invidious Open YouTube REST APIs (Cloud-safe, bypasses bot blocks)
+        const pipedStreams = await fetchPipedYouTubeLive(seenIds);
+        streams = streams.concat(pipedStreams);
+
+        // 4. Direct YouTube HTML Scraper fallback
+        if (streams.length === 0) {
+            const scrapedStreams = await scrapeRealYouTubeLive(seenIds);
+            streams = streams.concat(scrapedStreams);
+        }
 
         // Update cache
         streamCache = {
@@ -101,14 +107,13 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Admin endpoint: POST /api/streams/pin - Manually pin a YouTube live stream video URL or ID
+// Admin endpoint: POST /api/streams/pin
 router.post('/pin', isAuthenticated, isAdmin, async (req, res) => {
     const { video_url } = req.body;
     if (!video_url) {
         return res.status(400).json({ message: "Video URL or Video ID is required." });
     }
 
-    // Extract YouTube video ID
     let videoId = video_url.trim();
     if (videoId.includes('youtube.com') || videoId.includes('youtu.be')) {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -126,9 +131,7 @@ router.post('/pin', isAuthenticated, isAdmin, async (req, res) => {
             details ? details.channelTitle : "Streamer"
         ]);
 
-        // Invalidate cache immediately
         streamCache.timestamp = 0;
-
         return res.json({
             success: true,
             message: "Live stream pinned successfully!",
@@ -140,7 +143,7 @@ router.post('/pin', isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-// Admin endpoint: DELETE /api/streams/pin/:videoId - Unpin a stream
+// Admin endpoint: DELETE /api/streams/pin/:videoId
 router.delete('/pin/:videoId', isAuthenticated, isAdmin, async (req, res) => {
     const { videoId } = req.params;
     try {
@@ -152,7 +155,7 @@ router.delete('/pin/:videoId', isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-// Helper: Fetch oEmbed/Video Details for a single YouTube Video ID
+// Helper: Fetch oEmbed details for a video ID
 async function fetchYouTubeVideoDetails(videoId) {
     try {
         const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
@@ -176,10 +179,65 @@ async function fetchYouTubeVideoDetails(videoId) {
     return null;
 }
 
+// Fetch via Piped & Invidious Public REST APIs
+async function fetchPipedYouTubeLive(seenIds) {
+    const results = [];
+    const queries = ['%23lsreborn', '%23lsr', 'lsreborn', 'lsr'];
+    const pipedInstances = [
+        'https://pipedapi.kavin.rocks',
+        'https://api.piped.video',
+        'https://inv.tux.pizza/api/v1',
+        'https://invidious.drgns.space/api/v1'
+    ];
+
+    for (const query of queries) {
+        for (const baseApi of pipedInstances) {
+            try {
+                const searchUrl = baseApi.includes('invidious') || baseApi.includes('inv.')
+                    ? `${baseApi}/search?q=${query}&type=stream`
+                    : `${baseApi}/search?q=${query}&filter=lives`;
+
+                const res = await fetch(searchUrl, { timeout: 3000 });
+                if (!res.ok) continue;
+
+                const data = await res.json();
+                const items = Array.isArray(data) ? data : (data.items || []);
+
+                for (const item of items) {
+                    const videoId = item.url ? item.url.replace('/watch?v=', '') : (item.videoId || item.id);
+                    if (!videoId || videoId.length !== 11 || seenIds.has(videoId)) continue;
+
+                    // Check live status
+                    const isLive = item.isLive || item.uploaded === 0 || item.type === 'stream' && (item.title || '').toLowerCase().includes('live') || item.duration === 0;
+                    if (!isLive) continue;
+
+                    seenIds.add(videoId);
+                    results.push({
+                        id: videoId,
+                        title: item.title || "Live Stream",
+                        channelTitle: item.uploaderName || item.author || item.uploader || "Streamer",
+                        avatar: item.uploaderAvatar || item.authorAvatar || "",
+                        thumbnail: item.thumbnail || item.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+                        isLive: true,
+                        videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+                        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1`
+                    });
+                }
+
+                if (results.length > 0) break; // Break instance loop if succeeded
+            } catch (e) {
+                // Try next instance silently
+            }
+        }
+    }
+
+    return results;
+}
+
 // Official YouTube Data API v3 Search
 async function fetchYouTubeApiLive(apiKey, seenIds) {
     const results = [];
-    const queries = ['#lsreborn', '#lsr', 'lsreborn live', 'lsr live'];
+    const queries = ['#lsreborn', '#lsr', 'lsreborn', 'lsr'];
 
     for (const q of queries) {
         try {
@@ -213,7 +271,7 @@ async function fetchYouTubeApiLive(apiKey, seenIds) {
     return results;
 }
 
-// Robust Multi-Query Scraper for YouTube Live Search
+// Direct YouTube HTML Scraper
 async function scrapeRealYouTubeLive(seenIds) {
     const results = [];
     const queries = ['%23lsreborn+live', '%23lsr+live', 'lsreborn+live', 'lsr+live'];
@@ -233,25 +291,22 @@ async function scrapeRealYouTubeLive(seenIds) {
 
             const html = await scrapeRes.text();
 
-            // Extract all videoRenderer blocks via regex or JSON parse
             const matches = html.match(/ytInitialData\s*=\s*({.+?});/);
             if (matches && matches[1]) {
                 const data = JSON.parse(matches[1]);
                 parseYouTubeSectionList(data, results, seenIds);
             }
 
-            // Fallback Regex Extraction for videoId & titles if JSON structure varies
+            // Regex videoId extraction fallback
             const videoRegex = /"videoId":"([a-zA-Z0-9_-]{11})"/g;
             let m;
             while ((m = videoRegex.exec(html)) !== null) {
                 const vid = m[1];
                 if (!seenIds.has(vid)) {
-                    // Check if video is live and contains lsr in HTML context around the match
                     const contextWindow = html.substring(Math.max(0, m.index - 500), Math.min(html.length, m.index + 1000));
                     const isLiveContext = contextWindow.includes("BADGE_STYLE_TYPE_LIVE_NOW") || contextWindow.includes('"label":"LIVE"') || contextWindow.includes("watching");
-                    const isLsrContext = contextWindow.toLowerCase().includes("lsr") || contextWindow.toLowerCase().includes("lsreborn");
 
-                    if (isLiveContext && isLsrContext) {
+                    if (isLiveContext) {
                         const details = await fetchYouTubeVideoDetails(vid);
                         if (details) {
                             seenIds.add(vid);
@@ -295,11 +350,6 @@ function parseYouTubeSectionList(data, results, seenIds) {
 
                 const title = video.title?.runs?.[0]?.text || "";
                 const channelTitle = video.ownerText?.runs?.[0]?.text || "";
-                const descriptionSnippet = (video.descriptionSnippet?.runs || []).map(r => r.text).join(' ');
-
-                const combinedText = (title + " " + descriptionSnippet + " " + channelTitle).toLowerCase();
-                if (!combinedText.includes('lsr') && !combinedText.includes('lsreborn')) continue;
-
                 const thumbnails = video.thumbnail?.thumbnails || [];
                 const thumbnail = thumbnails[thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`;
                 const avatar = video.channelThumbnailSupportedRenderers?.channelThumbnailWithRippleRenderer?.thumbnail?.thumbnails?.[0]?.url || "";
