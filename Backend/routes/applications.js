@@ -166,7 +166,7 @@ router.put('/:id', isAuthenticated, isStaff, async (req, res) => {
             // 2. Post Approval Embed to Discord Channel directly
             const embed = {
                 title: "🎉 Application Approved",
-                description: `Congratulations <@${discordId}>, your application for **Kaizen City by LSReborn** has been approved! Welcome to the server!`,
+                description: `Congratulations <@${discordId}>, your application for **LSReborn** has been approved! Welcome to the server!`,
                 color: 0x00FF00,
                 fields: [
                     { name: "Applicant", value: `<@${discordId}>`, inline: true },

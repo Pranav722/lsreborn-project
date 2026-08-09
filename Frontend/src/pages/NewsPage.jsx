@@ -100,19 +100,22 @@ const NewsPage = () => {
             image: "/Media/Community_Meeting_1.gif"
         },
         {
-            title: "New Police Fleet Deployed",
-            date: "December 05, 2025",
-            content: "The LSPD has received a shipment of state-of-the-art pursuit vehicles. These new interceptors are equipped with the latest tracking tech. Criminals beware, the streets just got a lot safer.",
-            image: "/Media/PD_Fleet_1.png"
+            title: "Community Meeting: Future of LSReborn",
+            content: "Join us this Sunday at 8 PM EST for a server-wide town hall meeting on Discord.",
+            date: "2026-07-28",
+            author: "Management",
+            category: "Announcement",
+            readTime: "2 min read",
+            image: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80"
         }
     ];
 
     return (
-        <div className="animate-fade-in max-w-7xl mx-auto px-4 py-12">
-            <div className="text-center mb-16">
-                <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-4">Kaizen City News</h1>
-                <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                    Stay up to date with the latest developments, server updates, and community events in Kaizen City.
+        <div className="max-w-7xl mx-auto px-4 py-8 animate-fade-in space-y-12">
+            <div className="text-center space-y-4">
+                <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-4">LSReborn News</h1>
+                <p className="text-gray-400 max-w-2xl mx-auto">
+                    Stay up to date with the latest developments, server updates, and community events in LSReborn.
                 </p>
             </div>
 

@@ -15,15 +15,15 @@ const Footer = ({ setPage }) => {
                     <div className="md:col-span-5 lg:col-span-4 space-y-6">
                         <div className="flex items-center gap-3">
                             <div className="w-11 h-11 rounded-full bg-[#08101d] border border-cyan-500/40 flex items-center justify-center overflow-hidden shadow-md shadow-cyan-500/20 p-0.5">
-                                <img src="/kaizen_city_logo.png" alt="Kaizen City Official Logo" className="w-full h-full object-cover rounded-full" />
+                                <img src="/kaizen_city_logo.png" alt="LSReborn Official Logo" className="w-full h-full object-cover rounded-full" />
                             </div>
                             <div>
-                                <span className="text-xl font-bold text-white tracking-tight block">Kaizen City</span>
-                                <span className="text-xs text-cyan-400 font-mono tracking-widest uppercase">BY LSREBORN</span>
+                                <span className="text-xl font-bold text-white tracking-tight block">LSReborn</span>
+                                <span className="text-xs text-cyan-400 font-mono tracking-widest uppercase">OFFICIAL ROLEPLAY</span>
                             </div>
                         </div>
                         <p className="text-gray-400 leading-relaxed">
-                            Forging narratives, building legacies. Join Kaizen City by LSReborn (KLSR) where every character has a story and every action leaves a mark.
+                            Forging narratives, building legacies. Join LSReborn (LSR) where every character has a story and every action leaves a mark.
                         </p>
                         
                         <div className="flex items-center gap-4 pt-2">
@@ -44,6 +44,7 @@ const Footer = ({ setPage }) => {
                         <div className="flex flex-col space-y-4">
                             <h4 className="text-white font-semibold tracking-wider uppercase text-xs">Navigation</h4>
                             <FooterLink onClick={() => setPage('home')}>Home</FooterLink>
+                            <FooterLink onClick={() => setPage('life-at-lsr')}>Life at LSR</FooterLink>
                             <FooterLink onClick={() => setPage('news')}>News</FooterLink>
                             <FooterLink onClick={() => setPage('rules')}>Server Rules</FooterLink>
                         </div>
@@ -64,10 +65,10 @@ const Footer = ({ setPage }) => {
 
                 <div className="mt-16 pt-8 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-gray-600 text-sm">
-                        &copy; {new Date().getFullYear()} Kaizen City by LSReborn (KLSR). All rights reserved.
+                        &copy; {new Date().getFullYear()} LSReborn (LSR). All rights reserved.
                     </p>
                     <p className="text-gray-700 text-xs font-medium">
-                        Crafted with ❤️ for Kaizen City by LSReborn
+                        Crafted with ❤️ for LSReborn
                     </p>
                 </div>
             </div>

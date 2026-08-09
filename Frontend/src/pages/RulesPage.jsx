@@ -345,7 +345,7 @@ const PageContainer = ({ children, pageNum, title }) => (
         <div className="flex justify-between items-center border-b border-white/5 pb-3 md:pb-4 mb-4 md:mb-6 shrink-0 z-10">
             <span className="text-[10px] text-slate-500 font-mono tracking-widest uppercase flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-cyan-400" />
-                KAIZEN CITY BY LSREBORN
+                LSREBORN ROLEPLAY
             </span>
             <span className="text-[10px] text-slate-600 font-mono">{pageNum}</span>
         </div>
@@ -408,7 +408,7 @@ const CoverPage = () => (
 
         <p className="text-xs text-slate-400 font-mono max-w-[240px] leading-7 z-10">
             THE DEFINITIVE GUIDE TO CONDUCT,<br />LAW, AND SURVIVAL IN<br />
-            <span className="text-white font-bold">KAIZEN CITY BY LSREBORN</span>.
+            <span className="text-white font-bold">LSREBORN</span>.
         </p>
 
         <div className="mt-auto z-10 border border-white/10 px-4 py-1.5 rounded-full bg-white/5 backdrop-blur-md">

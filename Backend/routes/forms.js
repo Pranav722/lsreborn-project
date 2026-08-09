@@ -259,7 +259,7 @@ router.post('/submit/whitelist', isAuthenticated, async (req, res) => {
     const embed = {
         title: passed ? "🎉 Whitelist Quiz Passed - User Auto-Whitelisted" : "❌ Whitelist Quiz Failed",
         description: passed 
-            ? `Congratulations <@${req.user.id}>! You scored **${score}/${total}** on the Whitelist Quiz and have been automatically granted Citizenship in **Kaizen City by LSReborn**!`
+            ? `Congratulations <@${req.user.id}>! You scored **${score}/${total}** on the Whitelist Quiz and have been automatically granted Citizenship in **LSReborn**!`
             : `User <@${req.user.id}> attempted the Whitelist Quiz and scored **${score}/${total}**. A 24-hour cooldown has been applied.`,
         color: passed ? 0x00FF00 : 0xFF0000,
         fields: [

@@ -21,6 +21,7 @@ import QuizPage from './pages/QuizPage';
 import DepartmentApp from './pages/DepartmentApps';
 import JobManagement from './pages/staff/JobManagement';
 import StorePage from './pages/StorePage';
+import LifeAtLSR from './pages/LifeAtLSR';
 
 // --- ERROR BOUNDARY ---
 class ErrorBoundary extends React.Component {
@@ -215,6 +216,7 @@ export default function App() {
       rules: <RulesPage />,
       news: <NewsPage />,
       store: <StorePage />,
+      'life-at-lsr': <LifeAtLSR />,
       queue: <QueuePage user={user} setPage={setPage} />,
       dashboard: <StaffDashboard user={user} setPage={setPage} onLogout={handleLogout} />,
       'job-dashboard': <JobManagement user={user} />
@@ -251,7 +253,7 @@ export default function App() {
       <Layout>
         <div className="min-h-screen flex flex-col items-center justify-center">
           <Loader2 className="w-12 h-12 text-cyan-400 animate-spin mb-4" />
-          <p className="text-gray-400 text-lg animate-pulse">Loading Kaizen City by LSReborn...</p>
+          <p className="text-gray-400 text-lg animate-pulse">Loading LSReborn...</p>
         </div>
       </Layout>
     );
@@ -279,10 +281,10 @@ export default function App() {
                 <div className="flex items-center">
                   <button onClick={() => setPage('home')} className="flex-shrink-0 text-white font-bold text-2xl flex items-center gap-3 tracking-wider group">
                     <div className="relative w-11 h-11 rounded-full bg-[#08101d] border border-cyan-500/40 flex items-center justify-center overflow-hidden shadow-md shadow-cyan-500/20 group-hover:border-cyan-400 group-hover:shadow-cyan-400/40 transition-all duration-300 p-0.5">
-                      <img src="/kaizen_city_logo.png" alt="Kaizen City Logo" className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-300" />
+                      <img src="/kaizen_city_logo.png" alt="LSReborn Logo" className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-300" />
                     </div>
-                    <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 tracking-wider">KLSR</span>
-                    <span className="text-xs text-gray-400 uppercase tracking-widest hidden sm:inline-block font-mono border-l border-gray-700 pl-2">Kaizen City</span>
+                    <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-500 tracking-wider">LSR</span>
+                    <span className="text-xs text-gray-400 uppercase tracking-widest hidden sm:inline-block font-mono border-l border-gray-700 pl-2">LSREBORN</span>
                   </button>
                 </div>
                 <div className="hidden md:flex items-center space-x-8">
@@ -292,6 +294,7 @@ export default function App() {
                   <NavLink pageName="rules">Rules</NavLink>
                   <NavLink pageName="news">News</NavLink>
                   <NavLink pageName="store">Store</NavLink>
+                  <NavLink pageName="life-at-lsr">Life at LSR</NavLink>
 
                   {isStaffOrAdmin && (
                     <NavLink pageName="dashboard">Dashboard</NavLink>
@@ -352,6 +355,7 @@ export default function App() {
                     <NavLink pageName="rules">Rules</NavLink>
                     <NavLink pageName="news">News</NavLink>
                     <NavLink pageName="store">Store</NavLink>
+                    <NavLink pageName="life-at-lsr">Life at LSR</NavLink>
 
                     {isStaffOrAdmin && (
                       <NavLink pageName="dashboard">Staff Dashboard</NavLink>

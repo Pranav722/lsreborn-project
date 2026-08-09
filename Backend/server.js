@@ -30,6 +30,7 @@ app.use('/api/queue', require('./routes/queue'));
 app.use('/api/status', require('./routes/status'));
 app.use('/api/applications', require('./routes/applications')); // Written Applications
 app.use('/api/catalog', require('./routes/catalog')); // Interactive Catalogue Store API
+app.use('/api/streams', require('./routes/streams')); // YouTube Live Streams API (#lsr / #lsreborn)
 
 // --- Root and DB Test Routes ---
 app.get('/', (req, res) => {

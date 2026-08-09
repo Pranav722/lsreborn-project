@@ -360,7 +360,7 @@ const ApplicationPage = ({ user, setPage }) => {
             <div className="text-center mb-12">
                 <h1 className="text-4xl font-bold text-white mb-4">Application Center</h1>
                 <p className="text-gray-400 max-w-2xl mx-auto">
-                    Welcome to Kaizen City by LSReborn. Here you can apply for citizenship or join one of our whitelisted departments.
+                    Welcome to LSReborn. Here you can apply for citizenship or join one of our whitelisted departments.
                 </p>
                 {(isAdmin) && (
                     <p className="mt-4 text-sm text-yellow-400 border border-yellow-500/30 bg-yellow-500/10 inline-block px-4 py-1 rounded-full">
