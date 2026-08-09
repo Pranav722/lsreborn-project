@@ -35,7 +35,13 @@ let streamCache = {
     data: []
 };
 
-// GET /api/streams - Fetch currently active live streams
+// Strict Hashtag Checker: Stream MUST contain literal #lsr or #lsreborn hashtag
+function containsRequiredHashtag(title = '', desc = '') {
+    const text = (title + ' ' + desc).toLowerCase();
+    return text.includes('#lsr') || text.includes('#lsreborn');
+}
+
+// GET /api/streams - Fetch currently active live streams containing #lsr or #lsreborn hashtag
 router.get('/', async (req, res) => {
     const now = Date.now();
 
@@ -54,7 +60,7 @@ router.get('/', async (req, res) => {
         let streams = [];
         const seenIds = new Set();
 
-        // 1. Fetch manually pinned streams from DB first
+        // 1. Fetch manually pinned streams from DB first (Admin approved)
         try {
             const [dbRows] = await db.query('SELECT * FROM active_streams ORDER BY id DESC');
             for (const row of dbRows) {
@@ -74,7 +80,7 @@ router.get('/', async (req, res) => {
             streams = streams.concat(apiStreams);
         }
 
-        // 3. Robust YouTube Search Scraper with Recursive Object Parser
+        // 3. Robust YouTube Search Scraper with Strict Hashtag Verification
         const scrapedStreams = await scrapeYouTubeLiveRecursive(seenIds);
         streams = streams.concat(scrapedStreams);
 
@@ -173,10 +179,10 @@ async function fetchYouTubeVideoDetails(videoId) {
     return null;
 }
 
-// Official YouTube Data API v3 Search
+// Official YouTube Data API v3 Search with Strict Hashtag Check
 async function fetchYouTubeApiLive(apiKey, seenIds) {
     const results = [];
-    const queries = ['#lsr', '#lsreborn', 'lsr', 'lsreborn'];
+    const queries = ['#lsr', '#lsreborn'];
 
     for (const q of queries) {
         try {
@@ -190,10 +196,16 @@ async function fetchYouTubeApiLive(apiKey, seenIds) {
                     const videoId = item.id.videoId;
                     if (!videoId || seenIds.has(videoId)) continue;
 
+                    const title = item.snippet.title || "";
+                    const desc = item.snippet.description || "";
+
+                    // Strict hashtag verification check
+                    if (!containsRequiredHashtag(title, desc)) continue;
+
                     seenIds.add(videoId);
                     results.push({
                         id: videoId,
-                        title: item.snippet.title || "",
+                        title: title,
                         channelTitle: item.snippet.channelTitle || "",
                         channelId: item.snippet.channelId,
                         thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
@@ -210,10 +222,10 @@ async function fetchYouTubeApiLive(apiKey, seenIds) {
     return results;
 }
 
-// Robust YouTube Search Scraper with Recursive Object Tree Parser
+// Robust YouTube Search Scraper with Strict Hashtag Verification
 async function scrapeYouTubeLiveRecursive(seenIds) {
     const results = [];
-    const queries = ['%23lsr', '%23lsreborn', 'lsr+live', 'lsreborn+live'];
+    const queries = ['%23lsr', '%23lsreborn'];
 
     for (const query of queries) {
         try {
@@ -234,7 +246,7 @@ async function scrapeYouTubeLiveRecursive(seenIds) {
 
             const data = JSON.parse(matches[1]);
             
-            // Recursive object tree search
+            // Recursive object tree search with strict hashtag verification
             function searchObj(obj) {
                 if (!obj || typeof obj !== 'object') return;
                 if (obj.videoId && !seenIds.has(obj.videoId)) {
@@ -243,23 +255,28 @@ async function scrapeYouTubeLiveRecursive(seenIds) {
                                    jsonStr.includes('"label":"LIVE"') ||
                                    jsonStr.includes('watching');
                     if (isLive) {
-                        seenIds.add(obj.videoId);
-                        const title = obj.title?.runs?.[0]?.text || obj.headline?.runs?.[0]?.text || "Live Stream";
+                        const title = obj.title?.runs?.[0]?.text || obj.headline?.runs?.[0]?.text || "";
                         const owner = obj.ownerText?.runs?.[0]?.text || obj.shortBylineText?.runs?.[0]?.text || "Streamer";
-                        const thumbnails = obj.thumbnail?.thumbnails || [];
-                        const thumbnail = thumbnails[thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${obj.videoId}/hqdefault.jpg`;
-                        const avatar = obj.channelThumbnailSupportedRenderers?.channelThumbnailWithRippleRenderer?.thumbnail?.thumbnails?.[0]?.url || "";
+                        const desc = (obj.descriptionSnippet?.runs || []).map(r => r.text).join(' ');
 
-                        results.push({
-                            id: obj.videoId,
-                            title: title,
-                            channelTitle: owner,
-                            avatar: avatar,
-                            thumbnail: thumbnail,
-                            isLive: true,
-                            videoUrl: `https://www.youtube.com/watch?v=${obj.videoId}`,
-                            embedUrl: `https://www.youtube.com/embed/${obj.videoId}?autoplay=1`
-                        });
+                        // Strict hashtag verification check
+                        if (containsRequiredHashtag(title, desc) || containsRequiredHashtag(jsonStr)) {
+                            seenIds.add(obj.videoId);
+                            const thumbnails = obj.thumbnail?.thumbnails || [];
+                            const thumbnail = thumbnails[thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${obj.videoId}/hqdefault.jpg`;
+                            const avatar = obj.channelThumbnailSupportedRenderers?.channelThumbnailWithRippleRenderer?.thumbnail?.thumbnails?.[0]?.url || "";
+
+                            results.push({
+                                id: obj.videoId,
+                                title: title || "Live Stream",
+                                channelTitle: owner,
+                                avatar: avatar,
+                                thumbnail: thumbnail,
+                                isLive: true,
+                                videoUrl: `https://www.youtube.com/watch?v=${obj.videoId}`,
+                                embedUrl: `https://www.youtube.com/embed/${obj.videoId}?autoplay=1`
+                            });
+                        }
                     }
                 }
                 for (const key of Object.keys(obj)) {
