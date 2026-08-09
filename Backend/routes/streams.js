@@ -35,7 +35,7 @@ let streamCache = {
     data: []
 };
 
-// GET /api/streams - Fetch currently active live streams
+// GET /api/streams - Fetch currently active live streams matching #lsr OR #lsreborn
 router.get('/', async (req, res) => {
     const now = Date.now();
 
@@ -74,15 +74,13 @@ router.get('/', async (req, res) => {
             streams = streams.concat(apiStreams);
         }
 
-        // 3. Piped / Invidious Open YouTube REST APIs (Cloud-safe, bypasses bot blocks)
+        // 3. Piped / Invidious Open YouTube REST APIs for #lsr AND #lsreborn
         const pipedStreams = await fetchPipedYouTubeLive(seenIds);
         streams = streams.concat(pipedStreams);
 
-        // 4. Direct YouTube HTML Scraper fallback
-        if (streams.length === 0) {
-            const scrapedStreams = await scrapeRealYouTubeLive(seenIds);
-            streams = streams.concat(scrapedStreams);
-        }
+        // 4. Direct YouTube HTML Scraper fallback for #lsr AND #lsreborn
+        const scrapedStreams = await scrapeRealYouTubeLive(seenIds);
+        streams = streams.concat(scrapedStreams);
 
         // Update cache
         streamCache = {
@@ -179,10 +177,10 @@ async function fetchYouTubeVideoDetails(videoId) {
     return null;
 }
 
-// Fetch via Piped & Invidious Public REST APIs
+// Fetch via Piped & Invidious Public REST APIs for EITHER #lsr OR #lsreborn
 async function fetchPipedYouTubeLive(seenIds) {
     const results = [];
-    const queries = ['%23lsreborn', '%23lsr', 'lsreborn', 'lsr'];
+    const queries = ['%23lsr', '%23lsreborn', 'lsr+live', 'lsreborn+live'];
     const pipedInstances = [
         'https://pipedapi.kavin.rocks',
         'https://api.piped.video',
@@ -191,13 +189,16 @@ async function fetchPipedYouTubeLive(seenIds) {
     ];
 
     for (const query of queries) {
+        let querySuccess = false;
         for (const baseApi of pipedInstances) {
+            if (querySuccess) break;
+
             try {
                 const searchUrl = baseApi.includes('invidious') || baseApi.includes('inv.')
                     ? `${baseApi}/search?q=${query}&type=stream`
                     : `${baseApi}/search?q=${query}&filter=lives`;
 
-                const res = await fetch(searchUrl, { timeout: 3000 });
+                const res = await fetch(searchUrl, { timeout: 4000 });
                 if (!res.ok) continue;
 
                 const data = await res.json();
@@ -208,7 +209,7 @@ async function fetchPipedYouTubeLive(seenIds) {
                     if (!videoId || videoId.length !== 11 || seenIds.has(videoId)) continue;
 
                     // Check live status
-                    const isLive = item.isLive || item.uploaded === 0 || item.type === 'stream' && (item.title || '').toLowerCase().includes('live') || item.duration === 0;
+                    const isLive = item.isLive || item.uploaded === 0 || (item.type === 'stream' && (item.title || '').toLowerCase().includes('live')) || item.duration === 0;
                     if (!isLive) continue;
 
                     seenIds.add(videoId);
@@ -222,9 +223,8 @@ async function fetchPipedYouTubeLive(seenIds) {
                         videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
                         embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1`
                     });
+                    querySuccess = true;
                 }
-
-                if (results.length > 0) break; // Break instance loop if succeeded
             } catch (e) {
                 // Try next instance silently
             }
@@ -237,7 +237,7 @@ async function fetchPipedYouTubeLive(seenIds) {
 // Official YouTube Data API v3 Search
 async function fetchYouTubeApiLive(apiKey, seenIds) {
     const results = [];
-    const queries = ['#lsreborn', '#lsr', 'lsreborn', 'lsr'];
+    const queries = ['#lsr', '#lsreborn', 'lsr', 'lsreborn'];
 
     for (const q of queries) {
         try {
@@ -271,10 +271,10 @@ async function fetchYouTubeApiLive(apiKey, seenIds) {
     return results;
 }
 
-// Direct YouTube HTML Scraper
+// Direct YouTube HTML Scraper for #lsr OR #lsreborn
 async function scrapeRealYouTubeLive(seenIds) {
     const results = [];
-    const queries = ['%23lsreborn+live', '%23lsr+live', 'lsreborn+live', 'lsr+live'];
+    const queries = ['%23lsr+live', '%23lsreborn+live', 'lsr+live', 'lsreborn+live'];
 
     for (const query of queries) {
         try {
