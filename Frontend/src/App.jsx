@@ -216,7 +216,7 @@ export default function App() {
       rules: <RulesPage />,
       news: <NewsPage />,
       store: <StorePage />,
-      'life-at-lsr': <LifeAtLSR />,
+      'life-at-lsr': <LifeAtLSR user={user} />,
       queue: <QueuePage user={user} setPage={setPage} />,
       dashboard: <StaffDashboard user={user} setPage={setPage} onLogout={handleLogout} />,
       'job-dashboard': <JobManagement user={user} />

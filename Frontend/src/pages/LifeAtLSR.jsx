@@ -1,20 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Tv, Radio, Play, RefreshCw, ExternalLink, X, Search, Sparkles, Video } from 'lucide-react';
+import { Tv, Radio, Play, RefreshCw, ExternalLink, X, Search, Sparkles, Video, Plus, Trash2, Pin, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import AnimatedButton from '../components/AnimatedButton';
 
-const LifeAtLSR = () => {
+const getAuthToken = () => localStorage.getItem('authToken') || localStorage.getItem('token') || '';
+
+const LifeAtLSR = ({ user }) => {
     const [streams, setStreams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeStream, setActiveStream] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
 
+    // Admin Pin Modal State
+    const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+    const [pinUrl, setPinUrl] = useState('');
+    const [pinSubmitting, setPinSubmitting] = useState(false);
+    const [pinMessage, setPinMessage] = useState(null);
+
     const apiUrl = import.meta.env.VITE_API_URL || 'https://lsreborn-backend.onrender.com';
+    const isStaffOrAdmin = user && (user.isAdmin || user.isStaff || user.id === "444043711094194200");
 
     // Lock body scroll when modal is active
     useEffect(() => {
-        if (activeStream) {
+        if (activeStream || isPinModalOpen) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
@@ -22,7 +31,7 @@ const LifeAtLSR = () => {
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [activeStream]);
+    }, [activeStream, isPinModalOpen]);
 
     const fetchLiveStreams = async () => {
         setLoading(true);
@@ -42,10 +51,66 @@ const LifeAtLSR = () => {
 
     useEffect(() => {
         fetchLiveStreams();
-        // Auto refresh live streams every 30 seconds
         const interval = setInterval(fetchLiveStreams, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    const handlePinSubmit = async (e) => {
+        e.preventDefault();
+        if (!pinUrl.trim()) return;
+
+        setPinSubmitting(true);
+        setPinMessage(null);
+
+        try {
+            const token = getAuthToken();
+            const res = await fetch(`${apiUrl}/api/streams/pin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include',
+                body: JSON.stringify({ video_url: pinUrl.trim() })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                setPinMessage({ type: 'success', text: 'Live stream pinned successfully!' });
+                setPinUrl('');
+                setTimeout(() => {
+                    setIsPinModalOpen(false);
+                    setPinMessage(null);
+                }, 1200);
+                fetchLiveStreams();
+            } else {
+                setPinMessage({ type: 'error', text: data.message || 'Failed to pin stream.' });
+            }
+        } catch (err) {
+            setPinMessage({ type: 'error', text: 'Server connection error.' });
+        } finally {
+            setPinSubmitting(false);
+        }
+    };
+
+    const handleUnpin = async (e, videoId) => {
+        e.stopPropagation();
+        try {
+            const token = getAuthToken();
+            const res = await fetch(`${apiUrl}/api/streams/pin/${videoId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                credentials: 'include'
+            });
+            if (res.ok) {
+                fetchLiveStreams();
+            }
+        } catch (err) {
+            console.error("Error unpinning stream:", err);
+        }
+    };
 
     const filteredStreams = streams.filter(stream => {
         const query = searchTerm.toLowerCase();
@@ -77,7 +142,7 @@ const LifeAtLSR = () => {
                         Watch real-time live streams from community creators broadcasting live directly from LSReborn.
                     </p>
 
-                    {/* Stats Pill */}
+                    {/* Stats & Controls */}
                     <div className="pt-2 flex flex-wrap items-center gap-3 text-xs">
                         <div className="flex items-center gap-2 bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-gray-200">
                             <Radio size={15} className="text-red-400 animate-pulse" />
@@ -93,9 +158,9 @@ const LifeAtLSR = () => {
                 </div>
             </div>
 
-            {/* Controls Bar: Search & Refresh */}
-            <div className="flex items-center justify-between gap-4">
-                <div className="relative flex-1 sm:max-w-md">
+            {/* Controls Bar: Search, Staff Pin Button, & Refresh */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="relative w-full sm:max-w-md">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input
                         type="text"
@@ -106,15 +171,27 @@ const LifeAtLSR = () => {
                     />
                 </div>
 
-                <button
-                    onClick={fetchLiveStreams}
-                    disabled={loading}
-                    className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-cyan-400 rounded-xl border border-gray-800 transition-colors flex items-center gap-2 text-xs font-semibold disabled:opacity-50"
-                    title="Refresh live streams"
-                >
-                    <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                    <span className="hidden sm:inline">Refresh Live Feed</span>
-                </button>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    {isStaffOrAdmin && (
+                        <AnimatedButton
+                            onClick={() => setIsPinModalOpen(true)}
+                            className="bg-cyan-500 hover:bg-cyan-400 text-gray-950 text-xs font-bold px-4 py-2.5 flex items-center gap-2 shadow-lg shadow-cyan-500/20"
+                        >
+                            <Plus size={15} />
+                            <span>Pin YouTube Live Stream</span>
+                        </AnimatedButton>
+                    )}
+
+                    <button
+                        onClick={fetchLiveStreams}
+                        disabled={loading}
+                        className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-cyan-400 rounded-xl border border-gray-800 transition-colors flex items-center gap-2 text-xs font-semibold disabled:opacity-50"
+                        title="Refresh live streams"
+                    >
+                        <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                        <span className="hidden sm:inline">Refresh Feed</span>
+                    </button>
+                </div>
             </div>
 
             {/* Live Streams Cards Grid */}
@@ -128,7 +205,10 @@ const LifeAtLSR = () => {
                     <Tv className="w-16 h-16 text-gray-600 mx-auto animate-pulse" />
                     <h3 className="text-xl font-bold text-white">No Streamers Currently Live</h3>
                     <p className="text-xs text-gray-400 max-w-md mx-auto leading-relaxed">
-                        {searchTerm ? `No live streams found matching "${searchTerm}".` : 'There are no community members broadcasting live at this moment. Include hashtag #lsreborn or #lsr in your YouTube live stream title to appear here automatically!'}
+                        {searchTerm 
+                            ? `No live streams found matching "${searchTerm}".` 
+                            : 'There are no community members broadcasting live at this moment. Streamers include hashtag #lsreborn or #lsr in your YouTube live stream title to appear here automatically!'
+                        }
                     </p>
                     <button
                         onClick={fetchLiveStreams}
@@ -170,8 +250,19 @@ const LifeAtLSR = () => {
                                         <span>LIVE</span>
                                     </div>
 
+                                    {/* Staff Unpin Option if Staff */}
+                                    {isStaffOrAdmin && (
+                                        <button
+                                            onClick={(e) => handleUnpin(e, stream.id)}
+                                            className="absolute top-3 right-3 z-30 p-1.5 bg-gray-950/80 hover:bg-rose-600 text-gray-400 hover:text-white rounded-lg transition-colors border border-gray-700"
+                                            title="Unpin / Remove stream"
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                    )}
+
                                     {/* Play Overlay on Hover */}
-                                    <div className="absolute inset-0 z-30 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-xs">
+                                    <div className="absolute inset-0 z-25 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-xs">
                                         <div className="w-14 h-14 rounded-full bg-cyan-500 text-gray-950 flex items-center justify-center shadow-xl shadow-cyan-500/40 transform scale-75 group-hover:scale-100 transition-transform duration-300">
                                             <Play size={24} className="fill-current ml-1" />
                                         </div>
@@ -216,6 +307,75 @@ const LifeAtLSR = () => {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {/* REACT PORTAL: Admin Pin Live Stream Modal */}
+            {isPinModalOpen && ReactDOM.createPortal(
+                <div 
+                    className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in"
+                    onClick={() => setIsPinModalOpen(false)}
+                >
+                    <div 
+                        className="bg-gray-900 border border-cyan-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative z-[1000000]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <Pin className="text-cyan-400" size={20} />
+                                Pin YouTube Live Stream
+                            </h3>
+                            <button onClick={() => setIsPinModalOpen(false)} className="text-gray-400 hover:text-white">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {pinMessage && (
+                            <div className={`p-3 rounded-xl flex items-center gap-2 text-xs font-semibold border ${
+                                pinMessage.type === 'success' ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+                            }`}>
+                                {pinMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                                <span>{pinMessage.text}</span>
+                            </div>
+                        )}
+
+                        <form onSubmit={handlePinSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                                    YouTube Video URL or Video ID <span className="text-rose-400">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="https://www.youtube.com/watch?v=..."
+                                    value={pinUrl}
+                                    onChange={(e) => setPinUrl(e.target.value)}
+                                    className="w-full bg-gray-950 border border-gray-800 rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500/60"
+                                />
+                                <p className="text-[11px] text-gray-500 mt-1">
+                                    Paste any active YouTube Live Stream link to immediately display it on the Life at LSR feed.
+                                </p>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPinModalOpen(false)}
+                                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold rounded-xl"
+                                >
+                                    Cancel
+                                </button>
+                                <AnimatedButton
+                                    type="submit"
+                                    disabled={pinSubmitting}
+                                    className="bg-cyan-500 hover:bg-cyan-400 text-gray-950 text-xs font-bold px-5 py-2"
+                                >
+                                    {pinSubmitting ? 'Pinning Stream...' : 'Pin Stream'}
+                                </AnimatedButton>
+                            </div>
+                        </form>
+                    </div>
+                </div>,
+                document.body
             )}
 
             {/* REACT PORTAL: Live Stream Player Modal */}
