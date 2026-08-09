@@ -35,7 +35,7 @@ let streamCache = {
     data: []
 };
 
-// GET /api/streams - Fetch currently active live streams matching #lsr OR #lsreborn
+// GET /api/streams - Fetch currently active live streams
 router.get('/', async (req, res) => {
     const now = Date.now();
 
@@ -68,18 +68,14 @@ router.get('/', async (req, res) => {
             console.error("[STREAMS DB] Error fetching pinned streams:", dbErr);
         }
 
-        // 2. Official YouTube Data API v3 (if key provided in .env)
+        // 2. Official YouTube Data API v3 (if YOUTUBE_API_KEY present)
         if (apiKey) {
             const apiStreams = await fetchYouTubeApiLive(apiKey, seenIds);
             streams = streams.concat(apiStreams);
         }
 
-        // 3. Piped / Invidious Open YouTube REST APIs for #lsr AND #lsreborn
-        const pipedStreams = await fetchPipedYouTubeLive(seenIds);
-        streams = streams.concat(pipedStreams);
-
-        // 4. Direct YouTube HTML Scraper fallback for #lsr AND #lsreborn
-        const scrapedStreams = await scrapeRealYouTubeLive(seenIds);
+        // 3. Robust YouTube Search Scraper with Recursive Object Parser
+        const scrapedStreams = await scrapeYouTubeLiveRecursive(seenIds);
         streams = streams.concat(scrapedStreams);
 
         // Update cache
@@ -153,7 +149,7 @@ router.delete('/pin/:videoId', isAuthenticated, isAdmin, async (req, res) => {
     }
 });
 
-// Helper: Fetch oEmbed details for a video ID
+// Helper: Fetch oEmbed details for a single video ID
 async function fetchYouTubeVideoDetails(videoId) {
     try {
         const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
@@ -175,63 +171,6 @@ async function fetchYouTubeVideoDetails(videoId) {
         console.warn("[STREAMS] oEmbed error for", videoId, e.message);
     }
     return null;
-}
-
-// Fetch via Piped & Invidious Public REST APIs for EITHER #lsr OR #lsreborn
-async function fetchPipedYouTubeLive(seenIds) {
-    const results = [];
-    const queries = ['%23lsr', '%23lsreborn', 'lsr+live', 'lsreborn+live'];
-    const pipedInstances = [
-        'https://pipedapi.kavin.rocks',
-        'https://api.piped.video',
-        'https://inv.tux.pizza/api/v1',
-        'https://invidious.drgns.space/api/v1'
-    ];
-
-    for (const query of queries) {
-        let querySuccess = false;
-        for (const baseApi of pipedInstances) {
-            if (querySuccess) break;
-
-            try {
-                const searchUrl = baseApi.includes('invidious') || baseApi.includes('inv.')
-                    ? `${baseApi}/search?q=${query}&type=stream`
-                    : `${baseApi}/search?q=${query}&filter=lives`;
-
-                const res = await fetch(searchUrl, { timeout: 4000 });
-                if (!res.ok) continue;
-
-                const data = await res.json();
-                const items = Array.isArray(data) ? data : (data.items || []);
-
-                for (const item of items) {
-                    const videoId = item.url ? item.url.replace('/watch?v=', '') : (item.videoId || item.id);
-                    if (!videoId || videoId.length !== 11 || seenIds.has(videoId)) continue;
-
-                    // Check live status
-                    const isLive = item.isLive || item.uploaded === 0 || (item.type === 'stream' && (item.title || '').toLowerCase().includes('live')) || item.duration === 0;
-                    if (!isLive) continue;
-
-                    seenIds.add(videoId);
-                    results.push({
-                        id: videoId,
-                        title: item.title || "Live Stream",
-                        channelTitle: item.uploaderName || item.author || item.uploader || "Streamer",
-                        avatar: item.uploaderAvatar || item.authorAvatar || "",
-                        thumbnail: item.thumbnail || item.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-                        isLive: true,
-                        videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
-                        embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1`
-                    });
-                    querySuccess = true;
-                }
-            } catch (e) {
-                // Try next instance silently
-            }
-        }
-    }
-
-    return results;
 }
 
 // Official YouTube Data API v3 Search
@@ -271,17 +210,17 @@ async function fetchYouTubeApiLive(apiKey, seenIds) {
     return results;
 }
 
-// Direct YouTube HTML Scraper for #lsr OR #lsreborn
-async function scrapeRealYouTubeLive(seenIds) {
+// Robust YouTube Search Scraper with Recursive Object Tree Parser
+async function scrapeYouTubeLiveRecursive(seenIds) {
     const results = [];
-    const queries = ['%23lsr+live', '%23lsreborn+live', 'lsr+live', 'lsreborn+live'];
+    const queries = ['%23lsr', '%23lsreborn', 'lsr+live', 'lsreborn+live'];
 
     for (const query of queries) {
         try {
             const searchUrl = `https://www.youtube.com/results?search_query=${query}&sp=CAMSAkAB`;
             const scrapeRes = await fetch(searchUrl, {
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
                 }
@@ -290,86 +229,52 @@ async function scrapeRealYouTubeLive(seenIds) {
             if (!scrapeRes.ok) continue;
 
             const html = await scrapeRes.text();
-
             const matches = html.match(/ytInitialData\s*=\s*({.+?});/);
-            if (matches && matches[1]) {
-                const data = JSON.parse(matches[1]);
-                parseYouTubeSectionList(data, results, seenIds);
-            }
+            if (!matches || !matches[1]) continue;
 
-            // Regex videoId extraction fallback
-            const videoRegex = /"videoId":"([a-zA-Z0-9_-]{11})"/g;
-            let m;
-            while ((m = videoRegex.exec(html)) !== null) {
-                const vid = m[1];
-                if (!seenIds.has(vid)) {
-                    const contextWindow = html.substring(Math.max(0, m.index - 500), Math.min(html.length, m.index + 1000));
-                    const isLiveContext = contextWindow.includes("BADGE_STYLE_TYPE_LIVE_NOW") || contextWindow.includes('"label":"LIVE"') || contextWindow.includes("watching");
+            const data = JSON.parse(matches[1]);
+            
+            // Recursive object tree search
+            function searchObj(obj) {
+                if (!obj || typeof obj !== 'object') return;
+                if (obj.videoId && !seenIds.has(obj.videoId)) {
+                    const jsonStr = JSON.stringify(obj);
+                    const isLive = jsonStr.includes('BADGE_STYLE_TYPE_LIVE_NOW') || 
+                                   jsonStr.includes('"label":"LIVE"') ||
+                                   jsonStr.includes('watching');
+                    if (isLive) {
+                        seenIds.add(obj.videoId);
+                        const title = obj.title?.runs?.[0]?.text || obj.headline?.runs?.[0]?.text || "Live Stream";
+                        const owner = obj.ownerText?.runs?.[0]?.text || obj.shortBylineText?.runs?.[0]?.text || "Streamer";
+                        const thumbnails = obj.thumbnail?.thumbnails || [];
+                        const thumbnail = thumbnails[thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${obj.videoId}/hqdefault.jpg`;
+                        const avatar = obj.channelThumbnailSupportedRenderers?.channelThumbnailWithRippleRenderer?.thumbnail?.thumbnails?.[0]?.url || "";
 
-                    if (isLiveContext) {
-                        const details = await fetchYouTubeVideoDetails(vid);
-                        if (details) {
-                            seenIds.add(vid);
-                            results.push(details);
-                        }
+                        results.push({
+                            id: obj.videoId,
+                            title: title,
+                            channelTitle: owner,
+                            avatar: avatar,
+                            thumbnail: thumbnail,
+                            isLive: true,
+                            videoUrl: `https://www.youtube.com/watch?v=${obj.videoId}`,
+                            embedUrl: `https://www.youtube.com/embed/${obj.videoId}?autoplay=1`
+                        });
                     }
+                }
+                for (const key of Object.keys(obj)) {
+                    searchObj(obj[key]);
                 }
             }
 
+            searchObj(data);
+
         } catch (e) {
-            console.error("[STREAMS] Scraper error for query", query, e.message);
+            console.error("[STREAMS] Recursive scraper error for query", query, e.message);
         }
     }
 
     return results;
-}
-
-// Deep JSON parsing helper for YouTube Initial Data
-function parseYouTubeSectionList(data, results, seenIds) {
-    try {
-        const contents = data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-        if (!Array.isArray(contents)) return;
-
-        for (const section of contents) {
-            const items = section.itemSectionRenderer?.contents;
-            if (!Array.isArray(items)) continue;
-
-            for (const item of items) {
-                const video = item.videoRenderer;
-                if (!video || !video.videoId) continue;
-                if (seenIds.has(video.videoId)) continue;
-
-                // Check live badge
-                const badges = video.badges || [];
-                const isLive = badges.some(b => 
-                    b.metadataBadgeRenderer?.style === 'BADGE_STYLE_TYPE_LIVE_NOW' || 
-                    b.metadataBadgeRenderer?.label === 'LIVE'
-                ) || (video.viewCountText?.runs?.[0]?.text || '').toLowerCase().includes('watching');
-
-                if (!isLive) continue;
-
-                const title = video.title?.runs?.[0]?.text || "";
-                const channelTitle = video.ownerText?.runs?.[0]?.text || "";
-                const thumbnails = video.thumbnail?.thumbnails || [];
-                const thumbnail = thumbnails[thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`;
-                const avatar = video.channelThumbnailSupportedRenderers?.channelThumbnailWithRippleRenderer?.thumbnail?.thumbnails?.[0]?.url || "";
-
-                seenIds.add(video.videoId);
-                results.push({
-                    id: video.videoId,
-                    title: title,
-                    channelTitle: channelTitle,
-                    avatar: avatar,
-                    thumbnail: thumbnail,
-                    isLive: true,
-                    videoUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
-                    embedUrl: `https://www.youtube.com/embed/${video.videoId}?autoplay=1`
-                });
-            }
-        }
-    } catch (e) {
-        console.warn("[STREAMS] Section parser error:", e.message);
-    }
 }
 
 module.exports = router;
